@@ -4,8 +4,6 @@ import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Warning } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
-import { deleteEvent, type DeleteEventRequest } from '@/lib/gcal';
-import { supabase } from '@/lib/supabase';
 import {
   getBooking,
   saveBookingDays,
@@ -99,38 +97,11 @@ export function BookingDetailScreen() {
     if (!booking) return;
     setSaving(true);
     try {
-      // Try to delete GCal event
-      if (booking.gcal_event_id) {
-        try {
-          const [sessionData, profileData] = await Promise.all([
-            supabase.auth.getSession(),
-            supabase
-              .from('profiles')
-              .select('gcal_calendar_id')
-              .eq('id', booking.sitter_id)
-              .single(),
-          ]);
-          const accessToken = sessionData.data.session?.provider_token;
-          const profile = profileData.data;
-
-          if (accessToken && profile?.gcal_calendar_id) {
-            const req: DeleteEventRequest = {
-              accessToken,
-              calendarId: profile.gcal_calendar_id,
-              eventId: booking.gcal_event_id,
-            };
-            await deleteEvent(req);
-          }
-        } catch {
-          // non-fatal
-        }
-      }
-
       await updateBookingStatus(booking.id, booking.sitter_id, 'cancelled');
       addToast('Booking cancelled', 'info');
       navigate('/bookings');
-    } catch {
-      addToast('Failed to cancel booking', 'error');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to cancel booking', 'error');
     } finally {
       setSaving(false);
       setCancelConfirm(false);

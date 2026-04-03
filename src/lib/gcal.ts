@@ -1,8 +1,101 @@
+import { CalendarError } from './errors';
+import { logger } from './logger';
+
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: { date: string; dateTime?: string };
+  end: { date: string; dateTime?: string };
+  extendedProperties?: { private?: Record<string, string> };
+  etag?: string;
+  status?: string;
+  htmlLink?: string;
+  iCalUID?: string;
+  updated?: string;
+}
+
+export interface CreateEventRequest {
+  accessToken: string;
+  calendarId: string;
+  event: Omit<GoogleCalendarEvent, 'id' | 'etag' | 'htmlLink' | 'iCalUID' | 'updated' | 'status'>;
+  sendUpdates?: 'all' | 'externalOnly' | 'none';
+  conferenceDataVersion?: number;
+}
+
+export interface UpdateEventRequest {
+  accessToken: string;
+  calendarId: string;
+  eventId: string;
+  event: Partial<GoogleCalendarEvent>;
+  sendUpdates?: 'all' | 'externalOnly' | 'none';
+  conferenceDataVersion?: number;
+}
+
+export interface DeleteEventRequest {
+  accessToken: string;
+  calendarId: string;
+  eventId: string;
+  sendUpdates?: 'all' | 'externalOnly' | 'none';
+}
+
+export interface DeleteEventResponse {
+  deleted: boolean;
+  eventId: string;
+  status: number;
+}
+
+export interface CheckForChangesRequest {
+  accessToken: string;
+  calendarId: string;
+  eventId: string;
+  etag?: string;
+  fetch?: typeof fetch;
+  signal?: AbortSignal;
+}
+
+export interface CheckForChangesResponse {
+  changed: boolean;
+  status: number;
+  etag: string | null;
+  event: GoogleCalendarEvent | null;
+}
+
+export interface GoogleCalendarRequestContext {
+  accessToken: string;
+  calendarId: string;
+  baseUrl?: string;
+  fetch?: typeof fetch;
+  signal?: AbortSignal;
+}
+
 export const GOOGLE_CALENDAR_API_BASE_URL = 'https://www.googleapis.com/calendar/v3';
-export const GOOGLE_CALENDAR_LIST_API_BASE_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList';
+export const GOOGLE_CALENDAR_LIST_API_BASE_URL =
+  'https://www.googleapis.com/calendar/v3/users/me/calendarList';
 export const SNAPUPPY_CALENDAR_NAME = 'Snapuppy Bookings';
 
+export class GoogleCalendarError extends CalendarError {
+  readonly status: number | null;
+  readonly code_num?: number;
+
+  constructor(
+    message: string,
+    options: {
+      status?: number | null;
+      code?: number;
+      details?: unknown;
+      cause?: unknown;
+    } = {},
+  ) {
+    super(message, options.details, options.cause);
+    this.name = 'GoogleCalendarError';
+    this.status = options.status ?? null;
+    this.code_num = options.code;
+  }
+}
+
 export async function getOrCreateSnapuppyCalendar(accessToken: string): Promise<string> {
+  logger.debug('Listing calendars...');
   const listRes = await fetch(GOOGLE_CALENDAR_LIST_API_BASE_URL, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -15,9 +108,11 @@ export async function getOrCreateSnapuppyCalendar(accessToken: string): Promise<
   const existing = listBody.items?.find((c) => c.summary === SNAPUPPY_CALENDAR_NAME);
 
   if (existing) {
+    logger.debug('Found existing Snapuppy calendar', { calendarId: existing.id });
     return existing.id;
   }
 
+  logger.info('Snapuppy calendar not found, creating new one...');
   const createRes = await fetch(`${GOOGLE_CALENDAR_API_BASE_URL}/calendars`, {
     method: 'POST',
     headers: {
@@ -34,131 +129,8 @@ export async function getOrCreateSnapuppyCalendar(accessToken: string): Promise<
   }
 
   const created = (await createRes.json()) as { id: string };
+  logger.info('Created new Snapuppy calendar', { calendarId: created.id });
   return created.id;
-}
-
-export interface GoogleCalendarEventDateTime {
-  date?: string;
-  dateTime?: string;
-  timeZone?: string;
-}
-
-export interface GoogleCalendarAttendee {
-  email: string;
-  displayName?: string;
-  responseStatus?: 'accepted' | 'declined' | 'needsAction' | 'tentative';
-  optional?: boolean;
-  organizer?: boolean;
-  self?: boolean;
-}
-
-export interface GoogleCalendarReminderOverride {
-  method: 'email' | 'popup';
-  minutes: number;
-}
-
-export interface GoogleCalendarReminders {
-  useDefault?: boolean;
-  overrides?: GoogleCalendarReminderOverride[];
-}
-
-export interface GoogleCalendarEventInput {
-  summary: string;
-  description?: string;
-  location?: string;
-  start: GoogleCalendarEventDateTime;
-  end: GoogleCalendarEventDateTime;
-  attendees?: GoogleCalendarAttendee[];
-  colorId?: string;
-  reminders?: GoogleCalendarReminders;
-  extendedProperties?: {
-    private?: Record<string, string>;
-    shared?: Record<string, string>;
-  };
-}
-
-export interface GoogleCalendarEvent extends GoogleCalendarEventInput {
-  id: string;
-  status?: string;
-  htmlLink?: string;
-  created?: string;
-  updated?: string;
-  etag?: string;
-}
-
-export interface GoogleCalendarRequestContext {
-  accessToken: string;
-  calendarId: string;
-  fetch?: typeof fetch;
-  signal?: AbortSignal;
-  baseUrl?: string;
-}
-
-export interface CreateEventRequest extends GoogleCalendarRequestContext {
-  event: GoogleCalendarEventInput;
-  sendUpdates?: 'all' | 'externalOnly' | 'none';
-  conferenceDataVersion?: number;
-}
-
-export interface UpdateEventRequest extends GoogleCalendarRequestContext {
-  eventId: string;
-  event: Partial<GoogleCalendarEventInput>;
-  sendUpdates?: 'all' | 'externalOnly' | 'none';
-  conferenceDataVersion?: number;
-}
-
-export interface DeleteEventRequest extends GoogleCalendarRequestContext {
-  eventId: string;
-  sendUpdates?: 'all' | 'externalOnly' | 'none';
-}
-
-export interface DeleteEventResponse {
-  deleted: true;
-  eventId: string;
-  status: 204;
-}
-
-export interface CheckForChangesRequest extends GoogleCalendarRequestContext {
-  eventId: string;
-  etag?: string;
-}
-
-export type CheckForChangesResponse =
-  | {
-      changed: false;
-      status: 304;
-      etag: string | null;
-      event: null;
-    }
-  | {
-      changed: true;
-      status: 200;
-      etag: string | null;
-      event: GoogleCalendarEvent;
-    };
-
-export class GoogleCalendarError extends Error {
-  readonly status: number | null;
-  readonly code?: number;
-  readonly details?: unknown;
-  override readonly cause?: unknown;
-
-  constructor(
-    message: string,
-    options: {
-      status?: number | null;
-      code?: number;
-      details?: unknown;
-      cause?: unknown;
-    } = {},
-  ) {
-    super(message);
-    this.name = 'GoogleCalendarError';
-    this.status = options.status ?? null;
-    this.code = options.code;
-    this.details = options.details;
-    this.cause = options.cause;
-  }
 }
 
 export async function createEvent(request: CreateEventRequest): Promise<GoogleCalendarEvent> {
@@ -253,7 +225,11 @@ async function googleCalendarRequest<T>(
   definition: GoogleCalendarRequestDefinition,
 ): Promise<GoogleCalendarResponse<T>> {
   const fetchImpl = resolveFetch(context.fetch);
-  const url = buildUrl(context.baseUrl ?? GOOGLE_CALENDAR_API_BASE_URL, context.calendarId, definition);
+  const url = buildUrl(
+    context.baseUrl ?? GOOGLE_CALENDAR_API_BASE_URL,
+    context.calendarId,
+    definition,
+  );
   const headers = new Headers({
     Accept: 'application/json',
     Authorization: `Bearer ${context.accessToken}`,
@@ -304,7 +280,9 @@ async function googleCalendarRequest<T>(
 
 async function buildGoogleCalendarError(response: Response): Promise<GoogleCalendarError> {
   const payload = await parseUnknownResponseBody(response);
-  const message = extractGoogleCalendarErrorMessage(payload) ?? `Google Calendar request failed with status ${response.status}`;
+  const message =
+    extractGoogleCalendarErrorMessage(payload) ??
+    `Google Calendar request failed with status ${response.status}`;
   const code =
     typeof payload === 'object' && payload !== null && 'error' in payload
       ? readErrorCode((payload as { error?: unknown }).error)
@@ -361,7 +339,12 @@ async function parseUnknownResponseBody(response: Response): Promise<unknown> {
 }
 
 function asGoogleCalendarEvent(payload: unknown): GoogleCalendarEvent {
-  if (typeof payload !== 'object' || payload === null || !('id' in payload) || !('summary' in payload)) {
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('id' in payload) ||
+    !('summary' in payload)
+  ) {
     throw new GoogleCalendarError('Google Calendar returned an invalid event payload', {
       details: payload,
     });
@@ -376,7 +359,9 @@ function buildUrl(
   definition: Pick<GoogleCalendarRequestDefinition, 'path' | 'query'>,
 ): string {
   const url = new URL(
-    [`calendars`, encodeURIComponent(calendarId), ...definition.path.map(encodeURIComponent)].join('/'),
+    [`calendars`, encodeURIComponent(calendarId), ...definition.path.map(encodeURIComponent)].join(
+      '/',
+    ),
     `${baseUrl.replace(/\/$/, '')}/`,
   );
 

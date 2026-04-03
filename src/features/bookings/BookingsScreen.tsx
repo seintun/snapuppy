@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { type BookingStatus } from '@/lib/bookingService';
 import { useBookings } from '@/hooks/useBookings';
-import { BookingCreateSheet } from './BookingCreateSheet';
-import { BookingDetailSheet } from './BookingDetailSheet';
+import { useVirtualList } from '@/hooks/useVirtualList';
+import { CreateBookingSheet } from './CreateBookingSheet';
 import {
   bookingStatusOptions,
   formatBookingRange,
@@ -15,31 +16,39 @@ import {
   getStatusVariant,
 } from './bookingUi';
 
+const ITEM_HEIGHT = 90;
+
 export function BookingsScreen() {
-  const {
-    bookings,
-    dogs,
-    profile,
-    loading,
-    error,
-    createBooking,
-    saveBookingDays,
-    updateBookingStatus,
-    deleteBooking,
-  } = useBookings();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(400);
+  const navigate = useNavigate();
+
+  const { bookings, loading, error } = useBookings();
   const [filter, setFilter] = useState<BookingStatus>('active');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        setContainerHeight(containerRef.current.clientHeight);
+      }
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
 
   const filteredBookings = useMemo(
     () => bookings.filter((booking) => booking.status === filter),
     [bookings, filter],
   );
 
-  const selectedBooking = useMemo(
-    () => bookings.find((booking) => booking.id === selectedBookingId) ?? null,
-    [bookings, selectedBookingId],
-  );
+  const { virtualItems, totalHeight, onScroll } = useVirtualList({
+    items: filteredBookings,
+    itemHeight: ITEM_HEIGHT,
+    overscan: 3,
+    containerHeight,
+  });
 
   return (
     <>
@@ -84,47 +93,63 @@ export function BookingsScreen() {
 
       {!loading && !error ? (
         filteredBookings.length ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filteredBookings.map((booking) => (
-              <Card
-                key={booking.id}
-                className="p-4"
-                pressable
-                onClick={() => setSelectedBookingId(booking.id)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <DogAvatar
-                    name={booking.dog?.name ?? 'Dog'}
-                    src={booking.dog?.photo_url}
-                    size="md"
-                  />
+          <div
+            ref={containerRef}
+            onScroll={onScroll}
+            style={{ height: '100%', overflow: 'auto', contain: 'strict' }}
+          >
+            <div style={{ height: totalHeight, position: 'relative' }}>
+              {virtualItems.map(({ item: booking, offsetTop }) => (
+                <div
+                  key={booking.id}
+                  style={{
+                    position: 'absolute',
+                    top: offsetTop,
+                    left: 0,
+                    right: 0,
+                    height: ITEM_HEIGHT,
+                  }}
+                >
+                  <Card
+                    className="p-4"
+                    pressable
+                    onClick={() => navigate(`/bookings/${booking.id}`)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <DogAvatar
+                        name={booking.dog?.name ?? 'Dog'}
+                        src={booking.dog?.photo_url}
+                        size="md"
+                      />
 
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: 12,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <strong>{booking.dog?.name ?? 'Unknown dog'}</strong>
-                      <Badge variant={getStatusVariant(booking.status)}>
-                        {getStatusLabel(booking.status)}
-                      </Badge>
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: 12,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <strong>{booking.dog?.name ?? 'Unknown dog'}</strong>
+                          <Badge variant={getStatusVariant(booking.status)}>
+                            {getStatusLabel(booking.status)}
+                          </Badge>
+                        </div>
+
+                        <p style={{ margin: '4px 0 0', color: 'var(--bark-light)', fontSize: 14 }}>
+                          {formatBookingRange(booking)}
+                        </p>
+                        <p style={{ margin: '4px 0 0', fontSize: 14 }}>
+                          {booking.days.length} day{booking.days.length === 1 ? '' : 's'} ·{' '}
+                          {formatCurrency(booking.total_amount)}
+                        </p>
+                      </div>
                     </div>
-
-                    <p style={{ margin: '4px 0 0', color: 'var(--bark-light)', fontSize: 14 }}>
-                      {formatBookingRange(booking)}
-                    </p>
-                    <p style={{ margin: '4px 0 0', fontSize: 14 }}>
-                      {booking.days.length} day{booking.days.length === 1 ? '' : 's'} ·{' '}
-                      {formatCurrency(booking.total_amount)}
-                    </p>
-                  </div>
+                  </Card>
                 </div>
-              </Card>
-            ))}
+              ))}
+            </div>
           </div>
         ) : (
           <EmptyState
@@ -136,23 +161,7 @@ export function BookingsScreen() {
         )
       ) : null}
 
-      <BookingCreateSheet
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        dogs={dogs}
-        profile={profile}
-        onCreate={createBooking}
-      />
-
-      <BookingDetailSheet
-        booking={selectedBooking}
-        isOpen={Boolean(selectedBooking)}
-        onClose={() => setSelectedBookingId(null)}
-        profile={profile}
-        onSaveDays={saveBookingDays}
-        onUpdateStatus={updateBookingStatus}
-        onDelete={deleteBooking}
-      />
+      <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
     </>
   );
 }

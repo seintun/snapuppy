@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   eachDayOfInterval,
   endOfMonth,
@@ -19,7 +20,7 @@ interface CalendarMonthGridProps {
 
 const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export function CalendarMonthGrid({
+export const CalendarMonthGrid = memo(function CalendarMonthGrid({
   month,
   bookingsByDate,
   onSelectBooking,
@@ -123,4 +124,4 @@ export function CalendarMonthGrid({
       </div>
     </div>
   );
-}
+});

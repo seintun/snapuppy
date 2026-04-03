@@ -11,11 +11,16 @@ import {
 import {
   createEvent,
   updateEvent,
+  deleteEvent,
+  getOrCreateSnapuppyCalendar,
+  GoogleCalendarError,
   type CreateEventRequest,
   type UpdateEventRequest,
 } from '@/lib/gcal';
 import { supabase } from '@/lib/supabase';
 import type { Tables, TablesInsert } from '@/types/database';
+import { logger } from './logger';
+import { DatabaseError } from './errors';
 
 type BookingRow = Tables<'bookings'>;
 type BookingDayRow = Tables<'booking_days'>;
@@ -111,22 +116,42 @@ async function syncBookingToGCal(
   sitterId: string,
   booking: BookingRecord,
   existingEventId?: string,
+  retryWithNewCalendar = true,
 ): Promise<string | null> {
   try {
+    logger.debug('Starting GCal sync', { bookingId: booking.id, existingEventId });
     const gcal = await getGCalContext(sitterId);
     if (!gcal || !booking.dog) {
+      logger.info('Skipping GCal sync: No access token or dog info', {
+        sitterId,
+        dogId: booking.dog_id,
+      });
       return null;
     }
 
-    const summary = `${booking.dog.name} - ${booking.type === 'boarding' ? 'Boarding' : 'Daycare'}`;
+    const summary = `${booking.dog.name} — ${booking.type === 'boarding' ? 'Boarding' : 'Daycare'}${booking.is_holiday ? ' 🎉' : ''}`;
     const description = [
-      `Owner: ${booking.dog.owner_name ?? 'N/A'}`,
+      booking.dog.owner_name ? `Owner: ${booking.dog.owner_name}` : null,
       booking.dog.owner_phone ? `Phone: ${booking.dog.owner_phone}` : null,
-      `Rate: $${booking.total_amount.toFixed(2)}`,
-      booking.is_holiday ? '🎉 Holiday booking' : null,
+      `Total: $${booking.total_amount.toFixed(2)}`,
     ]
       .filter(Boolean)
       .join('\n');
+
+    const gcalEndDate =
+      booking.start_date === booking.end_date
+        ? booking.end_date
+        : new Date(new Date(`${booking.end_date}T00:00:00`).getTime() + 86_400_000)
+            .toISOString()
+            .split('T')[0];
+
+    const event = {
+      summary,
+      description,
+      start: { date: booking.start_date },
+      end: { date: gcalEndDate },
+      extendedProperties: { private: { snapuppy_booking_id: booking.id } },
+    };
 
     if (existingEventId) {
       // Update existing event
@@ -134,32 +159,50 @@ async function syncBookingToGCal(
         accessToken: gcal.accessToken,
         calendarId: gcal.calendarId,
         eventId: existingEventId,
-        event: {
-          summary,
-          description,
-          start: { date: booking.start_date },
-          end: { date: booking.end_date },
-        },
+        event,
       };
       await updateEvent(updateReq);
+      logger.info('Updated GCal event', { eventId: existingEventId, bookingId: booking.id });
       return existingEventId;
     } else {
       // Create new event
       const createReq: CreateEventRequest = {
         accessToken: gcal.accessToken,
         calendarId: gcal.calendarId,
-        event: {
-          summary,
-          description,
-          start: { date: booking.start_date },
-          end: { date: booking.end_date },
-        },
+        event,
       };
       const gcalEvent = await createEvent(createReq);
+      logger.info('Created GCal event', { eventId: gcalEvent.id, bookingId: booking.id });
       return gcalEvent.id;
     }
   } catch (err) {
-    console.warn('GCal sync failed (non-fatal):', err);
+    // If the calendar was deleted (404), try to re-create it and retry once
+    if (retryWithNewCalendar && err instanceof GoogleCalendarError && err.status === 404) {
+      logger.warn('GCal calendar not found (404), attempting re-creation...', { sitterId });
+      try {
+        const supabase = await getSupabase();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const accessToken = session?.provider_token;
+
+        if (accessToken) {
+          const newCalendarId = await getOrCreateSnapuppyCalendar(accessToken);
+          await supabase
+            .from('profiles')
+            .update({ gcal_calendar_id: newCalendarId })
+            .eq('id', sitterId);
+
+          logger.info('Re-created GCal calendar and updated profile', { newCalendarId });
+          // Retry sync with the new calendar (disable further retries)
+          return syncBookingToGCal(sitterId, booking, existingEventId, false);
+        }
+      } catch (retryErr) {
+        logger.error('GCal calendar re-creation failed during retry', retryErr, { sitterId });
+      }
+    }
+
+    logger.error('GCal sync failed', err, { bookingId: booking.id, sitterId });
     return null;
   }
 }
@@ -313,7 +356,10 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     .select('*')
     .single();
 
-  if (bookingError) throw bookingError;
+  if (bookingError) {
+    logger.error('Failed to insert booking record', bookingError);
+    throw new DatabaseError('Failed to create booking', null, bookingError);
+  }
 
   const dayRows = pricing.days.map<TablesInsert<'booking_days'>>((day) => ({
     booking_id: createdBooking.id,
@@ -330,8 +376,9 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     .select('*');
 
   if (daysError) {
+    logger.error('Failed to insert booking days', daysError, { bookingId: createdBooking.id });
     await supabase.from('bookings').delete().eq('id', createdBooking.id);
-    throw daysError;
+    throw new DatabaseError('Failed to create booking days', null, daysError);
   }
 
   const bookingWithDays = mapBookingRow({
@@ -345,16 +392,23 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
 
   // If GCal sync succeeded, update the booking with the event ID
   if (gcalEventId) {
-    await supabase
+    const { error: updateError } = await supabase
       .from('bookings')
       .update({ gcal_event_id: gcalEventId })
       .eq('id', createdBooking.id);
+
+    if (updateError) {
+      logger.warn('Failed to update booking with GCal event ID', updateError, {
+        bookingId: createdBooking.id,
+      });
+    }
   }
 
   return bookingWithDays;
 }
 
 export async function saveBookingDays(input: SaveBookingDaysInput): Promise<BookingRecord> {
+  logger.debug('Saving booking days', { bookingId: input.bookingId });
   const supabase = await getSupabase();
   const [{ profile }, booking] = await Promise.all([
     getBookingFormOptions(input.sitterId),
@@ -383,7 +437,10 @@ export async function saveBookingDays(input: SaveBookingDaysInput): Promise<Book
   );
 
   const updateError = updateResults.find((result) => result.error)?.error;
-  if (updateError) throw updateError;
+  if (updateError) {
+    logger.error('Failed to update booking days', updateError, { bookingId: input.bookingId });
+    throw new DatabaseError('Failed to update booking days', null, updateError);
+  }
 
   const { error: bookingError } = await supabase
     .from('bookings')
@@ -395,7 +452,10 @@ export async function saveBookingDays(input: SaveBookingDaysInput): Promise<Book
     .eq('id', input.bookingId)
     .eq('sitter_id', input.sitterId);
 
-  if (bookingError) throw bookingError;
+  if (bookingError) {
+    logger.error('Failed to update booking total', bookingError, { bookingId: input.bookingId });
+    throw new DatabaseError('Failed to update booking total', null, bookingError);
+  }
 
   const updatedBooking: BookingRecord = {
     ...booking,
@@ -419,6 +479,10 @@ export async function updateBookingStatus(
   status: BookingStatus,
 ): Promise<void> {
   const supabase = await getSupabase();
+
+  // Fetch current booking for GCal sync logic
+  const booking = await getBooking(bookingId);
+
   const { error } = await supabase
     .from('bookings')
     .update({ status, updated_at: new Date().toISOString() })
@@ -426,10 +490,60 @@ export async function updateBookingStatus(
     .eq('sitter_id', sitterId);
 
   if (error) throw error;
+
+  // Handle Google Calendar sync based on status change
+  if (status === 'cancelled') {
+    if (booking.gcal_event_id) {
+      try {
+        const gcal = await getGCalContext(sitterId);
+        if (gcal) {
+          await deleteEvent({
+            accessToken: gcal.accessToken,
+            calendarId: gcal.calendarId,
+            eventId: booking.gcal_event_id,
+          });
+          // Clear the event ID from the booking record
+          await supabase.from('bookings').update({ gcal_event_id: null }).eq('id', bookingId);
+        }
+      } catch (err) {
+        console.warn('GCal event deletion failed on cancellation (non-fatal):', err);
+      }
+    }
+  } else if (status === 'active' && booking.status === 'cancelled') {
+    // Re-sync to create a new calendar event if it was previously cancelled
+    const updatedBooking = { ...booking, status };
+    const newEventId = await syncBookingToGCal(sitterId, updatedBooking);
+    if (newEventId) {
+      await supabase.from('bookings').update({ gcal_event_id: newEventId }).eq('id', bookingId);
+    }
+  }
 }
 
 export async function deleteBooking(bookingId: string, sitterId: string): Promise<void> {
   const supabase = await getSupabase();
+
+  // Fetch the booking first to see if there's a Google Calendar event to delete
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('gcal_event_id')
+    .eq('id', bookingId)
+    .single();
+
+  if (booking?.gcal_event_id) {
+    try {
+      const gcal = await getGCalContext(sitterId);
+      if (gcal) {
+        await deleteEvent({
+          accessToken: gcal.accessToken,
+          calendarId: gcal.calendarId,
+          eventId: booking.gcal_event_id,
+        });
+      }
+    } catch (err) {
+      console.warn('GCal event deletion failed (non-fatal):', err);
+    }
+  }
+
   const { error: daysError } = await supabase
     .from('booking_days')
     .delete()

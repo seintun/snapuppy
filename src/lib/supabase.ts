@@ -27,6 +27,10 @@ export const signInWithGoogle = async () => {
       // This is required when running as a PWA — Google rejects OAuth from
       // standalone/webview contexts (Error 403: app_domain rejected).
       skipBrowserRedirect: true,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
     },
   });
 

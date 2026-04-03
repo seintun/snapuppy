@@ -8,8 +8,6 @@ import {
   getBookingFormOptions,
   type BookingFormOptions,
 } from '@/lib/bookingService';
-import { createEvent } from '@/lib/gcal';
-import { supabase } from '@/lib/supabase';
 
 export interface CreateBookingSheetProps {
   isOpen: boolean;
@@ -51,7 +49,9 @@ export function CreateBookingSheet({
     if (!isOpen || !user) return;
     getBookingFormOptions(user.id)
       .then(setOptions)
-      .catch(() => { /* silent */ });
+      .catch(() => {
+        /* silent */
+      });
   }, [isOpen, user]);
 
   const handleStartChange = useCallback(
@@ -95,7 +95,7 @@ export function CreateBookingSheet({
 
       setSubmitting(true);
       try {
-        const booking = await createBooking({
+        await createBooking({
           sitterId: user.id,
           dogId: selectedDogId,
           startDate,
@@ -103,41 +103,6 @@ export function CreateBookingSheet({
           status: 'active',
           holidayDates: isHoliday ? [startDate] : [],
         });
-
-        // GCal sync (non-blocking)
-        try {
-          const sessionData = await supabase.auth.getSession();
-          const accessToken = sessionData.data.session?.provider_token;
-          if (accessToken && options.profile?.gcal_calendar_id) {
-            const dog = options.dogs.find((d) => d.id === selectedDogId);
-            await createEvent({
-              accessToken,
-              calendarId: options.profile.gcal_calendar_id,
-              event: {
-                summary: `${dog?.name ?? 'Dog'} — ${booking.type === 'boarding' ? 'Boarding' : 'Daycare'}${isHoliday ? ' 🎉' : ''}`,
-                start: { date: startDate },
-                end: {
-                  date:
-                    startDate === endDate
-                      ? endDate
-                      : new Date(new Date(`${endDate}T00:00:00`).getTime() + 86_400_000)
-                          .toISOString()
-                          .split('T')[0],
-                },
-                description: [
-                  dog?.owner_name ? `Owner: ${dog.owner_name}` : null,
-                  dog?.owner_phone ? `Phone: ${dog.owner_phone}` : null,
-                  `Total: $${booking.total_amount.toFixed(2)}`,
-                ]
-                  .filter(Boolean)
-                  .join('\n'),
-                extendedProperties: { private: { snapuppy_booking_id: booking.id } },
-              },
-            });
-          }
-        } catch {
-          // non-fatal
-        }
 
         addToast('Woof! Booking confirmed! 🐾', 'success');
         onSuccess?.();
@@ -155,10 +120,15 @@ export function CreateBookingSheet({
 
   return (
     <SlideUpSheet isOpen={isOpen} onClose={onClose} title="New Booking 🐾">
-      <form onSubmit={(e) => void handleSubmit(e)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <form
+        onSubmit={(e) => void handleSubmit(e)}
+        style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+      >
         {/* Dog selector */}
         <div className="form-field">
-          <label className="form-label" htmlFor="booking-dog">Dog *</label>
+          <label className="form-label" htmlFor="booking-dog">
+            Dog *
+          </label>
           <select
             id="booking-dog"
             className="form-input"
@@ -169,7 +139,8 @@ export function CreateBookingSheet({
             <option value="">Select a dog…</option>
             {options.dogs.map((dog) => (
               <option key={dog.id} value={dog.id}>
-                {dog.name}{dog.owner_name ? ` (${dog.owner_name})` : ''}
+                {dog.name}
+                {dog.owner_name ? ` (${dog.owner_name})` : ''}
               </option>
             ))}
           </select>
@@ -183,44 +154,133 @@ export function CreateBookingSheet({
         {/* Dates */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div className="form-field">
-            <label className="form-label" htmlFor="booking-start">Check-in</label>
-            <input id="booking-start" type="date" className="form-input" value={startDate} onChange={(e) => handleStartChange(e.target.value)} required />
+            <label className="form-label" htmlFor="booking-start">
+              Check-in
+            </label>
+            <input
+              id="booking-start"
+              type="date"
+              className="form-input"
+              value={startDate}
+              onChange={(e) => handleStartChange(e.target.value)}
+              required
+            />
           </div>
           <div className="form-field">
-            <label className="form-label" htmlFor="booking-end">Check-out</label>
-            <input id="booking-end" type="date" className="form-input" value={endDate} min={startDate} onChange={(e) => handleEndChange(e.target.value)} required />
+            <label className="form-label" htmlFor="booking-end">
+              Check-out
+            </label>
+            <input
+              id="booking-end"
+              type="date"
+              className="form-input"
+              value={endDate}
+              min={startDate}
+              onChange={(e) => handleEndChange(e.target.value)}
+              required
+            />
           </div>
         </div>
 
         {/* Holiday toggle */}
         <div
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             background: isHoliday ? 'var(--blush)' : 'var(--cream)',
             border: `1.5px solid ${isHoliday ? 'var(--terracotta)' : 'var(--pebble)'}`,
-            borderRadius: 10, padding: '10px 14px', transition: 'all 150ms ease',
+            borderRadius: 10,
+            padding: '10px 14px',
+            transition: 'all 150ms ease',
           }}
         >
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: isHoliday ? 'var(--terracotta)' : 'var(--bark)' }}>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 14,
+                color: isHoliday ? 'var(--terracotta)' : 'var(--bark)',
+              }}
+            >
               🎉 Holiday booking
             </div>
-            <div style={{ fontSize: 11, color: 'var(--bark-light)', marginTop: 2 }}>Applies holiday surcharge</div>
+            <div style={{ fontSize: 11, color: 'var(--bark-light)', marginTop: 2 }}>
+              Applies holiday surcharge
+            </div>
           </div>
-          <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
-            <input type="checkbox" checked={isHoliday} onChange={(e) => setIsHoliday(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-            <span style={{ position: 'absolute', inset: 0, borderRadius: 99, background: isHoliday ? 'var(--terracotta)' : 'var(--pebble)', transition: 'background 200ms ease' }} />
-            <span style={{ position: 'absolute', top: 3, left: isHoliday ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 200ms ease', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+          <label
+            style={{
+              position: 'relative',
+              display: 'inline-block',
+              width: 44,
+              height: 24,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={isHoliday}
+              onChange={(e) => setIsHoliday(e.target.checked)}
+              style={{ opacity: 0, width: 0, height: 0 }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: 99,
+                background: isHoliday ? 'var(--terracotta)' : 'var(--pebble)',
+                transition: 'background 200ms ease',
+              }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                top: 3,
+                left: isHoliday ? 23 : 3,
+                width: 18,
+                height: 18,
+                borderRadius: '50%',
+                background: 'white',
+                transition: 'left 200ms ease',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+              }}
+            />
           </label>
         </div>
 
         {/* Rate preview */}
         <div style={{ background: 'var(--sage-light)', borderRadius: 12, padding: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--bark-light)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 8,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--bark-light)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
               Rate Preview
             </span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--sage)', background: 'white', borderRadius: 99, padding: '2px 8px', textTransform: 'uppercase' }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--sage)',
+                background: 'white',
+                borderRadius: 99,
+                padding: '2px 8px',
+                textTransform: 'uppercase',
+              }}
+            >
               {pricing?.type ?? (startDate === endDate ? 'daycare' : 'boarding')}
             </span>
           </div>
@@ -234,10 +294,29 @@ export function CreateBookingSheet({
           {pricing && pricing.days.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
               {pricing.days.map((day) => (
-                <div key={day.date} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--bark)' }}>
+                <div
+                  key={day.date}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 12,
+                    color: 'var(--bark)',
+                  }}
+                >
                   <span>{day.date}</span>
                   <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {day.is_holiday && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase' }}>Holiday</span>}
+                    {day.is_holiday && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: 'var(--terracotta)',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        Holiday
+                      </span>
+                    )}
                     <span style={{ fontWeight: 600 }}>${day.amount.toFixed(2)}</span>
                   </span>
                 </div>
@@ -245,15 +324,35 @@ export function CreateBookingSheet({
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--sage)', paddingTop: 8 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderTop: '1px solid var(--sage)',
+              paddingTop: 8,
+            }}
+          >
             <span style={{ fontWeight: 700, color: 'var(--bark)' }}>Total</span>
-            <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--terracotta)', letterSpacing: '-0.03em' }}>
+            <span
+              style={{
+                fontSize: 22,
+                fontWeight: 900,
+                color: 'var(--terracotta)',
+                letterSpacing: '-0.03em',
+              }}
+            >
               ${(pricing?.totalAmount ?? 0).toFixed(2)}
             </span>
           </div>
         </div>
 
-        <button type="submit" className="btn-sage" disabled={submitting || !selectedDogId} style={{ marginTop: 4 }}>
+        <button
+          type="submit"
+          className="btn-sage"
+          disabled={submitting || !selectedDogId}
+          style={{ marginTop: 4 }}
+        >
           {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
         </button>
       </form>
