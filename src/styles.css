@@ -1,5 +1,19 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-sage: #8fb886;
+  --color-sage-light: #d4e4d0;
+  --color-terracotta: #d4845a;
+  --color-sky: #7ec8e3;
+  --color-sunshine: #f5d76e;
+  --color-warm-beige: #f5f0eb;
+  --color-cream: #fdfbf7;
+  --color-bark: #4a3728;
+  --color-bark-light: #8b7355;
+  --color-pebble: #e8e0d8;
+  --color-blush: #f4c7b0;
+}
+
 :root {
   --sage: #8fb886;
   --sage-light: #d4e4d0;
