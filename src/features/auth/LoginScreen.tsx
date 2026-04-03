@@ -44,8 +44,11 @@ function GoogleIcon() {
 }
 
 export function LoginScreen() {
-  const { signIn } = useAuthContext();
+  const { signIn, signInAnonymously } = useAuthContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningInAnonymously, setIsSigningInAnonymously] = useState(false);
+
+  const enableGuestLogin = import.meta.env.VITE_ENABLE_GUEST_LOGIN !== 'false';
 
   async function handleSignIn() {
     setIsSigningIn(true);
@@ -53,6 +56,15 @@ export function LoginScreen() {
       await signIn();
     } finally {
       setIsSigningIn(false);
+    }
+  }
+
+  async function handleGuestSignIn() {
+    setIsSigningInAnonymously(true);
+    try {
+      await signInAnonymously();
+    } finally {
+      setIsSigningInAnonymously(false);
     }
   }
 
@@ -93,6 +105,20 @@ export function LoginScreen() {
           <GoogleIcon />
           {isSigningIn ? 'Connecting…' : 'Continue with Google'}
         </button>
+
+        {enableGuestLogin && (
+          <div style={{ marginTop: 12 }}>
+            <button
+              className="btn-sage"
+              onClick={() => void handleGuestSignIn()}
+              disabled={isSigningInAnonymously}
+              aria-label="Continue as Guest"
+              style={{ minHeight: 44 }}
+            >
+              {isSigningInAnonymously ? 'Continuing as Guest…' : 'Continue as Guest'}
+            </button>
+          </div>
+        )}
       </div>
 
       <p

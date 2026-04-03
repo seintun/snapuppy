@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { onAuthStateChange, signInWithGoogle, signOut as supabaseSignOut, supabase } from '@/lib/supabase';
+import { onAuthStateChange, signInWithGoogle, signOut as supabaseSignOut, supabase, signInAnonymously as supabaseSignInAnonymously } from '@/lib/supabase';
 import { getOrCreateSnapuppyCalendar } from '@/lib/gcal';
 import { getProfile, updateProfile } from '@/features/profile/profileService';
+import { markProfileAsGuest } from '@/features/guest/guestService';
 import type { Database } from '@/types/database';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -12,6 +13,7 @@ export interface AuthState {
   profile: Profile | null;
   loading: boolean;
   signIn: () => Promise<void>;
+  signInAnonymously: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -25,11 +27,25 @@ export function useAuth(): AuthState {
 
     async function handleSignIn(currentUser: User) {
       try {
-        const fetched = await getProfile(currentUser.id);
+        let fetched = await getProfile(currentUser.id);
         if (!mounted) return;
         setProfile(fetched);
 
-        if (!fetched.gcal_calendar_id) {
+        // Check if user is anonymous and mark as guest if needed
+        if (currentUser.is_anonymous && !fetched.is_guest) {
+          try {
+            await markProfileAsGuest(currentUser.id);
+            // Refresh the profile to get updated is_guest flag
+            const refreshed = await getProfile(currentUser.id);
+            if (mounted) setProfile(refreshed);
+            fetched = refreshed; // Update local variable for GCal check below
+          } catch {
+            // If marking as guest fails, continue anyway
+          }
+        }
+
+        // Skip GCal calendar creation for guest users
+        if (!fetched.gcal_calendar_id && !fetched.is_guest) {
           try {
             const { data: { session } } = await supabase.auth.getSession();
             const accessToken = session?.provider_token;
@@ -73,11 +89,15 @@ export function useAuth(): AuthState {
     await signInWithGoogle();
   }, []);
 
+  const signInAnonymously = useCallback(async () => {
+    await supabaseSignInAnonymously();
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabaseSignOut();
     setUser(null);
     setProfile(null);
   }, []);
 
-  return { user, profile, loading, signIn, signOut };
+  return { user, profile, loading, signIn, signInAnonymously, signOut };
 }
