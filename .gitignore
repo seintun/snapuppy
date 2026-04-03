@@ -36,3 +36,7 @@ dist-types
 
 # Supabase
 supabase/.temp/
+
+# OMX and TS build cache
+.omx/
+*.tsbuildinfo
