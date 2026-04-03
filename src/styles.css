@@ -170,3 +170,5 @@ textarea {
   padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
   box-shadow: var(--shadow-warm);
 }
+
+.bottom-tab-link { display: block; }
