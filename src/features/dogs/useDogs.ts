@@ -25,7 +25,7 @@ interface UseDogsResult {
 export function useDogs(): UseDogsResult {
   const { user } = useAuthContext();
   const [dogs, setDogs] = useState<Dog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(user));
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
@@ -33,14 +33,15 @@ export function useDogs(): UseDogsResult {
 
   useEffect(() => {
     if (!user) {
-      setDogs([]);
-      setLoading(false);
+      queueMicrotask(() => {
+        setDogs([]);
+        setError(null);
+        setLoading(false);
+      });
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     getDogs(user.id)
       .then((data) => {
