@@ -14,6 +14,7 @@ import {
   type CreateEventRequest,
   type UpdateEventRequest,
 } from '@/lib/gcal';
+import { supabase } from '@/lib/supabase';
 import type { Tables, TablesInsert } from '@/types/database';
 
 type BookingRow = Tables<'bookings'>;
@@ -74,8 +75,7 @@ interface BookingQueryRow extends BookingRow {
 }
 
 async function getSupabase() {
-  const mod = await import('@/lib/supabase');
-  return mod.supabase;
+  return supabase;
 }
 
 interface GCalContext {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuthContext } from './useAuthContext';
 
 function PawIcon() {
@@ -50,17 +51,20 @@ function GoogleIcon() {
 }
 
 export function LoginScreen() {
-  const { signIn, signInWithPassword, signUpWithPassword } = useAuthContext();
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const { user, loading, signIn, signInWithPassword, signUpWithPassword } = useAuthContext();
 
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [useEmail, setUseEmail] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  if (!loading && user) {
+    return <Navigate to="/calendar" replace />;
+  }
 
   async function handleSignIn() {
     setIsSigningIn(true);
@@ -103,14 +107,18 @@ export function LoginScreen() {
 
   return (
     <div className="login-screen">
-      <div style={{ textAlign: 'center', marginBottom: 24, animation: 'stagger-fade-in 400ms ease-out both' }}>
+      <div
+        style={{
+          textAlign: 'center',
+          marginBottom: 24,
+          animation: 'stagger-fade-in 400ms ease-out both',
+        }}
+      >
         <div className="login-logo">
           <PawIcon />
         </div>
         <h1 className="login-title">Snapuppy</h1>
-        <p className="login-tagline">
-          Your dog sitting command center
-        </p>
+        <p className="login-tagline">Your dog sitting command center</p>
       </div>
 
       <div
@@ -133,10 +141,19 @@ export function LoginScreen() {
               <GoogleIcon />
               {isSigningIn ? 'Connecting…' : 'Continue with Google'}
             </button>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '8px 0' }}>
               <div style={{ flex: 1, height: 1, background: 'var(--pebble)' }} />
-              <span style={{ fontSize: 13, color: 'var(--bark-light)', fontWeight: 600, textTransform: 'uppercase' }}>OR</span>
+              <span
+                style={{
+                  fontSize: 13,
+                  color: 'var(--bark-light)',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                }}
+              >
+                OR
+              </span>
               <div style={{ flex: 1, height: 1, background: 'var(--pebble)' }} />
             </div>
 
@@ -151,7 +168,15 @@ export function LoginScreen() {
               Log in with email
             </button>
             <button
-              style={{ background: 'none', border: 'none', color: 'var(--sage)', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginTop: 4 }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--sage)',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+                marginTop: 4,
+              }}
               onClick={() => {
                 setUseEmail(true);
                 setIsSignUp(true);
@@ -161,12 +186,26 @@ export function LoginScreen() {
             </button>
           </div>
         ) : (
-          <form style={{ display: 'flex', flexDirection: 'column', gap: 16 }} onSubmit={handleEmailAuth}>
+          <form
+            style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+            onSubmit={handleEmailAuth}
+          >
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
               <button
                 type="button"
                 onClick={() => setUseEmail(false)}
-                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--bark-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 14 }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: 'var(--bark-light)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
               >
                 ← Back
               </button>
@@ -176,7 +215,9 @@ export function LoginScreen() {
             </div>
 
             <div className="form-field">
-              <label className="form-label" htmlFor="email">Email</label>
+              <label className="form-label" htmlFor="email">
+                Email
+              </label>
               <input
                 id="email"
                 type="email"
@@ -187,9 +228,11 @@ export function LoginScreen() {
                 placeholder="you@example.com"
               />
             </div>
-            
+
             <div className="form-field">
-              <label className="form-label" htmlFor="password">Password</label>
+              <label className="form-label" htmlFor="password">
+                Password
+              </label>
               <input
                 id="password"
                 type="password"
@@ -202,8 +245,13 @@ export function LoginScreen() {
             </div>
 
             {isSignUp && (
-              <div className="form-field" style={{ animation: 'stagger-fade-in 200ms ease-out both' }}>
-                <label className="form-label" htmlFor="confirm-password">Confirm Password</label>
+              <div
+                className="form-field"
+                style={{ animation: 'stagger-fade-in 200ms ease-out both' }}
+              >
+                <label className="form-label" htmlFor="confirm-password">
+                  Confirm Password
+                </label>
                 <input
                   id="confirm-password"
                   type="password"
@@ -217,7 +265,16 @@ export function LoginScreen() {
             )}
 
             {authError && (
-              <div style={{ padding: '8px 12px', background: 'var(--blush)', color: '#7b2f1c', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  background: 'var(--blush)',
+                  color: '#7b2f1c',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
                 {authError}
               </div>
             )}
@@ -228,22 +285,34 @@ export function LoginScreen() {
               disabled={isAuthLoading}
               style={{ marginTop: 8 }}
             >
-              {isAuthLoading
-                ? 'Loading...'
-                : isSignUp
-                  ? 'Sign Up'
-                  : 'Log In'}
+              {isAuthLoading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Log In'}
             </button>
 
-            <p style={{ margin: '12px 0 0', textAlign: 'center', fontSize: 14, color: 'var(--bark-light)' }}>
-              {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            <p
+              style={{
+                margin: '12px 0 0',
+                textAlign: 'center',
+                fontSize: 14,
+                color: 'var(--bark-light)',
+              }}
+            >
+              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
               <button
                 type="button"
                 onClick={() => {
                   setIsSignUp(!isSignUp);
                   setAuthError(null);
                 }}
-                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--sage)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: 'var(--sage)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 2,
+                }}
               >
                 {isSignUp ? 'Log in' : 'Sign up'}
               </button>
