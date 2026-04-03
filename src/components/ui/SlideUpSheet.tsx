@@ -13,9 +13,9 @@ export function SlideUpSheet({ isOpen, onClose, title, children }: SlideUpSheetP
 
   useEffect(() => {
     if (!isOpen) return;
-    // Allow the element to mount at translateY(100%), then add --open to animate in
+    // Animate in
     const frame = requestAnimationFrame(() => {
-      sheetRef.current?.classList.add('sheet--open');
+      sheetRef.current?.style.setProperty('transform', 'translateY(0)');
     });
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
@@ -34,14 +34,14 @@ export function SlideUpSheet({ isOpen, onClose, title, children }: SlideUpSheetP
 
   return (
     <div
-      className="sheet-backdrop"
+      className="fixed inset-0 bg-bark/40 backdrop-blur-[4px] flex items-end justify-center z-50 animate-in fade-in duration-200"
       onClick={onClose}
       role="presentation"
       aria-hidden="true"
     >
       <div
         ref={sheetRef}
-        className="sheet"
+        className="w-[min(520px,100%)] bg-cream rounded-t-[18px] px-4 pt-2 pb-[calc(16px+env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(74,55,40,0.12)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] translate-y-full max-h-[90dvh] overflow-y-auto overscroll-contain"
         role="dialog"
         aria-modal="true"
         aria-label={title ?? 'Sheet'}
@@ -55,8 +55,8 @@ export function SlideUpSheet({ isOpen, onClose, title, children }: SlideUpSheetP
         }}
         {...handlers}
       >
-        <div className="sheet__handle" aria-hidden="true" />
-        {title ? <h3 className="sheet__title">{title}</h3> : null}
+        <div className="w-9 h-1 bg-pebble rounded-full mx-auto mb-3 cursor-grab active:cursor-grabbing" aria-hidden="true" />
+        {title ? <h3 className="m-0 mb-4 text-[17px] font-extrabold text-bark">{title}</h3> : null}
         {children}
       </div>
     </div>

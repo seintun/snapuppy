@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useAuthContext } from '@/features/auth/useAuthContext';
@@ -32,9 +32,8 @@ export function CreateBookingSheet({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     reset,
-    setValue,
     formState: { errors },
   } = useForm<CreateBookingFormData>({
     resolver: zodResolver(CreateBookingSchema),
@@ -48,10 +47,10 @@ export function CreateBookingSheet({
   });
 
   // Watch fields for real-time pricing calculation
-  const startDate = watch('startDate');
-  const endDate = watch('endDate');
-  const isHoliday = watch('isHoliday');
-  const selectedDogId = watch('dogId');
+  const startDate = useWatch({ control, name: 'startDate' });
+  const endDate = useWatch({ control, name: 'endDate' });
+  const isHoliday = useWatch({ control, name: 'isHoliday' });
+  const selectedDogId = useWatch({ control, name: 'dogId' });
 
   // Reset form when opening/closing or prefilled date changes
   useEffect(() => {
@@ -131,9 +130,7 @@ export function CreateBookingSheet({
               </option>
             ))}
           </select>
-          {errors.dogId && (
-            <p className="text-xs text-terracotta mt-1">{errors.dogId.message}</p>
-          )}
+          {errors.dogId && <p className="text-xs text-terracotta mt-1">{errors.dogId.message}</p>}
           {options.dogs.length === 0 && (
             <p className="text-xs text-bark-light mt-1">
               No dogs yet — add one in the Dogs tab first.
@@ -178,27 +175,17 @@ export function CreateBookingSheet({
         {/* Holiday toggle */}
         <div
           className={`flex items-center justify-between rounded-xl p-3.5 border-1.5 transition-all duration-150 ${
-            isHoliday
-              ? 'bg-blush border-terracotta'
-              : 'bg-cream border-pebble'
+            isHoliday ? 'bg-blush border-terracotta' : 'bg-cream border-pebble'
           }`}
         >
           <div>
-            <div
-              className={`font-bold text-sm ${
-                isHoliday ? 'text-terracotta' : 'text-bark'
-              }`}
-            >
+            <div className={`font-bold text-sm ${isHoliday ? 'text-terracotta' : 'text-bark'}`}>
               🎉 Holiday booking
             </div>
             <div className="text-[11px] text-bark-light mt-0.5">Applies holiday surcharge</div>
           </div>
           <label className="relative inline-block w-11 h-6 cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only"
-              {...register('isHoliday')}
-            />
+            <input type="checkbox" className="sr-only" {...register('isHoliday')} />
             <span
               className={`absolute inset-0 rounded-full transition-colors duration-200 ${
                 isHoliday ? 'bg-terracotta' : 'bg-pebble'
@@ -255,11 +242,7 @@ export function CreateBookingSheet({
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="btn-sage mt-1"
-          disabled={submitting || !selectedDogId}
-        >
+        <button type="submit" className="btn-sage mt-1" disabled={submitting || !selectedDogId}>
           {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
         </button>
       </form>

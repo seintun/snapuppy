@@ -1,6 +1,7 @@
 -- profiles (extends Supabase auth.users)
 create table public.profiles (
   id uuid primary key references auth.users on delete cascade,
+  business_name text,
   display_name text,
   email text,
   nightly_rate decimal(10,2) not null default 0,
@@ -16,6 +17,7 @@ create table public.dogs (
   id uuid primary key default gen_random_uuid(),
   sitter_id uuid not null references public.profiles(id) on delete cascade,
   name text not null,
+  breed text,
   owner_name text,
   owner_phone text,
   photo_url text,

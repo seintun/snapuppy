@@ -26,27 +26,34 @@ export function PwaStatus() {
   // Show "Sync Success" briefly after all background activities finish
   const isSyncing = isFetching > 0 || isMutating > 0;
   useEffect(() => {
+    let timer: number | null = null;
+
     if (isSyncing) {
-      setShowSyncStatus(true);
+      timer = window.setTimeout(() => setShowSyncStatus(true), 0);
     } else {
-      const timer = setTimeout(() => setShowSyncStatus(false), 2000);
-      return () => clearTimeout(timer);
+      timer = window.setTimeout(() => setShowSyncStatus(false), 2000);
     }
+
+    return () => {
+      if (timer !== null) {
+        clearTimeout(timer);
+      }
+    };
   }, [isSyncing]);
 
   return (
     <>
       {/* Network/Sync Status Banner */}
       {!isOnline || (showSyncSuccess && isOnline) ? (
-        <div 
+        <div
           className={`fixed top-3 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-4 py-2 rounded-full border shadow-lg transition-all duration-300 animate-in fade-in slide-in-from-top-4 ${
-            !isOnline 
-              ? 'bg-blush border-terracotta text-terracotta' 
-              : isSyncing 
-                ? 'bg-sky/10 border-sky text-sky' 
+            !isOnline
+              ? 'bg-blush border-terracotta text-terracotta'
+              : isSyncing
+                ? 'bg-sky/10 border-sky text-sky'
                 : 'bg-sage-light border-sage text-sage'
           }`}
-          role="status" 
+          role="status"
           aria-live="polite"
         >
           {!isOnline ? (
@@ -70,20 +77,22 @@ export function PwaStatus() {
 
       {/* PWA Install Prompt */}
       {canInstall ? (
-        <div 
-          className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom))] w-[min(480px,calc(100%-24px))] z-[35] bg-cream border border-pebble rounded-2xl shadow-xl p-3.5 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-4" 
-          role="status" 
+        <div
+          className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom))] w-[min(480px,calc(100%-24px))] z-[35] bg-cream border border-pebble rounded-2xl shadow-xl p-3.5 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-4"
+          role="status"
           aria-live="polite"
         >
           <div className="flex flex-col gap-0.5 min-w-0">
             <strong className="text-sm text-bark font-extrabold">Install Snapuppy</strong>
-            <span className="text-xs text-bark-light truncate">Quick access from your home screen.</span>
+            <span className="text-xs text-bark-light truncate">
+              Quick access from your home screen.
+            </span>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button 
-              type="button" 
-              className="h-10 bg-sage text-white font-bold text-sm rounded-xl px-4 flex items-center gap-2 shadow-sm active:scale-95 transition-transform" 
+            <button
+              type="button"
+              className="h-10 bg-sage text-white font-bold text-sm rounded-xl px-4 flex items-center gap-2 shadow-sm active:scale-95 transition-transform"
               onClick={() => void install()}
             >
               <DownloadSimple size={18} weight="bold" />

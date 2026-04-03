@@ -5,13 +5,19 @@ import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useToast } from '@/components/ui/useToast';
 import { useCreateDog } from '@/hooks/useDogs';
 import { DogSchema, type DogFormData } from '@/lib/schemas';
+import { updateDog } from './dogService';
+import type { Database } from '@/types/database';
+
+type Dog = Database['public']['Tables']['dogs']['Row'];
 
 interface AddDogSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  editingDog?: Dog;
+  onSuccess?: () => void;
 }
 
-export function AddDogSheet({ isOpen, onClose }: AddDogSheetProps) {
+export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSheetProps) {
   const { addToast } = useToast();
   const { mutateAsync: createDogMutation, isPending: submitting } = useCreateDog();
 
@@ -35,33 +41,61 @@ export function AddDogSheet({ isOpen, onClose }: AddDogSheetProps) {
   // Reset form when opening/closing
   useEffect(() => {
     if (isOpen) {
-      reset();
+      if (editingDog) {
+        reset({
+          name: editingDog.name,
+          breed: editingDog.breed ?? '',
+          ownerName: editingDog.owner_name ?? '',
+          ownerPhone: editingDog.owner_phone ?? '',
+          notes: editingDog.notes ?? '',
+          photoUrl: editingDog.photo_url ?? '',
+        });
+      } else {
+        reset();
+      }
     }
-  }, [isOpen, reset]);
+  }, [editingDog, isOpen, reset]);
 
   const onFormSubmit = useCallback(
     async (data: DogFormData) => {
       try {
-        await createDogMutation({
-          name: data.name,
-          breed: data.breed || null,
-          owner_name: data.ownerName || null,
-          owner_phone: data.ownerPhone || null,
-          notes: data.notes || null,
-          photo_url: data.photoUrl || null,
-        });
+        if (editingDog) {
+          await updateDog(editingDog.id, {
+            name: data.name,
+            breed: data.breed || null,
+            owner_name: data.ownerName || null,
+            owner_phone: data.ownerPhone || null,
+            notes: data.notes || null,
+            photo_url: data.photoUrl || null,
+          });
+          addToast(`${data.name} updated successfully! 🐾`, 'success');
+        } else {
+          await createDogMutation({
+            name: data.name,
+            breed: data.breed || null,
+            owner_name: data.ownerName || null,
+            owner_phone: data.ownerPhone || null,
+            notes: data.notes || null,
+            photo_url: data.photoUrl || null,
+          });
+          addToast(`${data.name} added successfully! 🐾`, 'success');
+        }
 
-        addToast(`${data.name} added successfully! 🐾`, 'success');
+        onSuccess?.();
         onClose();
       } catch (err) {
-        addToast(err instanceof Error ? err.message : 'Failed to add dog', 'error');
+        addToast(err instanceof Error ? err.message : 'Failed to save dog', 'error');
       }
     },
-    [createDogMutation, addToast, onClose],
+    [createDogMutation, addToast, editingDog, onClose, onSuccess],
   );
 
   return (
-    <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Add New Dog 🐾">
+    <SlideUpSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingDog ? 'Edit Dog 🐾' : 'Add New Dog 🐾'}
+    >
       <form onSubmit={(e) => void handleSubmit(onFormSubmit)(e)} className="flex flex-col gap-4">
         {/* Name & Breed */}
         <div className="grid grid-cols-2 gap-3">
@@ -76,9 +110,7 @@ export function AddDogSheet({ isOpen, onClose }: AddDogSheetProps) {
               placeholder="e.g. Buddy"
               {...register('name')}
             />
-            {errors.name && (
-              <p className="text-xs text-terracotta mt-1">{errors.name.message}</p>
-            )}
+            {errors.name && <p className="text-xs text-terracotta mt-1">{errors.name.message}</p>}
           </div>
           <div className="form-field">
             <label className="form-label" htmlFor="dog-breed">
@@ -152,7 +184,7 @@ export function AddDogSheet({ isOpen, onClose }: AddDogSheetProps) {
         </div>
 
         <button type="submit" className="btn-sage mt-2" disabled={submitting}>
-          {submitting ? 'Adding Dog…' : 'Add Dog to Pack 🐾'}
+          {submitting ? 'Saving…' : editingDog ? 'Save Dog Changes 🐾' : 'Add Dog to Pack 🐾'}
         </button>
       </form>
     </SlideUpSheet>

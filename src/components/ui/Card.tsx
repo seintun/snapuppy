@@ -6,17 +6,14 @@ interface CardProps extends PropsWithChildren {
   onClick?: () => void;
 }
 
-export function Card({ children, className, pressable, onClick }: CardProps) {
-  const classes = [
-    'surface-card',
-    pressable ? 'surface-card--pressable' : '',
-    className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
+export function Card({ children, className = '', pressable, onClick }: CardProps) {
   return (
-    <section className={classes} onClick={onClick}>
+    <section 
+      className={`bg-cream rounded-xl shadow-sm border border-pebble p-4 transition-all duration-120 ${
+        pressable ? 'cursor-pointer active:scale-[0.98] active:shadow-none' : ''
+      } ${className}`} 
+      onClick={onClick}
+    >
       {children}
     </section>
   );

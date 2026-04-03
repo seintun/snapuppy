@@ -3,7 +3,6 @@ import { useAuthContext } from '@/features/auth/useAuthContext';
 import { getProfile, updateProfile } from '@/features/profile/profileService';
 import type { Database } from '@/types/database';
 
-type Profile = Database['public']['Tables']['profiles']['Row'];
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 /**

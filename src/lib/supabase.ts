@@ -4,8 +4,15 @@ import type { Database } from '@/types/database';
 
 function requiredEnv(name: 'VITE_SUPABASE_URL' | 'VITE_SUPABASE_ANON_KEY'): string {
   const value = import.meta.env[name];
+  const nodeEnv = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env
+    ?.NODE_ENV;
+  const isTestRuntime = import.meta.env.MODE === 'test' || nodeEnv === 'test';
 
   if (!value || typeof value !== 'string') {
+    if (isTestRuntime) {
+      return name === 'VITE_SUPABASE_URL' ? 'http://127.0.0.1:54321' : 'test-anon-key';
+    }
+
     throw new Error(`Missing required env var: ${name}`);
   }
 

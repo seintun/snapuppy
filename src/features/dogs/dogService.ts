@@ -16,23 +16,20 @@ export async function getDogs(sitterId: string): Promise<Dog[]> {
   return data;
 }
 
-export async function getDog(id: string): Promise<Dog> {
-  const { data, error } = await supabase
-    .from('dogs')
-    .select('*')
-    .eq('id', id)
-    .single();
+export async function getDog(id: string, sitterId?: string): Promise<Dog> {
+  let query = supabase.from('dogs').select('*').eq('id', id);
+  if (sitterId) {
+    query = query.eq('sitter_id', sitterId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error) throw error;
   return data;
 }
 
 export async function createDog(dog: DogInsert): Promise<Dog> {
-  const { data, error } = await supabase
-    .from('dogs')
-    .insert(dog)
-    .select()
-    .single();
+  const { data, error } = await supabase.from('dogs').insert(dog).select().single();
 
   if (error) throw error;
   return data;
@@ -50,8 +47,13 @@ export async function updateDog(id: string, updates: DogUpdate): Promise<Dog> {
   return data;
 }
 
-export async function deleteDog(id: string): Promise<void> {
-  const { error } = await supabase.from('dogs').delete().eq('id', id);
+export async function deleteDog(id: string, sitterId?: string): Promise<void> {
+  let query = supabase.from('dogs').delete().eq('id', id);
+  if (sitterId) {
+    query = query.eq('sitter_id', sitterId);
+  }
+
+  const { error } = await query;
   if (error) throw error;
 }
 
@@ -62,9 +64,7 @@ export async function uploadDogPhoto(dogId: string, file: File): Promise<string>
 
   if (error) throw error;
 
-  const { data } = supabase.storage
-    .from('dog-photos')
-    .getPublicUrl(`${dogId}/${file.name}`);
+  const { data } = supabase.storage.from('dog-photos').getPublicUrl(`${dogId}/${file.name}`);
 
   return data.publicUrl;
 }

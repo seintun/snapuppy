@@ -9,7 +9,7 @@ import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
 export function ProfileScreen() {
   const { signOut } = useAuthContext();
   const { addToast } = useToast();
-  
+
   const { data: profile, isLoading } = useProfile();
   const { mutateAsync: updateProfileMutation, isPending: saving } = useUpdateProfile();
 
@@ -33,7 +33,7 @@ export function ProfileScreen() {
   useEffect(() => {
     if (profile) {
       reset({
-        businessName: profile.business_name,
+        businessName: profile.business_name ?? '',
         nightlyRate: profile.nightly_rate,
         daycareRate: profile.daycare_rate,
         holidaySurcharge: profile.holiday_surcharge,

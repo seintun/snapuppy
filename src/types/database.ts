@@ -105,6 +105,7 @@ export type Database = {
       };
       dogs: {
         Row: {
+          breed: string | null;
           created_at: string;
           id: string;
           name: string;
@@ -116,6 +117,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          breed?: string | null;
           created_at?: string;
           id?: string;
           name: string;
@@ -127,6 +129,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          breed?: string | null;
           created_at?: string;
           id?: string;
           name?: string;
@@ -149,6 +152,7 @@ export type Database = {
       };
       profiles: {
         Row: {
+          business_name: string | null;
           created_at: string;
           cutoff_time: string;
           daycare_rate: number;
@@ -161,6 +165,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          business_name?: string | null;
           created_at?: string;
           cutoff_time?: string;
           daycare_rate?: number;
@@ -173,6 +178,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          business_name?: string | null;
           created_at?: string;
           cutoff_time?: string;
           daycare_rate?: number;
