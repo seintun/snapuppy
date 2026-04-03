@@ -22,7 +22,7 @@ export const signInWithGoogle = () =>
     provider: 'google',
     options: {
       scopes: 'openid email profile https://www.googleapis.com/auth/calendar',
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}/auth/callback`,
     },
   });
 
@@ -47,3 +47,8 @@ export const onAuthStateChange = (
 
   return () => subscription.unsubscribe();
 };
+
+export async function signInAnonymously(): Promise<void> {
+  const { error } = await supabase.auth.signInAnonymously();
+  if (error) throw error;
+}

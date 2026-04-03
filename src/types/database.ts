@@ -166,6 +166,7 @@ export type Database = {
           gcal_calendar_id: string | null
           holiday_surcharge: number
           id: string
+          is_guest: boolean
           nightly_rate: number
           updated_at: string
         }
@@ -178,6 +179,7 @@ export type Database = {
           gcal_calendar_id?: string | null
           holiday_surcharge?: number
           id: string
+          is_guest?: boolean
           nightly_rate?: number
           updated_at?: string
         }
@@ -190,6 +192,7 @@ export type Database = {
           gcal_calendar_id?: string | null
           holiday_surcharge?: number
           id?: string
+          is_guest?: boolean
           nightly_rate?: number
           updated_at?: string
         }
