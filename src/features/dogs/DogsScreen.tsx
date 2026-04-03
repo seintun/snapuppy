@@ -1,119 +1,110 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus, Trash } from '@phosphor-icons/react';
 import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/useToast';
-import { useDogs } from './useDogs';
-import { useAuthContext } from '@/features/auth/useAuthContext';
+import { useDogs, useDeleteDog } from '@/hooks/useDogs';
 import { AddDogSheet } from './AddDogSheet';
-import { DogDetailScreen } from './DogDetailScreen';
-import type { Database } from '@/types/database';
-
-export { DogDetailScreen };
-
-type Dog = Database['public']['Tables']['dogs']['Row'];
 
 export function DogsScreen() {
-  const { user } = useAuthContext();
-  const { dogs, loading, error, deleteDog } = useDogs();
+  const { data: dogs = [], isLoading, isError, error } = useDogs();
+  const { mutateAsync: deleteDogMutation } = useDeleteDog();
   const { addToast } = useToast();
-  const navigate = useNavigate();
-  const [isAddDogOpen, setIsAddDogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const filteredDogs = useMemo(() => {
-    if (!searchQuery.trim()) return dogs;
-
-    const needle = searchQuery.trim().toLowerCase();
-    return dogs.filter((dog) => dog.name.toLowerCase().includes(needle));
-  }, [dogs, searchQuery]);
-
-  async function handleDeleteDog(dog: Dog) {
-    if (!confirm(`Delete ${dog.name}? This cannot be undone.`)) return;
+  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to remove ${name}?`)) return;
 
     try {
-      await deleteDog(dog.id);
-      addToast(`${dog.name} removed`, 'success');
+      await deleteDogMutation(id);
+      addToast('Dog removed 🐾', 'info');
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Failed to delete dog', 'error');
+      addToast(err instanceof Error ? err.message : 'Failed to remove dog', 'error');
     }
+  };
+
+  if (isLoading && !dogs.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-sm text-bark-light">
+        Loading dogs…
+      </div>
+    );
   }
 
-  if (!user) return null;
+  if (isError) {
+    return (
+      <div className="p-6 text-center text-terracotta font-semibold">
+        {error instanceof Error ? error.message : 'Failed to load dogs'}
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="flex justify-between items-center mb-3">
-        <h1 className="page-title !m-0">Dogs</h1>
-        {dogs.length > 0 && (
-          <button className="btn-secondary" type="button" onClick={() => setIsAddDogOpen(true)}>
-            + Add Dog
-          </button>
-        )}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="page-title !m-0">Dogs</h1>
+          <p className="m-0 mt-1 text-bark-light text-sm">
+            Manage your regular clients and their details.
+          </p>
+        </div>
+        <button
+          onClick={() => setIsAddOpen(true)}
+          className="flex items-center gap-2 bg-sage text-white font-bold px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-transform"
+        >
+          <Plus size={20} weight="bold" />
+          Add Dog
+        </button>
       </div>
 
-      {loading ? <p className="text-bark-light">Loading dogs...</p> : null}
-      {!loading && error ? <p className="text-terracotta">{error}</p> : null}
-
-      {!loading && !error ? (
-        filteredDogs.length === 0 ? (
-          <EmptyState
-            title="No dogs yet"
-            description="Add your first furry client to get started."
-            actionLabel="Add Dog"
-            onAction={() => setIsAddDogOpen(true)}
-          />
-        ) : (
-          <>
-            <input
-              type="search"
-              placeholder="Search dogs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="form-input mb-3 w-full"
-            />
-
-            <div className="flex flex-col gap-2.5">
-              {filteredDogs.map((dog) => (
-                <Card
-                  key={dog.id}
-                  className="p-4"
-                  pressable
-                  onClick={() => navigate(`/dogs/${dog.id}`)}
-                >
-                  <div className="flex items-center gap-3">
-                    <DogAvatar name={dog.name} src={dog.photo_url} size="md" />
-                    <div className="flex-1">
-                      <strong>{dog.name}</strong>
-                      <p className="m-0 text-sm text-bark-light">
-                        {dog.owner_name ?? 'No owner name'}
-                      </p>
+      {dogs.length === 0 ? (
+        <EmptyState
+          title="No dogs yet"
+          description="Add your first furry friend to start tracking their stays."
+          actionLabel="Add Dog"
+          onAction={() => setIsAddOpen(true)}
+        />
+      ) : (
+        <div className="grid gap-3.5">
+          {dogs.map((dog) => (
+            <Link key={dog.id} to={`/dogs/${dog.id}`} className="block">
+              <Card className="p-4" pressable>
+                <div className="flex items-center gap-4">
+                  <DogAvatar name={dog.name} src={dog.photo_url} size="lg" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                      <h3 className="font-extrabold text-bark truncate text-base">{dog.name}</h3>
+                      <button
+                        onClick={(e) => void handleDelete(e, dog.id, dog.name)}
+                        className="p-1.5 text-bark-light hover:text-terracotta bg-cream rounded-lg border border-pebble active:scale-90 transition-all"
+                        title="Delete dog"
+                      >
+                        <Trash size={18} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className="btn-icon"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleDeleteDog(dog);
-                      }}
-                      aria-label={`Delete ${dog.name}`}
-                    >
-                      ✕
-                    </button>
+                    <div className="flex flex-col gap-0.5 mt-0.5">
+                      <p className="text-xs text-bark-light font-bold uppercase tracking-wide">
+                        {dog.breed || 'Unknown breed'}
+                      </p>
+                      {dog.owner_name && (
+                        <p className="text-sm text-bark truncate">
+                          Owner: <span className="font-semibold">{dog.owner_name}</span>
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </Card>
-              ))}
-            </div>
-          </>
-        )
-      ) : null}
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
 
-      <AddDogSheet
-        isOpen={isAddDogOpen}
-        onClose={() => setIsAddDogOpen(false)}
-        onSuccess={() => setIsAddDogOpen(false)}
-      />
+      <AddDogSheet isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
     </>
   );
 }

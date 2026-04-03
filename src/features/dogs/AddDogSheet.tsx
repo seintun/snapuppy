@@ -1,219 +1,158 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useToast } from '@/components/ui/useToast';
-import { useAuthContext } from '@/features/auth/useAuthContext';
-import { uploadDogPhoto } from './dogService';
-import { useDogs } from './useDogs';
-import type { Database } from '@/types/database';
-
-type Dog = Database['public']['Tables']['dogs']['Row'];
+import { useCreateDog } from '@/hooks/useDogs';
+import { DogSchema, type DogFormData } from '@/lib/schemas';
 
 interface AddDogSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  editingDog?: Dog;
 }
 
-interface FormState {
-  name: string;
-  owner_name: string;
-  owner_phone: string;
-  notes: string;
-}
-
-const EMPTY_FORM: FormState = {
-  name: '',
-  owner_name: '',
-  owner_phone: '',
-  notes: '',
-};
-
-export function AddDogSheet({ isOpen, onClose, onSuccess, editingDog }: AddDogSheetProps) {
-  const { user } = useAuthContext();
-  const { createDog, updateDog } = useDogs();
+export function AddDogSheet({ isOpen, onClose }: AddDogSheetProps) {
   const { addToast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { mutateAsync: createDogMutation, isPending: submitting } = useCreateDog();
 
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [submitting, setSubmitting] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<DogFormData>({
+    resolver: zodResolver(DogSchema),
+    defaultValues: {
+      name: '',
+      breed: '',
+      ownerName: '',
+      ownerPhone: '',
+      notes: '',
+      photoUrl: '',
+    },
+  });
 
+  // Reset form when opening/closing
   useEffect(() => {
     if (isOpen) {
-      if (editingDog) {
-        setForm({
-          name: editingDog.name,
-          owner_name: editingDog.owner_name ?? '',
-          owner_phone: editingDog.owner_phone ?? '',
-          notes: editingDog.notes ?? '',
+      reset();
+    }
+  }, [isOpen, reset]);
+
+  const onFormSubmit = useCallback(
+    async (data: DogFormData) => {
+      try {
+        await createDogMutation({
+          name: data.name,
+          breed: data.breed || null,
+          owner_name: data.ownerName || null,
+          owner_phone: data.ownerPhone || null,
+          notes: data.notes || null,
+          photo_url: data.photoUrl || null,
         });
-        setPhotoPreview(editingDog.photo_url ?? null);
-      } else {
-        setForm(EMPTY_FORM);
-        setPhotoPreview(null);
+
+        addToast(`${data.name} added successfully! 🐾`, 'success');
+        onClose();
+      } catch (err) {
+        addToast(err instanceof Error ? err.message : 'Failed to add dog', 'error');
       }
-      setPhotoFile(null);
-    }
-  }, [isOpen, editingDog]);
-
-  function handleChange(field: keyof FormState, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      addToast('Dog name is required', 'error');
-      return;
-    }
-    if (!user) return;
-
-    setSubmitting(true);
-    try {
-      let photoUrl: string | null = editingDog?.photo_url ?? null;
-
-      if (editingDog) {
-        const updated = await updateDog(editingDog.id, {
-          name: form.name.trim(),
-          owner_name: form.owner_name.trim() || null,
-          owner_phone: form.owner_phone.trim() || null,
-          notes: form.notes.trim() || null,
-        });
-
-        if (photoFile) {
-          photoUrl = await uploadDogPhoto(updated.id, photoFile);
-          await updateDog(updated.id, { photo_url: photoUrl });
-        }
-
-        addToast('Dog updated! 🐾', 'success');
-      } else {
-        const created = await createDog({
-          sitter_id: user.id,
-          name: form.name.trim(),
-          owner_name: form.owner_name.trim() || null,
-          owner_phone: form.owner_phone.trim() || null,
-          notes: form.notes.trim() || null,
-        });
-
-        if (photoFile) {
-          photoUrl = await uploadDogPhoto(created.id, photoFile);
-          await updateDog(created.id, { photo_url: photoUrl });
-        }
-
-        addToast('Woof! Dog added! 🐾', 'success');
-      }
-
-      onSuccess();
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : 'Something went wrong', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  const title = editingDog ? 'Edit Dog' : 'Add Dog';
+    },
+    [createDogMutation, addToast, onClose],
+  );
 
   return (
-    <SlideUpSheet isOpen={isOpen} onClose={onClose} title={title}>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Add New Dog 🐾">
+      <form onSubmit={(e) => void handleSubmit(onFormSubmit)(e)} className="flex flex-col gap-4">
+        {/* Name & Breed */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="form-field">
+            <label className="form-label" htmlFor="dog-name">
+              Name *
+            </label>
+            <input
+              id="dog-name"
+              type="text"
+              className={`form-input w-full ${errors.name ? 'border-terracotta' : ''}`}
+              placeholder="e.g. Buddy"
+              {...register('name')}
+            />
+            {errors.name && (
+              <p className="text-xs text-terracotta mt-1">{errors.name.message}</p>
+            )}
+          </div>
+          <div className="form-field">
+            <label className="form-label" htmlFor="dog-breed">
+              Breed
+            </label>
+            <input
+              id="dog-breed"
+              type="text"
+              className="form-input w-full"
+              placeholder="e.g. Golden Retriever"
+              {...register('breed')}
+            />
+          </div>
+        </div>
+
+        {/* Owner Info */}
+        <div className="grid grid-cols-1 gap-4">
+          <div className="form-field">
+            <label className="form-label" htmlFor="owner-name">
+              Owner Name
+            </label>
+            <input
+              id="owner-name"
+              type="text"
+              className="form-input w-full"
+              placeholder="e.g. Jane Smith"
+              {...register('ownerName')}
+            />
+          </div>
+          <div className="form-field">
+            <label className="form-label" htmlFor="owner-phone">
+              Owner Phone
+            </label>
+            <input
+              id="owner-phone"
+              type="tel"
+              className="form-input w-full"
+              placeholder="e.g. 555-0123"
+              {...register('ownerPhone')}
+            />
+          </div>
+        </div>
+
+        {/* Photo & Notes */}
         <div className="form-field">
-          <label className="form-label" htmlFor="dog-name">Name *</label>
+          <label className="form-label" htmlFor="dog-photo">
+            Photo URL
+          </label>
           <input
-            id="dog-name"
-            className="form-input"
-            type="text"
-            value={form.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="Buddy"
-            required
+            id="dog-photo"
+            type="url"
+            className={`form-input w-full ${errors.photoUrl ? 'border-terracotta' : ''}`}
+            placeholder="https://..."
+            {...register('photoUrl')}
           />
+          {errors.photoUrl && (
+            <p className="text-xs text-terracotta mt-1">{errors.photoUrl.message}</p>
+          )}
         </div>
 
         <div className="form-field">
-          <label className="form-label" htmlFor="dog-owner">Owner name</label>
-          <input
-            id="dog-owner"
-            className="form-input"
-            type="text"
-            value={form.owner_name}
-            onChange={(e) => handleChange('owner_name', e.target.value)}
-            placeholder="Jane Smith"
-          />
-        </div>
-
-        <div className="form-field">
-          <label className="form-label" htmlFor="dog-phone">Owner phone</label>
-          <input
-            id="dog-phone"
-            className="form-input"
-            type="tel"
-            value={form.owner_phone}
-            onChange={(e) => handleChange('owner_phone', e.target.value)}
-            placeholder="+1 555 000 0000"
-          />
-        </div>
-
-        <div className="form-field">
-          <label className="form-label" htmlFor="dog-notes">Notes</label>
+          <label className="form-label" htmlFor="dog-notes">
+            Special Instructions / Notes
+          </label>
           <textarea
             id="dog-notes"
-            className="form-input"
-            rows={3}
-            value={form.notes}
-            onChange={(e) => handleChange('notes', e.target.value)}
-            placeholder="Feeding, meds, vet info, behavior notes..."
+            className="form-input w-full min-h-[80px]"
+            placeholder="e.g. Allergic to chicken, loves belly rubs..."
+            {...register('notes')}
           />
         </div>
 
-        <div className="form-field">
-          <label className="form-label">Photo</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoChange}
-            style={{ display: 'none' }}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              minHeight: 44,
-              border: '1.5px dashed var(--pebble)',
-              borderRadius: 8,
-              background: 'var(--cream)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              color: 'var(--bark-light)',
-              fontWeight: 600,
-              fontSize: 14,
-            }}
-          >
-            {photoPreview ? (
-              <img
-                src={photoPreview}
-                alt="Preview"
-                style={{ width: 40, height: 40, borderRadius: 999, objectFit: 'cover' }}
-              />
-            ) : null}
-            {photoPreview ? 'Change photo' : 'Upload photo'}
-          </button>
-        </div>
-
-        <button type="submit" className="btn-sage" disabled={submitting} style={{ marginTop: 4 }}>
-          {submitting ? 'Saving...' : editingDog ? 'Save changes' : 'Add dog'}
+        <button type="submit" className="btn-sage mt-2" disabled={submitting}>
+          {submitting ? 'Adding Dog…' : 'Add Dog to Pack 🐾'}
         </button>
       </form>
     </SlideUpSheet>
