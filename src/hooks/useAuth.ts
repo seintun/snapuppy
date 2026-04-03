@@ -32,6 +32,24 @@ export function useAuth(): AuthState {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Re-validate session when page is restored from bfcache (back/forward navigation).
+  // Browsers freeze JS state on navigate-away; on restore the stale user object is still
+  // in context. getSession() reads localStorage (already cleared on signOut) and clears
+  // React state if there's no valid session.
+  useEffect(() => {
+    function handlePageShow(e: PageTransitionEvent) {
+      if (!e.persisted) return;
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+          setUser(null);
+          setProfile(null);
+        }
+      });
+    }
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -75,8 +93,29 @@ export function useAuth(): AuthState {
       }
     }
 
-    const unsubscribe = onAuthStateChange((_sessionEvent, session) => {
+    const unsubscribe = onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null;
+
+      if (currentUser && event === 'INITIAL_SESSION') {
+        // Server-validate the token to catch revoked or not-yet-expired sessions
+        // that Supabase hasn't detected locally yet (getUser makes a real network request)
+        supabase.auth.getUser().then(({ error }) => {
+          if (!mounted) return;
+          if (error) {
+            void supabase.auth.signOut({ scope: 'local' });
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+          setUser(currentUser);
+          handleSignIn(currentUser).finally(() => {
+            if (mounted) setLoading(false);
+          });
+        });
+        return;
+      }
+
       if (mounted) setUser(currentUser);
 
       if (currentUser) {

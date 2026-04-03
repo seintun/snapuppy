@@ -1,4 +1,5 @@
 import { useEffect, useRef, type PropsWithChildren } from 'react';
+import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 
 interface SlideUpSheetProps extends PropsWithChildren {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface SlideUpSheetProps extends PropsWithChildren {
 
 export function SlideUpSheet({ isOpen, onClose, title, children }: SlideUpSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
+  const { offset, isDragging, handlers } = useSwipeToDismiss(onClose);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -44,6 +46,13 @@ export function SlideUpSheet({ isOpen, onClose, title, children }: SlideUpSheetP
         aria-modal="true"
         aria-label={title ?? 'Sheet'}
         onClick={(e) => e.stopPropagation()}
+        style={{
+          transform: isDragging || offset > 0 
+            ? `translateY(${offset}px)` 
+            : undefined,
+          transition: isDragging ? 'none' : undefined
+        }}
+        {...handlers}
       >
         <div className="sheet__handle" aria-hidden="true" />
         {title ? <h3 className="sheet__title">{title}</h3> : null}
