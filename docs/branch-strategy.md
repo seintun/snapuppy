@@ -36,9 +36,9 @@ This repo will use **one feature branch per implementation step** so work can ru
    - Branch: `feat/step-6-booking-crud`
    - Scope: booking sheet, create/edit/cancel, booking-day generation, detail accordion
 
-7. **Step 7: lib/gcal + rate calculator**
-   - Branch: `feat/step-7-gcal-rate-lib`
-   - Scope: gcal API wrapper contracts, pure rate calculation helpers + unit tests
+7. **Step 7: rate calculator hardening**
+   - Branch: `feat/step-7-rate-lib`
+   - Scope: pure rate calculation helpers + unit tests
 
 8. **Step 8: Bookings list tab**
    - Branch: `feat/step-8-bookings-list`
@@ -49,15 +49,15 @@ This repo will use **one feature branch per implementation step** so work can ru
    - Scope: manifest/service worker/install prompt/offline shell hardening
 
 10. **Step 10: Polish**
-   - Branch: `feat/step-10-polish`
-   - Scope: toasts, loading/error states, motion polish, copy pass
+
+- Branch: `feat/step-10-polish`
+- Scope: toasts, loading/error states, motion polish, copy pass
 
 ## Parallelization Guidance
 
-- Safe to run in parallel: Steps **3, 7, 9** (low coupling).
+- Safe to run in parallel: Steps **3, 9** (low coupling).
 - Start Step 10 after base UI shell from Step 3 exists.
 - Steps 4/5/6/8 depend on Step 1 + Step 3 foundations.
-
 
 ## Continuous Coordination Protocol
 
@@ -73,7 +73,7 @@ Suggested file ownership (default):
 
 - Step 1: `supabase/**`, `src/lib/supabase.ts`, `src/types/database.ts`
 - Step 3: `src/App.tsx`, `src/main.tsx`, `src/components/**`, base layout styles
-- Step 7: `src/lib/gcal.ts`, `src/lib/rate-calculator.ts`, tests under `src/test/**`
+- Step 7: `src/lib/rate-calculator.ts`, tests under `src/test/**`
 - Step 9: `public/manifest.json`, `public/sw.js`, install/offline glue in app shell
 - Step 10: cross-cut polish only after feature branches are merged
 

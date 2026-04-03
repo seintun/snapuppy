@@ -7,7 +7,6 @@ create table public.profiles (
   daycare_rate decimal(10,2) not null default 0,
   holiday_surcharge decimal(10,2) not null default 0,
   cutoff_time time not null default '11:00',
-  gcal_calendar_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -34,7 +33,6 @@ create table public.bookings (
   end_date date not null,
   type text not null check (type in ('boarding', 'daycare')),
   is_holiday boolean not null default false,
-  gcal_event_id text,
   status text not null check (status in ('active', 'completed', 'cancelled')) default 'active',
   total_amount decimal(10,2) not null default 0,
   created_at timestamptz not null default now(),

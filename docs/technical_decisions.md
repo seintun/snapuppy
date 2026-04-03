@@ -10,6 +10,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Vite SPA
 **Rationale:**
+
 - Capacitor (Phase 4) wraps a static SPA — Next.js SSR adds complexity with no benefit since there's no SEO requirement and a single authenticated user.
 - CRA is deprecated.
 - Vite offers the fastest HMR for development and produces a clean static dist for both PWA deployment and Capacitor packaging.
@@ -32,7 +33,8 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Supabase (PostgreSQL + Auth + Storage + Edge Functions)
 **Rationale:**
-- Auth: Supabase Auth handles Google OAuth natively with token refresh, and can pass Google access tokens for Calendar API — this eliminates building a custom OAuth proxy.
+
+- Auth: Supabase Auth handles passwordless magic links natively, which removes custom auth backend work and keeps onboarding low-friction.
 - Database: PostgreSQL gives us proper relational data (booking → booking_days → dog) with Row-Level Security for future multi-tenant without schema changes.
 - Storage: Built-in bucket for dog photos with signed URLs.
 - Edge Functions: Available for future webhook handling (Phase 3).
@@ -42,42 +44,42 @@ This document captures every architectural and design decision made during the p
 
 ---
 
-## 4. Auth: Google OAuth Only (not email/password)
+## 4. Auth: Passwordless Magic Link via Supabase
 
-**Decision:** Google OAuth exclusively via Supabase Auth
+**Decision:** Supabase email magic links only (passwordless)
 **Rationale:**
-- The sitter is a single known user — no registration flow needed.
-- Google OAuth bundles the Calendar scope into login, so the user authenticates once and the app gets both identity and calendar access.
-- Eliminates password management UX entirely.
-- Supabase stores and refreshes the Google access token automatically.
 
-**Trade-off:** Requires a Google account. If the sitter switches to Apple ecosystem, we'd add Apple Sign-In in Phase 4 via Capacitor.
+- Fastest onboarding flow: one input (email) and one tap from inbox.
+- Removes Google OAuth app setup and permissions friction.
+- No password management UX or password reset support burden.
+- `shouldCreateUser` allows first-time sign-up and sign-in in the same flow.
+
+**Trade-off:** Login depends on email deliverability and inbox access.
 
 ---
 
-## 5. Google Calendar Sync Direction: Push-only (Snapuppy → Google)
+## 5. Calendar Ownership: App-Only System (No External Sync)
 
-**Decision:** Snapuppy is the source of truth; sync pushes to Google Calendar
+**Decision:** Snapuppy calendar data lives only in Supabase tables (`bookings`, `booking_days`)
 **Rationale:**
-- Bidirectional sync is complex (conflict resolution, stale detection, rate limits).
-- The sitter creates bookings in Snapuppy, not directly in Google Calendar.
-- Google Calendar serves as a "shared view" for family/assistants — read-only consumers.
-- On app open, we check for deleted/moved events and flag for review (not auto-resolve).
 
-**Trade-off:** If someone deletes an event in Google Calendar, Snapuppy won't automatically mark it cancelled — requires a manual review flag. Acceptable for Phase 1.
+- Keeps architecture simple and predictable.
+- Removes external API failures and OAuth token edge cases from booking CRUD paths.
+- Improves maintainability and testability for Phase 1.
+
+**Trade-off:** No automatic propagation to external calendar providers.
 
 ---
 
-## 6. Dedicated "Snapuppy Bookings" Calendar (not the user's primary calendar)
+## 6. Profile Schema Simplification
 
-**Decision:** Create a separate calendar via Google Calendar API on first login
+**Decision:** Remove Google calendar linkage columns (`profiles.gcal_calendar_id`, `bookings.gcal_event_id`)
 **Rationale:**
-- Keeps sitter's personal life and work bookings separate.
-- The calendar can be shared with family/assistants without exposing personal events.
-- Deleting it in GCal doesn't nuke the sitter's primary calendar.
-- `gcal_calendar_id` stored in the `profiles` table.
 
-**Trade-off:** Requires an extra API call on first login to create the calendar. Handled gracefully — if it already exists (re-login), we detect and reuse.
+- These fields are no longer used in an app-only calendar model.
+- Reduces schema noise and removes dead sync metadata.
+
+**Trade-off:** Existing Google-linked rows must be migrated via schema update.
 
 ---
 
@@ -85,6 +87,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Profile stores universal nightly/daycare/holiday rates; `booking_days` stores per-day amounts with override capability
 **Rationale:**
+
 - The sitter uses the same rates for all dogs (not per-dog pricing).
 - Holiday surcharge is a flat dollar add-on, not a percentage (simpler math, easier to explain to clients).
 - Cutoff time (default 11:00 AM): if last-day pickup is after cutoff, append a daycare charge — this mirrors how most sitters manually calculate.
@@ -98,6 +101,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** 1 day = Daycare automatically; 2+ days = Boarding
 **Rationale:**
+
 - Industry standard for Rover/Wag-style sitters.
 - Reduces cognitive load — sitter picks dates, type is inferred.
 - Manual override available in the creation form.
@@ -110,6 +114,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Each day of a booking gets its own row in `booking_days`
 **Rationale:**
+
 - Enables the daily breakdown accordion in the UI.
 - Per-day overrides (toggle boarding/daycare, mark holiday) are stored directly on the row.
 - `total_amount` on `bookings` is a denormalized sum — pre-computed for list views without joins.
@@ -123,6 +128,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Tailwind CSS v4
 **Rationale:**
+
 - User convention across all projects.
 - v4 uses CSS-native cascade layers and `@theme` for design tokens — cleaner than v3's `tailwind.config.js`.
 - The `@tailwindcss/vite` plugin integrates seamlessly with our Vite setup.
@@ -136,6 +142,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Custom design system, no component library (shadcn/ui, MUI, Chakra)
 **Rationale:**
+
 - The playful, dog-centric aesthetic (paw motifs, bounce animations, Nunito font, warm terracotta) would require extensive overriding of any generic library.
 - Building custom components gives full control over the organic, rounded feel.
 - Mobile-first with 44px minimum tap targets is easier to enforce from scratch.
@@ -153,6 +160,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** 4 bottom tabs (Calendar, Bookings, Dogs, Profile) + always-visible FAB
 **Rationale:**
+
 - Mobile-first: bottom tabs are thumb-reachable on large phones.
 - Calendar is the home/primary view (most daily interactions start there).
 - FAB provides quick booking creation from any context without switching tabs.
@@ -166,6 +174,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Build as PWA now; wrap with Capacitor in Phase 4
 **Rationale:**
+
 - PWA is immediately distributable (no App Store review).
 - The sitter can install it to their home screen today.
 - Capacitor wraps a Vite SPA without code changes — our architecture is already compatible.
@@ -179,6 +188,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Vitest for unit tests (rate calculator), Playwright for e2e
 **Rationale:**
+
 - User convention.
 - Rate calculator logic is complex pure functions — ideal for unit testing.
 - E2e tests cover the full booking flow (the most critical user journey).
@@ -192,6 +202,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** All tables have `sitter_id UUID REFERENCES profiles(id)` with RLS `sitter_id = auth.uid()`
 **Rationale:**
+
 - Adding RLS later is painful (schema migration + data backfill).
 - Single-user now, but the architecture supports multiple sitters without code changes.
 - Supabase RLS policies are declared in SQL migrations — version-controlled and auditable.
@@ -204,6 +215,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Upload dog photos to Supabase Storage; store URL in `dogs.photo_url`
 **Rationale:**
+
 - Photos need to be accessible across devices (phone + tablet + web).
 - The draft spec proposed local-only media with Capacitor FileSystem — rejected for Phase 1 because PWA has no reliable local storage for binary files.
 - Supabase Storage provides signed URLs, bucket-level policies, and CDN delivery.
@@ -217,6 +229,7 @@ This document captures every architectural and design decision made during the p
 
 **Decision:** Rate calculation is pure TypeScript (no Supabase calls)
 **Rationale:**
+
 - Pure functions are trivially unit-testable.
 - The calculator runs client-side for the live rate preview in the booking form.
 - The same logic generates `booking_days` rows on booking creation.
@@ -226,12 +239,12 @@ This document captures every architectural and design decision made during the p
 
 ## Decisions Deferred to Later Phases
 
-| Decision | Phase | Reason Deferred |
-|----------|-------|-----------------|
-| Native haptics on tally increment | 4 | Requires Capacitor |
-| Bento report card (OffscreenCanvas) | 2 | Complex feature, non-blocking |
-| Revenue/tax dashboard | 3 | Needs booking history volume |
-| Push notifications | 4 | PWA limitation on iOS |
-| Per-dog custom rates | TBD | Not requested by current user |
-| Apple Sign-In | 4 | Current user is Google |
-| Bidirectional GCal sync | TBD | Complexity vs. benefit ratio |
+| Decision                            | Phase | Reason Deferred                           |
+| ----------------------------------- | ----- | ----------------------------------------- |
+| Native haptics on tally increment   | 4     | Requires Capacitor                        |
+| Bento report card (OffscreenCanvas) | 2     | Complex feature, non-blocking             |
+| Revenue/tax dashboard               | 3     | Needs booking history volume              |
+| Push notifications                  | 4     | PWA limitation on iOS                     |
+| Per-dog custom rates                | TBD   | Not requested by current user             |
+| Apple Sign-In                       | 4     | PWA-first scope uses Supabase magic links |
+| External calendar integration       | TBD   | Deferred until clear user demand          |

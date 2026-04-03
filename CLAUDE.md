@@ -8,18 +8,18 @@
 
 ## Tech Stack (do not deviate)
 
-| Layer | Choice | Notes |
-|-------|--------|-------|
-| Framework | React 19 + TypeScript | Strict mode, ESM |
-| Build | Vite (SPA) | NOT Next.js, NOT CRA |
-| Styling | Tailwind CSS v4 | No config file — uses `@tailwindcss/vite` plugin |
-| Backend | Supabase | PostgreSQL + Auth + Storage |
-| Routing | React Router v7 | Client-side only |
-| Testing | Vitest (unit) + Playwright (e2e) | jsdom environment |
-| Icons | @phosphor-icons/react | No other icon lib |
-| Dates | date-fns | No moment.js, no dayjs |
-| Package Manager | **Bun** | NEVER npm, NEVER yarn |
-| Mobile | PWA-first | Capacitor is Phase 4 — do NOT add it now |
+| Layer           | Choice                           | Notes                                            |
+| --------------- | -------------------------------- | ------------------------------------------------ |
+| Framework       | React 19 + TypeScript            | Strict mode, ESM                                 |
+| Build           | Vite (SPA)                       | NOT Next.js, NOT CRA                             |
+| Styling         | Tailwind CSS v4                  | No config file — uses `@tailwindcss/vite` plugin |
+| Backend         | Supabase                         | PostgreSQL + Auth + Storage                      |
+| Routing         | React Router v7                  | Client-side only                                 |
+| Testing         | Vitest (unit) + Playwright (e2e) | jsdom environment                                |
+| Icons           | @phosphor-icons/react            | No other icon lib                                |
+| Dates           | date-fns                         | No moment.js, no dayjs                           |
+| Package Manager | **Bun**                          | NEVER npm, NEVER yarn                            |
+| Mobile          | PWA-first                        | Capacitor is Phase 4 — do NOT add it now         |
 
 ---
 
@@ -37,7 +37,7 @@ src/
     dogs/
     profile/
   hooks/              # Shared hooks (not feature-specific)
-  lib/                # Service utilities (supabase.ts, gcal.ts, rate-calculator.ts)
+  lib/                # Service utilities (supabase.ts, rate-calculator.ts)
   types/              # database.ts (Supabase-generated) + index.ts
   test/               # All test files here
   styles.css          # Global CSS + Tailwind @theme tokens
@@ -51,34 +51,43 @@ Use `@/` alias (maps to `src/`) for all internal imports.
 
 ## Naming Conventions
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| React components | PascalCase | `DogDetailScreen.tsx` |
-| Custom hooks | `use` prefix | `useDogs.ts`, `useBookings.ts` |
-| Service files | `*Service.ts` suffix | `dogService.ts`, `bookingService.ts` |
-| Page screens | `*Screen.tsx` | `DogsScreen.tsx`, `CalendarScreen.tsx` |
-| Bottom sheets | `*Sheet.tsx` | `AddDogSheet.tsx`, `CreateBookingSheet.tsx` |
-| Feature barrel | `index.ts` or `index.tsx` | Exports only public API |
+| Type             | Pattern                   | Example                                     |
+| ---------------- | ------------------------- | ------------------------------------------- |
+| React components | PascalCase                | `DogDetailScreen.tsx`                       |
+| Custom hooks     | `use` prefix              | `useDogs.ts`, `useBookings.ts`              |
+| Service files    | `*Service.ts` suffix      | `dogService.ts`, `bookingService.ts`        |
+| Page screens     | `*Screen.tsx`             | `DogsScreen.tsx`, `CalendarScreen.tsx`      |
+| Bottom sheets    | `*Sheet.tsx`              | `AddDogSheet.tsx`, `CreateBookingSheet.tsx` |
+| Feature barrel   | `index.ts` or `index.tsx` | Exports only public API                     |
 
 ---
 
 ## Code Patterns
 
 ### Custom Hooks
+
 Return a structured result object:
+
 ```typescript
 return { data, loading, error, refresh, create, update, remove };
 ```
+
 Use a `cancelled` ref in `useEffect` for cleanup to prevent state updates on unmounted components:
+
 ```typescript
 useEffect(() => {
   let cancelled = false;
-  fetchData().then(result => { if (!cancelled) setData(result); });
-  return () => { cancelled = true; };
+  fetchData().then((result) => {
+    if (!cancelled) setData(result);
+  });
+  return () => {
+    cancelled = true;
+  };
 }, []);
 ```
 
 ### Supabase Queries
+
 ```typescript
 import { supabase } from '@/lib/supabase';
 
@@ -86,15 +95,19 @@ const { data, error } = await supabase.from('table').select('*');
 if (error) throw error;
 return data;
 ```
+
 Always use the typed client from `@/lib/supabase`. RLS handles `sitter_id` filtering automatically — do not add manual `sitter_id = auth.uid()` filters in queries.
 
 ### TypeScript / Supabase Types
+
 ```typescript
 import type { Database } from '@/types/database';
 type Dog = Database['public']['Tables']['dogs']['Row'];
 type DogInsert = Database['public']['Tables']['dogs']['Insert'];
 ```
+
 Or use the helpers from `@/types/index.ts`:
+
 ```typescript
 import type { Tables, TablesInsert } from '@/types';
 type Dog = Tables<'dogs'>;
@@ -102,6 +115,7 @@ type DogInsert = TablesInsert<'dogs'>;
 ```
 
 ### Context + Provider
+
 Global state uses Context + Provider pattern (see `AuthContext`/`AuthProvider`, `ToastContext`/`ToastProvider`).
 Never manage auth or toast state directly in components.
 
@@ -158,21 +172,20 @@ bun run format        # Prettier
 - **No `tailwind.config.js`** — Tailwind v4 uses `@theme` in `src/styles.css`
 - **No generic AI aesthetics** — preserve the Sage & Earth design system
 - **No per-dog pricing** — rates are universal in the `profiles` table
-- **No bidirectional GCal sync** — push-only (Snapuppy → Google Calendar)
+- **No external calendar sync** — calendar is app-owned for Phase 1
 - **No manual `sitter_id` filters** — RLS handles authorization automatically
 
 ---
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/supabase.ts` | Typed Supabase client |
-| `src/lib/rate-calculator.ts` | Pure functions for booking day pricing |
-| `src/lib/gcal.ts` | Google Calendar API integration |
-| `src/lib/bookingService.ts` | Booking CRUD + pricing orchestration |
-| `src/types/database.ts` | Supabase-generated DB types |
-| `src/types/index.ts` | Type helpers (`Tables<T>`, `TablesInsert<T>`) |
-| `src/styles.css` | Global CSS, design tokens, all component classes |
+| File                          | Purpose                                                           |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `src/lib/supabase.ts`         | Typed Supabase client                                             |
+| `src/lib/rate-calculator.ts`  | Pure functions for booking day pricing                            |
+| `src/lib/bookingService.ts`   | Booking CRUD + pricing orchestration                              |
+| `src/types/database.ts`       | Supabase-generated DB types                                       |
+| `src/types/index.ts`          | Type helpers (`Tables<T>`, `TablesInsert<T>`)                     |
+| `src/styles.css`              | Global CSS, design tokens, all component classes                  |
 | `docs/technical_decisions.md` | Architecture decision records (read before making arch decisions) |
-| `docs/plan.md` | Phase 1 MVP implementation plan |
+| `docs/plan.md`                | Phase 1 MVP implementation plan                                   |

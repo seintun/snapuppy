@@ -508,30 +508,6 @@ textarea {
   text-align: center;
 }
 
-.btn-google {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 320px;
-  height: 52px;
-  background: var(--cream);
-  color: var(--bark);
-  border: 1.5px solid var(--pebble);
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(74, 55, 40, 0.12);
-  transition: transform 120ms ease-out;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn-google:active {
-  transform: scale(0.97);
-}
-
 .login-footer {
   font-size: 12px;
   color: var(--bark-light);
@@ -709,11 +685,6 @@ input[type='date'].form-input {
 
 .app-content {
   animation: stagger-fade-in 220ms ease-out both;
-}
-
-.btn-google:disabled {
-  opacity: 0.7;
-  cursor: wait;
 }
 
 .toast-stack {

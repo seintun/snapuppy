@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from './useAuthContext';
 
@@ -21,88 +21,42 @@ function PawIcon() {
   );
 }
 
-function GoogleIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M19.6 10.23c0-.68-.06-1.36-.17-2H10v3.79h5.39a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.9-1.75 2.98-4.32 2.98-7.31z"
-        fill="#4285F4"
-      />
-      <path
-        d="M10 20c2.7 0 4.97-.9 6.62-2.44l-3.23-2.5c-.9.6-2.04.96-3.39.96-2.6 0-4.81-1.76-5.6-4.12H1.08v2.58A10 10 0 0 0 10 20z"
-        fill="#34A853"
-      />
-      <path
-        d="M4.4 11.9A6.03 6.03 0 0 1 4.08 10c0-.66.12-1.3.32-1.9V5.52H1.08A10 10 0 0 0 0 10c0 1.61.39 3.13 1.08 4.48L4.4 11.9z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M10 3.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.94 9.94 0 0 0 10 0 10 10 0 0 0 1.08 5.52L4.4 8.1C5.19 5.74 7.4 3.98 10 3.98z"
-        fill="#EA4335"
-      />
-    </svg>
-  );
-}
-
 export function LoginScreen() {
-  const { user, loading, signIn, signInWithPassword, signUpWithPassword } = useAuthContext();
+  const { user, loading, signIn } = useAuthContext();
 
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [useEmail, setUseEmail] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   if (!loading && user) {
     return <Navigate to="/calendar" replace />;
   }
 
-  async function handleSignIn() {
-    setIsSigningIn(true);
+  async function sendMagicLink(emailValue: string) {
+    setIsSending(true);
+    setAuthError(null);
+
     try {
-      await signIn();
+      await signIn(emailValue);
+      setSentTo(emailValue);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Failed to send magic link.');
     } finally {
-      setIsSigningIn(false);
+      setIsSending(false);
     }
   }
 
-  async function handleEmailAuth(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError(null);
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-    if (isSignUp) {
-      if (password !== confirmPassword) {
-        setAuthError('Passwords do not match');
-        return;
-      }
-      if (password.length < 6) {
-        setAuthError('Password must be at least 6 characters');
-        return;
-      }
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setAuthError('Please enter an email address.');
+      return;
     }
 
-    setIsAuthLoading(true);
-    try {
-      if (isSignUp) {
-        await signUpWithPassword(email, password);
-        setAuthError('Check your email to confirm your account');
-      } else {
-        await signInWithPassword(email, password);
-      }
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Authentication failed');
-    } finally {
-      setIsAuthLoading(false);
-    }
+    await sendMagicLink(normalizedEmail);
   }
 
   return (
@@ -130,89 +84,45 @@ export function LoginScreen() {
           animation: 'stagger-fade-in 400ms 160ms ease-out both',
         }}
       >
-        {!useEmail ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {sentTo ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <h2 style={{ margin: 0, color: 'var(--bark)', fontSize: 20 }}>Check your inbox 🐕</h2>
+            <p style={{ margin: 0, color: 'var(--bark-light)', fontSize: 14, lineHeight: 1.4 }}>
+              We sent a magic link to <strong style={{ color: 'var(--bark)' }}>{sentTo}</strong>.
+              Tap it and you are in.
+            </p>
+
             <button
-              className="btn-google"
-              onClick={() => void handleSignIn()}
-              disabled={isSigningIn}
-              aria-label="Sign in with Google"
+              type="button"
+              className="btn-sage"
+              style={{ minHeight: 46 }}
+              onClick={() => {
+                setSentTo(null);
+                setAuthError(null);
+              }}
             >
-              <GoogleIcon />
-              {isSigningIn ? 'Connecting…' : 'Continue with Google'}
+              Send to a different email
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '8px 0' }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--pebble)' }} />
-              <span
-                style={{
-                  fontSize: 13,
-                  color: 'var(--bark-light)',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                }}
-              >
-                OR
-              </span>
-              <div style={{ flex: 1, height: 1, background: 'var(--pebble)' }} />
-            </div>
-
             <button
+              type="button"
               className="btn-secondary"
-              onClick={() => {
-                setUseEmail(true);
-                setIsSignUp(false);
-              }}
-              style={{ minHeight: 44 }}
+              style={{ minHeight: 44, fontWeight: 700 }}
+              onClick={() => void sendMagicLink(sentTo)}
+              disabled={isSending}
             >
-              Log in with email
-            </button>
-            <button
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--sage)',
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: 'pointer',
-                marginTop: 4,
-              }}
-              onClick={() => {
-                setUseEmail(true);
-                setIsSignUp(true);
-              }}
-            >
-              Create an account
+              {isSending ? 'Sending...' : 'Resend magic link'}
             </button>
           </div>
         ) : (
           <form
             style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-            onSubmit={handleEmailAuth}
+            onSubmit={handleSubmit}
           >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-              <button
-                type="button"
-                onClick={() => setUseEmail(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  color: 'var(--bark-light)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  fontWeight: 600,
-                  fontSize: 14,
-                }}
-              >
-                ← Back
-              </button>
-              <h2 style={{ margin: '0 auto 0 12px', fontSize: 18, color: 'var(--bark)' }}>
-                {isSignUp ? 'Create account' : 'Welcome back'}
-              </h2>
-            </div>
+            <h2 style={{ margin: 0, fontSize: 20, color: 'var(--bark)' }}>Start in 10 seconds</h2>
+            <p style={{ margin: 0, color: 'var(--bark-light)', fontSize: 14, lineHeight: 1.4 }}>
+              No password. No setup headaches. Just your email and done.
+            </p>
 
             <div className="form-field">
               <label className="form-label" htmlFor="email">
@@ -224,45 +134,11 @@ export function LoginScreen() {
                 required
                 className="form-input"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
               />
             </div>
-
-            <div className="form-field">
-              <label className="form-label" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                className="form-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
-
-            {isSignUp && (
-              <div
-                className="form-field"
-                style={{ animation: 'stagger-fade-in 200ms ease-out both' }}
-              >
-                <label className="form-label" htmlFor="confirm-password">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  required
-                  className="form-input"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
-            )}
 
             {authError && (
               <div
@@ -282,41 +158,11 @@ export function LoginScreen() {
             <button
               type="submit"
               className="btn-sage"
-              disabled={isAuthLoading}
+              disabled={isSending}
               style={{ marginTop: 8 }}
             >
-              {isAuthLoading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Log In'}
+              {isSending ? 'Sending your link...' : 'Send me a magic link 🐾'}
             </button>
-
-            <p
-              style={{
-                margin: '12px 0 0',
-                textAlign: 'center',
-                fontSize: 14,
-                color: 'var(--bark-light)',
-              }}
-            >
-              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setAuthError(null);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  color: 'var(--sage)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  textUnderlineOffset: 2,
-                }}
-              >
-                {isSignUp ? 'Log in' : 'Sign up'}
-              </button>
-            </p>
           </form>
         )}
       </div>

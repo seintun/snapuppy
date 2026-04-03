@@ -5,7 +5,20 @@ import { getMonthQueryRange, type CalendarBooking } from '@/features/calendar/ca
 import {
   createBooking as svcCreateBooking,
   deleteBooking as svcDeleteBooking,
-...
+  getBooking,
+  getBookingFormOptions,
+  getBookings,
+  saveBookingDays as svcSaveBookingDays,
+  updateBookingStatus as svcUpdateBookingStatus,
+  type BookingRecord,
+  type BookingStatus,
+  type CreateBookingInput,
+  type EditableBookingDay,
+} from '@/lib/bookingService';
+import { logger } from '@/lib/logger';
+
+// --- CALENDAR QUERIES ---
+
 /**
  * Fetches bookings for a specific month for the calendar view.
  * Uses keepPreviousData for smooth transitions between months.
@@ -31,17 +44,6 @@ export function useCalendarBookings(month: Date) {
     placeholderData: keepPreviousData,
   });
 }
-
-  getBookingFormOptions,
-  getBookings,
-  saveBookingDays as svcSaveBookingDays,
-  updateBookingStatus as svcUpdateBookingStatus,
-  type BookingRecord,
-  type BookingStatus,
-  type CreateBookingInput,
-  type EditableBookingDay,
-} from '@/lib/bookingService';
-import { logger } from '@/lib/logger';
 
 // --- QUERIES ---
 
@@ -72,7 +74,6 @@ export function useBooking(id?: string) {
     queryFn: () => getBooking(id!),
     enabled: !!user?.id && !!id,
     initialData: () => {
-      // Pre-populate from the list if possible
       return queryClient
         .getQueryData<BookingRecord[]>(['bookings', user?.id])
         ?.find((b) => b.id === id);

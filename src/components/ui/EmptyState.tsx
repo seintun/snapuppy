@@ -21,15 +21,15 @@ export function EmptyState({ title, description, actionLabel, onAction }: EmptyS
             aria-hidden="true"
           >
             {/* Main paw pad */}
-            <ellipse cx="16" cy="20" rx="7" ry="8" fill="#8fb886" />
+            <ellipse cx="16" cy="20" rx="7" ry="8" fill="var(--sage)" />
             {/* Top-left toe */}
-            <ellipse cx="8" cy="13" rx="3.5" ry="4.5" fill="#8fb886" />
+            <ellipse cx="8" cy="13" rx="3.5" ry="4.5" fill="var(--sage)" />
             {/* Top-right toe */}
-            <ellipse cx="24" cy="13" rx="3.5" ry="4.5" fill="#8fb886" />
+            <ellipse cx="24" cy="13" rx="3.5" ry="4.5" fill="var(--sage)" />
             {/* Left toe */}
-            <ellipse cx="5" cy="19" rx="3" ry="4" fill="#8fb886" />
+            <ellipse cx="5" cy="19" rx="3" ry="4" fill="var(--sage)" />
             {/* Right toe */}
-            <ellipse cx="27" cy="19" rx="3" ry="4" fill="#8fb886" />
+            <ellipse cx="27" cy="19" rx="3" ry="4" fill="var(--sage)" />
           </svg>
         </div>
         <p className="empty-state__title">{title}</p>

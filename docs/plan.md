@@ -6,7 +6,7 @@
 
 ## Overview
 
-snapuppy.life is a mobile-first PWA serving as the operations command center for independent dog sitters. Phase 1 MVP covers: Auth, Dog Profiles, Bookings, Calendar, Google Calendar Sync, Rate Calculation, and PWA shell.
+snapuppy.life is a mobile-first PWA serving as the operations command center for independent dog sitters. Phase 1 MVP covers: Passwordless Auth, Dog Profiles, Bookings, Calendar, Rate Calculation, and PWA shell.
 
 ---
 
@@ -20,7 +20,7 @@ snapuppy.life is a mobile-first PWA serving as the operations command center for
   src/
     components/     # Shared UI components
     features/       # Feature modules (calendar, bookings, dogs, profile)
-    lib/            # supabase.ts, gcal.ts, rate-calculator.ts
+    lib/            # supabase.ts, rate-calculator.ts
     hooks/          # Custom React hooks
     types/          # TypeScript types
     App.tsx
@@ -44,7 +44,7 @@ snapuppy.life is a mobile-first PWA serving as the operations command center for
 - Enable Row-Level Security on all tables
 - RLS policies: `sitter_id = auth.uid()`
 - Supabase Storage bucket for dog photos
-- Configure Google OAuth in Supabase Auth dashboard (scopes: `openid email profile https://www.googleapis.com/auth/calendar`)
+- Configure Supabase email auth + magic link redirect URL
 - DB trigger: auto-create `profiles` row on new `auth.users` signup
 - `src/lib/supabase.ts` — typed Supabase client
 - `src/types/database.ts` — TypeScript types matching DB schema
@@ -53,12 +53,12 @@ snapuppy.life is a mobile-first PWA serving as the operations command center for
 
 ## Step 2: Auth + Profile
 
-- Google OAuth login screen (sage-themed, playful)
+- Magic-link login screen (single email input, passwordless)
 - `useAuth` hook — Supabase `onAuthStateChange`
 - Protected route wrapper (`<RequireAuth>`)
 - Profile tab: display name, rate settings (nightly, daycare, holiday surcharge, cutoff time)
 - Profile CRUD with Supabase (`profiles` table)
-- On first login: call Google Calendar API → create "Snapuppy Bookings" calendar → save `gcal_calendar_id` to profile
+- On first login: create auth user + profile row via trigger, then route into app
 
 ---
 
@@ -105,6 +105,7 @@ snapuppy.life is a mobile-first PWA serving as the operations command center for
 ## Step 6: Booking CRUD + Detail
 
 **Create Booking (slide-up sheet):**
+
 - Dog selector (searchable from dogs table)
 - Date range picker (start/end)
 - Auto-detect type: 1 day = daycare, 2+ days = boarding
@@ -112,30 +113,27 @@ snapuppy.life is a mobile-first PWA serving as the operations command center for
 - Live rate preview (computed from profile rates)
 
 **On confirm:**
+
 - Insert `bookings` row
 - Generate `booking_days` rows (one per day, computed amounts)
 - Compute `total_amount` = sum of booking_days
-- Create Google Calendar event → save `gcal_event_id`
+- Persist booking and booking_days only in Supabase
 
 **Booking Detail screen:**
+
 - Dog avatar + name header
 - Date range, type badge, status
 - Daily breakdown accordion (date, rate type, holiday badge, amount)
 - Per-day overrides: toggle boarding/daycare or holiday per day
 - Recalculate total on override
-- Edit booking, Cancel booking (soft-delete + delete GCal event)
+- Edit booking, Cancel booking (soft-delete in app data only)
 
 ---
 
-## Step 7: Google Calendar Sync
+## Step 7: Internal Calendar Consistency
 
-- `src/lib/gcal.ts`:
-  - `createEvent(booking)` → create on "Snapuppy Bookings" calendar
-  - `updateEvent(booking)` → update existing event
-  - `deleteEvent(gcal_event_id)` → delete event
-  - `checkForChanges()` → compare Supabase bookings with GCal events on app open
-- Use Supabase Auth session for Google access token
-- Event format: title = `{Dog Name} - {Boarding|Daycare}`, dates, description with owner + rate
+- Keep bookings as the source of truth for calendar rendering
+- Ensure booking create/update/cancel paths update `bookings` + `booking_days` only
 - `src/lib/rate-calculator.ts`: pure functions for rate computation + Vitest unit tests
 
 ---
@@ -167,19 +165,18 @@ snapuppy.life is a mobile-first PWA serving as the operations command center for
 - Paw-print confetti on booking success
 - Responsive: iPhone SE → iPhone 15 Pro Max
 - Vitest unit tests: rate calculation, booking day generation
-- Playwright e2e: login → create dog → create booking → verify calendar → edit → cancel
+- Playwright e2e: magic-link login → create dog → create booking → verify calendar → edit → cancel
 - Lighthouse PWA audit
 
 ---
 
 ## Verification Checklist
 
-- [ ] Auth: Google login → profile created → rates configurable
+- [ ] Auth: Magic link login → profile created → rates configurable
 - [ ] Dogs: Create dog with photo → list → edit → delete
 - [ ] Booking: Tap date → form → rate preview correct → confirm → block on calendar
 - [ ] Rate calc: 3 nights × boarding rate + holiday surcharge on holiday nights
 - [ ] Per-day override: toggle rate type/holiday → total recalculates
-- [ ] Google Calendar: create event → edit updates → cancel deletes
 - [ ] PWA: Add to home screen iOS/Android → offline shell loads
 - [ ] Responsive: iPhone SE, iPhone 15 Pro, Pixel 7, Samsung Galaxy
 
@@ -187,8 +184,8 @@ snapuppy.life is a mobile-first PWA serving as the operations command center for
 
 ## Future Phases
 
-| Phase | Scope |
-|-------|-------|
-| 2 | Bento Report Cards (photo grid + tallies + share) |
-| 3 | Financial Dashboard (revenue charts, CSV export) |
-| 4 | Capacitor Native (haptics, native album, push notifications) |
+| Phase | Scope                                                        |
+| ----- | ------------------------------------------------------------ |
+| 2     | Bento Report Cards (photo grid + tallies + share)            |
+| 3     | Financial Dashboard (revenue charts, CSV export)             |
+| 4     | Capacitor Native (haptics, native album, push notifications) |
