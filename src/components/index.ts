@@ -7,4 +7,5 @@ export { Card } from './ui/Card';
 export { DogAvatar } from './ui/DogAvatar';
 export { EmptyState } from './ui/EmptyState';
 export { SlideUpSheet } from './ui/SlideUpSheet';
-export { ToastProvider, useToast } from './ui/ToastProvider';
+export { ToastProvider } from './ui/ToastProvider';
+export { useToast } from './ui/useToast';

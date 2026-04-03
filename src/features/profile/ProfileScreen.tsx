@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useAuthContext } from '@/features/auth';
 import { updateProfile } from './profileService';
 import { signInWithGoogle } from '@/lib/supabase';
+import { useToast } from '@/components/ui/useToast';
 
 export function ProfileScreen() {
   const { user, profile, signOut } = useAuthContext();
+  const { addToast } = useToast();
 
   const [nightlyRate, setNightlyRate] = useState('');
   const [daycareRate, setDaycareRate] = useState('');
@@ -32,11 +34,19 @@ export function ProfileScreen() {
         holiday_surcharge: parseFloat(holidaySurcharge) || 0,
         cutoff_time: cutoffTime,
       });
-      alert('Rates saved!');
+      addToast('Woof! Rates saved.', 'success');
     } catch {
-      alert('Failed to save rates. Please try again.');
+      addToast('Could not save rates. Please try again.', 'error');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCalendarConnect() {
+    try {
+      await signInWithGoogle();
+    } catch {
+      addToast('Could not connect Google Calendar.', 'error');
     }
   }
 
@@ -172,7 +182,7 @@ export function ProfileScreen() {
           </span>
         ) : (
           <button
-            onClick={() => signInWithGoogle()}
+            onClick={() => void handleCalendarConnect()}
             style={{
               background: 'none',
               border: 'none',

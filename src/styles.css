@@ -680,3 +680,52 @@ textarea {
   align-items: center;
   justify-content: center;
 }
+
+.app-content {
+  animation: stagger-fade-in 220ms ease-out both;
+}
+
+.btn-google:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(56px + env(safe-area-inset-top));
+  z-index: 60;
+  width: min(420px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--pebble);
+  box-shadow: var(--shadow-warm);
+  font-weight: 700;
+  font-size: 14px;
+  animation: stagger-fade-in 160ms ease-out both;
+}
+
+.toast--info {
+  background: var(--cream);
+  color: var(--bark);
+}
+
+.toast--success {
+  background: var(--sage-light);
+  color: #35582d;
+}
+
+.toast--error {
+  background: var(--blush);
+  color: #7b2f1c;
+}

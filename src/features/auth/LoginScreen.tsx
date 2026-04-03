@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAuthContext } from './useAuthContext';
 
 function PawIcon() {
@@ -44,6 +45,16 @@ function GoogleIcon() {
 
 export function LoginScreen() {
   const { signIn } = useAuthContext();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  async function handleSignIn() {
+    setIsSigningIn(true);
+    try {
+      await signIn();
+    } finally {
+      setIsSigningIn(false);
+    }
+  }
 
   return (
     <div className="login-screen">
@@ -75,11 +86,12 @@ export function LoginScreen() {
       >
         <button
           className="btn-google"
-          onClick={signIn}
+          onClick={() => void handleSignIn()}
+          disabled={isSigningIn}
           aria-label="Sign in with Google"
         >
           <GoogleIcon />
-          Continue with Google
+          {isSigningIn ? 'Connecting…' : 'Continue with Google'}
         </button>
       </div>
 

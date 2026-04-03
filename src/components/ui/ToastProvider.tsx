@@ -1,20 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { CheckCircle, WarningCircle, XCircle } from '@phosphor-icons/react';
-
-type ToastTone = 'success' | 'error' | 'info';
+import { ToastContext, type ToastContextValue, type ToastTone } from './ToastContext';
 
 interface ToastItem {
   id: string;
   message: string;
   tone: ToastTone;
 }
-
-interface ToastContextValue {
-  addToast: (message: string, tone?: ToastTone) => void;
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: PropsWithChildren) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -49,14 +42,4 @@ export function ToastProvider({ children }: PropsWithChildren) {
       </div>
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-
-  if (!context) {
-    throw new Error('useToast must be used inside ToastProvider');
-  }
-
-  return context;
 }
