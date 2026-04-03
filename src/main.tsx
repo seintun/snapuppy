@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from '@/features/auth/AuthProvider';
+import { ToastProvider } from '@/components/ui/ToastProvider';
 import './styles.css';
 
 if ('serviceWorker' in navigator) {
@@ -16,10 +17,12 @@ if (!root) throw new Error('Root element not found');
 
 createRoot(root).render(
   <StrictMode>
-    <AuthProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
+    </ToastProvider>
   </StrictMode>,
 );
