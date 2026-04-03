@@ -1,4 +1,41 @@
 export const GOOGLE_CALENDAR_API_BASE_URL = 'https://www.googleapis.com/calendar/v3';
+export const GOOGLE_CALENDAR_LIST_API_BASE_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList';
+export const SNAPUPPY_CALENDAR_NAME = 'Snapuppy Bookings';
+
+export async function getOrCreateSnapuppyCalendar(accessToken: string): Promise<string> {
+  const listRes = await fetch(GOOGLE_CALENDAR_LIST_API_BASE_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!listRes.ok) {
+    throw new GoogleCalendarError('Failed to list Google Calendars', { status: listRes.status });
+  }
+
+  const listBody = (await listRes.json()) as { items?: Array<{ id: string; summary: string }> };
+  const existing = listBody.items?.find((c) => c.summary === SNAPUPPY_CALENDAR_NAME);
+
+  if (existing) {
+    return existing.id;
+  }
+
+  const createRes = await fetch(`${GOOGLE_CALENDAR_API_BASE_URL}/calendars`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ summary: SNAPUPPY_CALENDAR_NAME }),
+  });
+
+  if (!createRes.ok) {
+    throw new GoogleCalendarError('Failed to create Snapuppy Bookings calendar', {
+      status: createRes.status,
+    });
+  }
+
+  const created = (await createRes.json()) as { id: string };
+  return created.id;
+}
 
 export interface GoogleCalendarEventDateTime {
   date?: string;
