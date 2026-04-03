@@ -600,3 +600,83 @@ textarea {
   border-radius: 0 var(--radius-input) var(--radius-input) 0;
   flex: 1;
 }
+
+/* ─── PWA status / install ──────────────────────────── */
+
+.pwa-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--blush);
+  color: var(--bark);
+  border: 1px solid var(--pebble);
+  border-radius: 999px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow-warm);
+}
+
+.pwa-install-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  width: min(480px, calc(100% - 24px));
+  z-index: 35;
+  background: var(--cream);
+  border: 1px solid var(--pebble);
+  border-radius: 14px;
+  box-shadow: var(--shadow-warm);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: stagger-fade-in 220ms ease-out both;
+}
+
+.pwa-install-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pwa-install-copy > span {
+  color: var(--bark-light);
+  font-size: 13px;
+}
+
+.pwa-install-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pwa-install-btn {
+  min-height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: var(--sage);
+  color: #fff;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+}
+
+.pwa-dismiss-btn {
+  min-height: 44px;
+  min-width: 44px;
+  border: 1px solid var(--pebble);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--bark-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

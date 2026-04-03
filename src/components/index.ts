@@ -1,6 +1,7 @@
 export { AppLayout } from './layout/AppLayout';
 export { BottomTabs } from './layout/BottomTabs';
 export { Fab } from './layout/FAB';
+export { PwaStatus } from './layout/PwaStatus';
 export { Badge } from './ui/Badge';
 export { Card } from './ui/Card';
 export { DogAvatar } from './ui/DogAvatar';
