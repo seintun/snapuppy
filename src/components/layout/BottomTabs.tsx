@@ -15,7 +15,9 @@ export function BottomTabs() {
         <NavLink key={to} to={to} className="bottom-tab-link">
           {({ isActive }) => (
             <div className="bottom-tab" data-active={isActive}>
-              <Icon size={20} weight={isActive ? 'duotone' : 'regular'} />
+              <span className="tab-icon">
+                <Icon size={20} weight={isActive ? 'duotone' : 'regular'} />
+              </span>
               <span>{label}</span>
             </div>
           )}

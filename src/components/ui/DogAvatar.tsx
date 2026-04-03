@@ -1,10 +1,16 @@
+type AvatarSize = 'sm' | 'md' | 'lg';
+
 interface DogAvatarProps {
   name: string;
+  src?: string | null;
+  /** @deprecated use src */
   photoUrl?: string | null;
-  size?: number;
+  size?: AvatarSize;
 }
 
-export function DogAvatar({ name, photoUrl, size = 44 }: DogAvatarProps) {
+export function DogAvatar({ name, src, photoUrl, size = 'md' }: DogAvatarProps) {
+  const photo = src ?? photoUrl ?? null;
+
   const initials = name
     .split(' ')
     .map((part) => part.charAt(0).toUpperCase())
@@ -12,26 +18,8 @@ export function DogAvatar({ name, photoUrl, size = 44 }: DogAvatarProps) {
     .slice(0, 2);
 
   return (
-    <div
-      aria-label={`${name} avatar`}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 999,
-        border: '2px solid var(--sage)',
-        display: 'grid',
-        placeItems: 'center',
-        overflow: 'hidden',
-        background: 'var(--sage-light)',
-        fontWeight: 800,
-        color: 'var(--bark)',
-      }}
-    >
-      {photoUrl ? (
-        <img src={photoUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        initials
-      )}
+    <div className={`dog-avatar dog-avatar--${size}`} aria-label={`${name} avatar`}>
+      {photo ? <img src={photo} alt={name} /> : initials}
     </div>
   );
 }

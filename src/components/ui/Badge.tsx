@@ -1,11 +1,11 @@
 import type { PropsWithChildren } from 'react';
 
-type BadgeTone = 'default' | 'holiday';
+type BadgeVariant = 'sage' | 'terracotta' | 'sky' | 'blush' | 'sunshine';
 
 interface BadgeProps extends PropsWithChildren {
-  tone?: BadgeTone;
+  variant?: BadgeVariant;
 }
 
-export function Badge({ tone = 'default', children }: BadgeProps) {
-  return <span className={`badge badge--${tone}`}>{children}</span>;
+export function Badge({ variant = 'sage', children }: BadgeProps) {
+  return <span className={`badge badge--${variant}`}>{children}</span>;
 }
