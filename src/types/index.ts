@@ -1,1 +1,1 @@
-// TypeScript types
+export * from './database';

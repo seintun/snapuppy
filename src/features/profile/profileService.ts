@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabase';
-import type { Profile, ProfileUpdate } from '@/types/database';
+import type { Database } from '@/types/database';
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 export async function getProfile(userId: string): Promise<Profile> {
   const { data, error } = await supabase

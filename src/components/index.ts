@@ -1,1 +1,8 @@
-// Shared UI components
+export { AppLayout } from './layout/AppLayout';
+export { BottomTabs } from './layout/BottomTabs';
+export { Fab } from './layout/FAB';
+export { Badge } from './ui/Badge';
+export { Card } from './ui/Card';
+export { DogAvatar } from './ui/DogAvatar';
+export { EmptyState } from './ui/EmptyState';
+export { SlideUpSheet } from './ui/SlideUpSheet';

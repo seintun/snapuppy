@@ -1,226 +1,335 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-export type BookingStatus = 'active' | 'completed' | 'cancelled';
-export type BookingType = 'boarding' | 'daycare';
-export type RateType = 'boarding' | 'daycare';
-
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       booking_days: {
         Row: {
-          id: string;
-          booking_id: string;
-          date: string;
-          rate_type: RateType;
-          is_holiday: boolean;
-          amount: number;
-          notes: string | null;
-        };
+          amount: number
+          booking_id: string
+          date: string
+          id: string
+          is_holiday: boolean
+          notes: string | null
+          rate_type: string
+        }
         Insert: {
-          id?: string;
-          booking_id: string;
-          date: string;
-          rate_type: RateType;
-          is_holiday?: boolean;
-          amount?: number;
-          notes?: string | null;
-        };
+          amount?: number
+          booking_id: string
+          date: string
+          id?: string
+          is_holiday?: boolean
+          notes?: string | null
+          rate_type: string
+        }
         Update: {
-          id?: string;
-          booking_id?: string;
-          date?: string;
-          rate_type?: RateType;
-          is_holiday?: boolean;
-          amount?: number;
-          notes?: string | null;
-        };
+          amount?: number
+          booking_id?: string
+          date?: string
+          id?: string
+          is_holiday?: boolean
+          notes?: string | null
+          rate_type?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'booking_days_booking_id_fkey';
-            columns: ['booking_id'];
-            isOneToOne: false;
-            referencedRelation: 'bookings';
-            referencedColumns: ['id'];
+            foreignKeyName: "booking_days_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       bookings: {
         Row: {
-          id: string;
-          sitter_id: string;
-          dog_id: string;
-          start_date: string;
-          end_date: string;
-          type: BookingType;
-          is_holiday: boolean;
-          gcal_event_id: string | null;
-          status: BookingStatus;
-          total_amount: number;
-          created_at: string;
-          updated_at: string;
-        };
+          created_at: string
+          dog_id: string
+          end_date: string
+          gcal_event_id: string | null
+          id: string
+          is_holiday: boolean
+          sitter_id: string
+          start_date: string
+          status: string
+          total_amount: number
+          type: string
+          updated_at: string
+        }
         Insert: {
-          id?: string;
-          sitter_id: string;
-          dog_id: string;
-          start_date: string;
-          end_date: string;
-          type: BookingType;
-          is_holiday?: boolean;
-          gcal_event_id?: string | null;
-          status?: BookingStatus;
-          total_amount?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
+          created_at?: string
+          dog_id: string
+          end_date: string
+          gcal_event_id?: string | null
+          id?: string
+          is_holiday?: boolean
+          sitter_id: string
+          start_date: string
+          status?: string
+          total_amount?: number
+          type: string
+          updated_at?: string
+        }
         Update: {
-          id?: string;
-          sitter_id?: string;
-          dog_id?: string;
-          start_date?: string;
-          end_date?: string;
-          type?: BookingType;
-          is_holiday?: boolean;
-          gcal_event_id?: string | null;
-          status?: BookingStatus;
-          total_amount?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
+          created_at?: string
+          dog_id?: string
+          end_date?: string
+          gcal_event_id?: string | null
+          id?: string
+          is_holiday?: boolean
+          sitter_id?: string
+          start_date?: string
+          status?: string
+          total_amount?: number
+          type?: string
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'bookings_dog_id_fkey';
-            columns: ['dog_id'];
-            isOneToOne: false;
-            referencedRelation: 'dogs';
-            referencedColumns: ['id'];
+            foreignKeyName: "bookings_dog_id_fkey"
+            columns: ["dog_id"]
+            isOneToOne: false
+            referencedRelation: "dogs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'bookings_sitter_id_fkey';
-            columns: ['sitter_id'];
-            isOneToOne: false;
-            referencedRelation: 'profiles';
-            referencedColumns: ['id'];
+            foreignKeyName: "bookings_sitter_id_fkey"
+            columns: ["sitter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       dogs: {
         Row: {
-          id: string;
-          sitter_id: string;
-          name: string;
-          owner_name: string | null;
-          owner_phone: string | null;
-          photo_url: string | null;
-          notes: string | null;
-          created_at: string;
-          updated_at: string;
-        };
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          owner_name: string | null
+          owner_phone: string | null
+          photo_url: string | null
+          sitter_id: string
+          updated_at: string
+        }
         Insert: {
-          id?: string;
-          sitter_id: string;
-          name: string;
-          owner_name?: string | null;
-          owner_phone?: string | null;
-          photo_url?: string | null;
-          notes?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          photo_url?: string | null
+          sitter_id: string
+          updated_at?: string
+        }
         Update: {
-          id?: string;
-          sitter_id?: string;
-          name?: string;
-          owner_name?: string | null;
-          owner_phone?: string | null;
-          photo_url?: string | null;
-          notes?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          photo_url?: string | null
+          sitter_id?: string
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'dogs_sitter_id_fkey';
-            columns: ['sitter_id'];
-            isOneToOne: false;
-            referencedRelation: 'profiles';
-            referencedColumns: ['id'];
+            foreignKeyName: "dogs_sitter_id_fkey"
+            columns: ["sitter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       profiles: {
         Row: {
-          id: string;
-          display_name: string | null;
-          email: string | null;
-          nightly_rate: number;
-          daycare_rate: number;
-          holiday_surcharge: number;
-          cutoff_time: string;
-          gcal_calendar_id: string | null;
-          created_at: string;
-          updated_at: string;
-        };
+          created_at: string
+          cutoff_time: string
+          daycare_rate: number
+          display_name: string | null
+          email: string | null
+          gcal_calendar_id: string | null
+          holiday_surcharge: number
+          id: string
+          nightly_rate: number
+          updated_at: string
+        }
         Insert: {
-          id: string;
-          display_name?: string | null;
-          email?: string | null;
-          nightly_rate?: number;
-          daycare_rate?: number;
-          holiday_surcharge?: number;
-          cutoff_time?: string;
-          gcal_calendar_id?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
+          created_at?: string
+          cutoff_time?: string
+          daycare_rate?: number
+          display_name?: string | null
+          email?: string | null
+          gcal_calendar_id?: string | null
+          holiday_surcharge?: number
+          id: string
+          nightly_rate?: number
+          updated_at?: string
+        }
         Update: {
-          id?: string;
-          display_name?: string | null;
-          email?: string | null;
-          nightly_rate?: number;
-          daycare_rate?: number;
-          holiday_surcharge?: number;
-          cutoff_time?: string;
-          gcal_calendar_id?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
-  };
+          created_at?: string
+          cutoff_time?: string
+          daycare_rate?: number
+          display_name?: string | null
+          email?: string | null
+          gcal_calendar_id?: string | null
+          holiday_surcharge?: number
+          id?: string
+          nightly_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
-export type Profile = Database['public']['Tables']['profiles']['Row'];
-export type Dog = Database['public']['Tables']['dogs']['Row'];
-export type Booking = Database['public']['Tables']['bookings']['Row'];
-export type BookingDay = Database['public']['Tables']['booking_days']['Row'];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-export type ProfileRates = Pick<
-  Profile,
-  'nightly_rate' | 'daycare_rate' | 'holiday_surcharge' | 'cutoff_time'
->;
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
-export type BookingWithDog = Booking & { dog: Dog };
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
-export type BookingWithDays = Booking & {
-  booking_days: BookingDay[];
-  dog: Dog;
-};
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
-export type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
-export type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
-export type DogInsert = Database['public']['Tables']['dogs']['Insert'];
-export type DogUpdate = Database['public']['Tables']['dogs']['Update'];
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
-export type BookingInsert = Database['public']['Tables']['bookings']['Insert'];
-export type BookingUpdate = Database['public']['Tables']['bookings']['Update'];
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
-export type BookingDayInsert = Database['public']['Tables']['booking_days']['Insert'];
-export type BookingDayUpdate = Database['public']['Tables']['booking_days']['Update'];
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
