@@ -6,25 +6,8 @@ export function RequireAuth() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: '100dvh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            border: '3px solid var(--sage-light)',
-            borderTopColor: 'var(--sage)',
-            borderRadius: '50%',
-            animation: 'spin 0.7s linear infinite',
-          }}
-        />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className="min-h-[100dvh] flex items-center justify-center">
+        <div className="w-10 h-10 border-3 border-sage-light border-t-sage rounded-full animate-spin" />
       </div>
     );
   }

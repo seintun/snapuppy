@@ -50,7 +50,8 @@ export function SlideUpSheet({ isOpen, onClose, title, children }: SlideUpSheetP
           transform: isDragging || offset > 0 
             ? `translateY(${offset}px)` 
             : undefined,
-          transition: isDragging ? 'none' : undefined
+          transition: isDragging ? 'none' : undefined,
+          cursor: isDragging ? 'grabbing' : undefined
         }}
         {...handlers}
       >

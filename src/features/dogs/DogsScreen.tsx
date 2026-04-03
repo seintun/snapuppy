@@ -44,24 +44,17 @@ export function DogsScreen() {
 
   return (
     <>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-        }}
-      >
-        <h1 className="page-title" style={{ margin: 0 }}>
-          Dogs
-        </h1>
-        <button className="btn-secondary" type="button" onClick={() => setIsAddDogOpen(true)}>
-          + Add Dog
-        </button>
+      <div className="flex justify-between items-center mb-3">
+        <h1 className="page-title !m-0">Dogs</h1>
+        {dogs.length > 0 && (
+          <button className="btn-secondary" type="button" onClick={() => setIsAddDogOpen(true)}>
+            + Add Dog
+          </button>
+        )}
       </div>
 
-      {loading ? <p>Loading dogs...</p> : null}
-      {!loading && error ? <p style={{ color: 'var(--terracotta)' }}>{error}</p> : null}
+      {loading ? <p className="text-bark-light">Loading dogs...</p> : null}
+      {!loading && error ? <p className="text-terracotta">{error}</p> : null}
 
       {!loading && !error ? (
         filteredDogs.length === 0 ? (
@@ -78,11 +71,10 @@ export function DogsScreen() {
               placeholder="Search dogs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="form-input"
-              style={{ marginBottom: 12 }}
+              className="form-input mb-3 w-full"
             />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="flex flex-col gap-2.5">
               {filteredDogs.map((dog) => (
                 <Card
                   key={dog.id}
@@ -90,11 +82,11 @@ export function DogsScreen() {
                   pressable
                   onClick={() => navigate(`/dogs/${dog.id}`)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="flex items-center gap-3">
                     <DogAvatar name={dog.name} src={dog.photo_url} size="md" />
-                    <div style={{ flex: 1 }}>
+                    <div className="flex-1">
                       <strong>{dog.name}</strong>
-                      <p style={{ margin: 0, color: 'var(--bark-light)', fontSize: 14 }}>
+                      <p className="m-0 text-sm text-bark-light">
                         {dog.owner_name ?? 'No owner name'}
                       </p>
                     </div>

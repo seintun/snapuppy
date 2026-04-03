@@ -25,17 +25,8 @@ function BookingBlock({
   const info = getBookingSpanInfo(booking, date);
 
   const style: React.CSSProperties = {
-    height: 18,
-    fontSize: 9,
-    fontWeight: 700,
-    display: 'flex',
-    alignItems: 'center',
     paddingLeft: info.isStart ? 4 : 0,
     paddingRight: info.isEnd ? 4 : 0,
-    overflow: 'hidden',
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-    marginBottom: 1,
     borderRadius:
       info.isStart && info.isEnd
         ? 99
@@ -46,17 +37,19 @@ function BookingBlock({
             : 0,
     marginLeft: info.isStart ? 2 : 0,
     marginRight: info.isEnd ? 2 : 0,
-    background: info.isDaycare ? 'var(--sky)' : 'var(--sage)',
-    color: 'white',
     borderLeft:
       info.isHoliday && info.isStart ? '3px solid var(--terracotta)' : undefined,
-    letterSpacing: '0.02em',
   };
 
   return (
-    <div style={style} onClick={onClick} title={info.label}>
+    <div
+      className={`h-[18px] text-[9px] font-bold flex items-center overflow-hidden whitespace-nowrap cursor-pointer mb-[1px] tracking-[0.02em] text-white ${info.isDaycare ? 'bg-sky' : 'bg-sage'}`}
+      style={style}
+      onClick={onClick}
+      title={info.label}
+    >
       {info.label && (
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
+        <span className="overflow-hidden text-ellipsis max-w-[60px]">
           {info.label}
         </span>
       )}
@@ -98,25 +91,25 @@ export function CalendarMain() {
   }, [handleClose, refresh]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--warm-beige)' }}>
+    <div className="flex flex-col h-full bg-warm-beige">
       {/* Month header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 10px', background: 'var(--cream)', borderBottom: '1px solid var(--pebble)' }}>
+      <div className="flex items-center justify-between px-4 pt-3 pb-2.5 bg-cream border-b border-pebble">
         <button
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-          style={{ minHeight: 44, minWidth: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--bark)', borderRadius: 999 }}
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-bark rounded-full focus-visible:outline-sky"
           aria-label="Previous month"
         >
           <CaretLeft size={20} weight="bold" />
         </button>
 
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--bark)', letterSpacing: '-0.02em' }}>
+        <div className="text-center">
+          <div className="font-extrabold text-lg text-bark tracking-tight">
             {format(currentMonth, 'MMMM yyyy')}
           </div>
           {!isSameMonth(todayDate, currentMonth) && (
             <button
               onClick={() => setCurrentMonth(new Date())}
-              style={{ fontSize: 11, color: 'var(--sage)', fontWeight: 700, background: 'var(--sage-light)', border: 'none', borderRadius: 99, padding: '2px 10px', cursor: 'pointer', marginTop: 2 }}
+              className="text-[11px] text-sage font-bold bg-sage-light border-none rounded-full px-2.5 py-0.5 cursor-pointer mt-0.5"
             >
               Today
             </button>
@@ -125,7 +118,7 @@ export function CalendarMain() {
 
         <button
           onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-          style={{ minHeight: 44, minWidth: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--bark)', borderRadius: 999 }}
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer text-bark rounded-full focus-visible:outline-sky"
           aria-label="Next month"
         >
           <CaretRight size={20} weight="bold" />
@@ -133,9 +126,9 @@ export function CalendarMain() {
       </div>
 
       {/* Day-of-week header */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'var(--cream)', borderBottom: '1px solid var(--pebble)' }}>
+      <div className="grid grid-cols-7 bg-cream border-b border-pebble">
         {DAY_LABELS.map((day) => (
-          <div key={day} style={{ textAlign: 'center', padding: '6px 0', fontSize: 10, fontWeight: 700, color: 'var(--bark-light)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div key={day} className="text-center py-1.5 text-[10px] font-bold text-bark-light uppercase tracking-wider">
             {day}
           </div>
         ))}
@@ -143,11 +136,11 @@ export function CalendarMain() {
 
       {/* Calendar grid */}
       {loading ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bark-light)' }}>
-          Loading…
+        <div className="flex-1 flex items-center justify-center text-bark-light animate-pulse font-bold text-sm">
+          Loading Calendar...
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '1fr', flex: 1, overflowY: 'auto' }}>
+        <div className="grid grid-cols-7 auto-rows-fr flex-1 overflow-y-auto">
           {days.map((day, i) => {
             const dayBookings = getBookingsForDate(bookings, day);
             const inCurrentMonth = isSameMonth(day, currentMonth);
@@ -155,36 +148,21 @@ export function CalendarMain() {
             const colIndex = i % 7;
 
             return (
-              <div
+              <button
                 key={i}
+                type="button"
                 onClick={() => inCurrentMonth && handleDateTap(day)}
-                style={{
-                  borderRight: colIndex < 6 ? '1px solid var(--pebble)' : undefined,
-                  borderBottom: '1px solid var(--pebble)',
-                  background: inCurrentMonth ? 'var(--cream)' : 'var(--warm-beige)',
-                  opacity: inCurrentMonth ? 1 : 0.45,
-                  minHeight: 80,
-                  padding: '4px 0 2px',
-                  cursor: inCurrentMonth ? 'pointer' : 'default',
-                  transition: 'background 150ms ease',
-                }}
-                role={inCurrentMonth ? 'button' : undefined}
-                tabIndex={inCurrentMonth ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if ((e.key === 'Enter' || e.key === ' ') && inCurrentMonth) {
-                    e.preventDefault();
-                    handleDateTap(day);
-                  }
-                }}
+                disabled={!inCurrentMonth}
+                className={`text-left outline-none p-0 flex flex-col items-stretch border-b border-pebble min-h-[80px] pt-1 pb-0.5 transition-colors duration-150 ${inCurrentMonth ? 'cursor-pointer focus-visible:bg-pebble active:bg-pebble' : 'cursor-default opacity-45 bg-warm-beige'} ${inCurrentMonth ? 'bg-cream' : ''} ${colIndex < 6 ? 'border-r' : ''}`}
                 aria-label={inCurrentMonth ? `${format(day, 'MMMM d')} — add booking` : undefined}
               >
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
-                  <span style={{ width: 22, height: 22, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: todayCell ? 800 : 600, background: todayCell ? 'var(--sage)' : 'transparent', color: todayCell ? 'white' : 'var(--bark)' }}>
+                <div className="flex justify-center mb-0.5">
+                  <span className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] ${todayCell ? 'font-extrabold bg-sage text-white' : 'font-semibold bg-transparent text-bark'}`}>
                     {format(day, 'd')}
                   </span>
                 </div>
 
-                <div style={{ overflow: 'hidden' }}>
+                <div className="overflow-hidden flex-1 px-0.5">
                   {dayBookings.slice(0, 3).map((booking) => (
                     <BookingBlock
                       key={booking.id}
@@ -194,12 +172,12 @@ export function CalendarMain() {
                     />
                   ))}
                   {dayBookings.length > 3 && (
-                    <div style={{ fontSize: 9, color: 'var(--bark-light)', textAlign: 'center', fontWeight: 600 }}>
+                    <div className="text-[9px] text-bark-light text-center font-semibold">
                       +{dayBookings.length - 3}
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -209,15 +187,7 @@ export function CalendarMain() {
       <button
         id="calendar-fab"
         onClick={() => handleDateTap(todayDate)}
-        style={{
-          position: 'fixed', right: 20, bottom: 88, width: 56, height: 56,
-          borderRadius: 999, background: 'var(--terracotta)', color: 'white',
-          border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', boxShadow: '0 4px 16px rgba(212,132,90,0.4)',
-          transition: 'transform 150ms ease, box-shadow 150ms ease', zIndex: 50,
-        }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+        className="fixed right-5 bottom-[88px] w-14 h-14 rounded-full bg-terracotta text-white border-none cursor-pointer flex items-center justify-center shadow-[0_4px_16px_rgba(212,132,90,0.4)] transition-transform duration-150 hover:scale-105 active:scale-95 z-50 focus-visible:outline-sky focus-visible:outline-offset-2"
         aria-label="New booking"
       >
         <Plus size={26} weight="bold" />

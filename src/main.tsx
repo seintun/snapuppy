@@ -1,10 +1,39 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import './styles.css';
+
+// 1. Configure the Query Client for high-performance and offline-first
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Data stays stale (doesn't refetch) for 5 minutes by default
+      staleTime: 1000 * 60 * 5,
+      // Keep unused data in the cache for 24 hours
+      gcTime: 1000 * 60 * 60 * 24,
+      // Retry failed requests up to 3 times with exponential backoff
+      retry: (failureCount, error) => {
+        if (error instanceof Error && error.message.includes('404')) return false;
+        return failureCount < 3;
+      },
+      // Refetch when the window regains focus (great for mobile/PWA)
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+// 2. Setup the browser persistence layer (LocalStorage for now, easy to swap to IndexedDB)
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'SNAPUPPY_OFFLINE_CACHE',
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -17,12 +46,20 @@ if (!root) throw new Error('Root element not found');
 
 createRoot(root).render(
   <StrictMode>
-    <ToastProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </AuthProvider>
-    </ToastProvider>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}
+    >
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </AuthProvider>
+        </ToastProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </PersistQueryClientProvider>
   </StrictMode>,
 );

@@ -49,13 +49,13 @@ export function DogDetailScreen() {
   }
 
   if (loading) {
-    return <p>Loading dog profile...</p>;
+    return <p className="text-bark-light">Loading dog profile...</p>;
   }
 
   if (!dogId) {
     return (
       <>
-        <p style={{ color: 'var(--terracotta)' }}>Dog ID is missing</p>
+        <p className="text-terracotta">Dog ID is missing</p>
         <button type="button" className="btn-secondary" onClick={() => navigate('/dogs')}>
           Back to Dogs
         </button>
@@ -66,7 +66,7 @@ export function DogDetailScreen() {
   if (error || !dog) {
     return (
       <>
-        <p style={{ color: 'var(--terracotta)' }}>{error ?? 'Dog not found'}</p>
+        <p className="text-terracotta">{error ?? 'Dog not found'}</p>
         <button type="button" className="btn-secondary" onClick={() => navigate('/dogs')}>
           Back to Dogs
         </button>
@@ -80,35 +80,35 @@ export function DogDetailScreen() {
         ← Back
       </button>
 
-      <div style={{ textAlign: 'center', margin: '16px 0 20px' }}>
-        <div style={{ display: 'inline-flex', marginBottom: 12 }}>
+      <div className="text-center my-4 mb-5">
+        <div className="inline-flex mb-3">
           <DogAvatar name={dog.name} src={dog.photo_url} size="lg" />
         </div>
-        <h1 style={{ margin: 0 }}>{dog.name}</h1>
-        <p style={{ margin: '4px 0 0', color: 'var(--bark-light)' }}>
+        <h1 className="m-0 text-2xl font-extrabold">{dog.name}</h1>
+        <p className="m-0 mt-1 text-bark-light">
           {dog.owner_name ?? 'Owner unknown'}
         </p>
       </div>
 
-      <div style={{ marginBottom: 12 }}>
+      <div className="mb-3">
         <Card className="p-4">
-          <p className="profile-section-title">Contact</p>
-          <p style={{ margin: 0 }}>{dog.owner_phone ?? 'No phone number'}</p>
+          <p className="profile-section-title !mt-0">Contact</p>
+          <p className="m-0 text-bark font-medium">{dog.owner_phone ?? 'No phone number'}</p>
         </Card>
       </div>
 
-      <div style={{ marginBottom: 12 }}>
+      <div className="mb-3">
         <Card className="p-4">
-          <p className="profile-section-title">Notes</p>
-          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{dog.notes ?? 'No notes yet.'}</p>
+          <p className="profile-section-title !mt-0">Notes</p>
+          <p className="m-0 whitespace-pre-wrap text-bark">{dog.notes ?? 'No notes yet.'}</p>
         </Card>
       </div>
 
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button type="button" className="btn-sage" style={{ flex: 1 }} onClick={() => setIsEditing(true)}>
+      <div className="flex gap-2.5">
+        <button type="button" className="btn-sage flex-1" onClick={() => setIsEditing(true)}>
           Edit
         </button>
-        <button type="button" className="btn-danger" style={{ flex: 1 }} onClick={() => void handleDelete()}>
+        <button type="button" className="btn-danger flex-1" onClick={() => void handleDelete()}>
           Delete
         </button>
       </div>

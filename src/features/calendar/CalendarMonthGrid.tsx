@@ -32,25 +32,16 @@ export const CalendarMonthGrid = memo(function CalendarMonthGrid({
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-          gap: 8,
-          color: 'var(--bark-light)',
-          fontSize: 12,
-          fontWeight: 700,
-        }}
-      >
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-7 gap-2 text-bark-light text-xs font-bold">
         {weekdayLabels.map((label) => (
-          <div key={label} style={{ textAlign: 'center' }}>
+          <div key={label} className="text-center">
             {label}
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 8 }}>
+      <div className="grid grid-cols-7 gap-2">
         {gridDays.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
           const dayBookings = bookingsByDate[dateKey] ?? [];
@@ -60,60 +51,39 @@ export const CalendarMonthGrid = memo(function CalendarMonthGrid({
           return (
             <div
               key={dateKey}
-              style={{
-                minHeight: 120,
-                borderRadius: 12,
-                border: isToday ? '2px solid var(--sage)' : '1px solid var(--line)',
-                background: isCurrentMonth ? 'white' : 'rgba(0,0,0,0.02)',
-                padding: 8,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-              }}
+              className={`min-h-[120px] rounded-xl p-2 flex flex-col gap-1.5 ${isToday ? 'border-2 border-sage' : 'border border-line'} ${isCurrentMonth ? 'bg-white' : 'bg-black/2'}`}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 6,
-                  alignItems: 'center',
-                  color: isCurrentMonth ? 'var(--bark)' : 'var(--bark-light)',
-                }}
-              >
+              <div className={`flex justify-between items-center gap-1.5 ${isCurrentMonth ? 'text-bark' : 'text-bark-light'}`}>
                 <strong>{format(day, 'd')}</strong>
                 {isToday ? (
-                  <span style={{ fontSize: 11, color: 'var(--sage)', fontWeight: 700 }}>Today</span>
+                  <span className="text-[11px] text-sage font-bold">Today</span>
                 ) : null}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {dayBookings.slice(0, 3).map((booking) => (
-                  <button
-                    key={`${dateKey}-${booking.id}`}
-                    type="button"
-                    onClick={() => onSelectBooking(booking.id)}
-                    style={{
-                      border: 'none',
-                      borderRadius: 999,
-                      padding: '4px 8px',
-                      background:
-                        getStatusVariant(booking.status) === 'terracotta'
-                          ? 'rgba(193, 104, 81, 0.18)'
-                          : getStatusVariant(booking.status) === 'sky'
-                            ? 'rgba(122, 171, 214, 0.18)'
-                            : 'rgba(143, 184, 134, 0.22)',
-                      color: 'var(--bark)',
-                      fontSize: 12,
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {booking.dog?.name ?? 'Booking'}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-1">
+                {dayBookings.slice(0, 3).map((booking) => {
+                  const statusVariant = getStatusVariant(booking.status);
+                  const bgClass =
+                    statusVariant === 'terracotta'
+                      ? 'bg-terracotta/20'
+                      : statusVariant === 'sky'
+                        ? 'bg-sky/20'
+                        : 'bg-sage/20';
+
+                  return (
+                    <button
+                      key={`${dateKey}-${booking.id}`}
+                      type="button"
+                      onClick={() => onSelectBooking(booking.id)}
+                      className={`border-none rounded-full px-2 py-1 text-xs text-left cursor-pointer text-bark ${bgClass}`}
+                    >
+                      {booking.dog?.name ?? 'Booking'}
+                    </button>
+                  );
+                })}
 
                 {dayBookings.length > 3 ? (
-                  <span style={{ fontSize: 12, color: 'var(--bark-light)' }}>
+                  <span className="text-xs text-bark-light">
                     +{dayBookings.length - 3} more
                   </span>
                 ) : null}

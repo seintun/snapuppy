@@ -23,7 +23,7 @@ export function BookingsScreen() {
   const [containerHeight, setContainerHeight] = useState(400);
   const navigate = useNavigate();
 
-  const { bookings, loading, error } = useBookings();
+  const { data: bookings = [], isLoading, isError, error } = useBookings();
   const [filter, setFilter] = useState<BookingStatus>('active');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -52,20 +52,10 @@ export function BookingsScreen() {
 
   return (
     <>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-          marginBottom: 12,
-        }}
-      >
+      <div className="flex justify-between items-center gap-3 mb-3">
         <div>
-          <h1 className="page-title" style={{ margin: 0 }}>
-            Bookings
-          </h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--bark-light)' }}>
+          <h1 className="page-title !m-0">Bookings</h1>
+          <p className="m-0 mt-1 text-bark-light">
             Track upcoming stays and adjust day-by-day pricing.
           </p>
         </div>
@@ -75,7 +65,7 @@ export function BookingsScreen() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div className="flex gap-2 mb-3 flex-wrap">
         {bookingStatusOptions.map((status) => (
           <button
             key={status}
@@ -88,25 +78,23 @@ export function BookingsScreen() {
         ))}
       </div>
 
-      {loading ? <p>Loading bookings...</p> : null}
-      {!loading && error ? <p style={{ color: 'var(--terracotta)' }}>{error}</p> : null}
+      {isLoading && !bookings.length ? <p className="text-bark-light">Loading bookings...</p> : null}
+      {isError ? <p className="text-terracotta">{error instanceof Error ? error.message : 'Failed to load bookings'}</p> : null}
 
-      {!loading && !error ? (
+      {!isLoading && !isError ? (
         filteredBookings.length ? (
           <div
             ref={containerRef}
             onScroll={onScroll}
-            style={{ height: '100%', overflow: 'auto', contain: 'strict' }}
+            className="h-full overflow-auto strict-contain"
           >
-            <div style={{ height: totalHeight, position: 'relative' }}>
+            <div className="relative" style={{ height: totalHeight }}>
               {virtualItems.map(({ item: booking, offsetTop }) => (
                 <div
                   key={booking.id}
+                  className="absolute left-0 right-0"
                   style={{
-                    position: 'absolute',
                     top: offsetTop,
-                    left: 0,
-                    right: 0,
                     height: ITEM_HEIGHT,
                   }}
                 >
@@ -115,32 +103,25 @@ export function BookingsScreen() {
                     pressable
                     onClick={() => navigate(`/bookings/${booking.id}`)}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="flex items-center gap-3">
                       <DogAvatar
                         name={booking.dog?.name ?? 'Dog'}
                         src={booking.dog?.photo_url}
                         size="md"
                       />
 
-                      <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            gap: 12,
-                            alignItems: 'center',
-                          }}
-                        >
+                      <div className="flex-1">
+                        <div className="flex justify-between gap-3 items-center">
                           <strong>{booking.dog?.name ?? 'Unknown dog'}</strong>
                           <Badge variant={getStatusVariant(booking.status)}>
                             {getStatusLabel(booking.status)}
                           </Badge>
                         </div>
 
-                        <p style={{ margin: '4px 0 0', color: 'var(--bark-light)', fontSize: 14 }}>
+                        <p className="m-0 mt-1 text-sm text-bark-light">
                           {formatBookingRange(booking)}
                         </p>
-                        <p style={{ margin: '4px 0 0', fontSize: 14 }}>
+                        <p className="m-0 mt-1 text-sm">
                           {booking.days.length} day{booking.days.length === 1 ? '' : 's'} ·{' '}
                           {formatCurrency(booking.total_amount)}
                         </p>

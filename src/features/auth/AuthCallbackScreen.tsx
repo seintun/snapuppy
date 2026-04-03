@@ -37,30 +37,9 @@ export function AuthCallbackScreen() {
   }, [navigate]);
 
   return (
-    <div
-      style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
-        fontFamily: 'var(--font-sans, system-ui)',
-        color: 'var(--bark, #3b3228)',
-      }}
-    >
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          border: '3px solid #d4cfc9',
-          borderTopColor: '#8fb886',
-          borderRadius: '50%',
-          animation: 'spin 0.7s linear infinite',
-        }}
-      />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <p style={{ margin: 0, fontSize: 15 }}>Signing you in…</p>
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 font-sans text-bark">
+      <div className="w-9 h-9 border-3 border-[#d4cfc9] border-t-[#8fb886] rounded-full animate-spin" />
+      <p className="m-0 text-[15px]">Signing you in…</p>
     </div>
   );
 }

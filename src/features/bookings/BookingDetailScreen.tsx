@@ -5,44 +5,31 @@ import { ArrowLeft, Warning } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import {
-  getBooking,
-  saveBookingDays,
-  updateBookingStatus,
-  type BookingRecord,
-  type EditableBookingDay,
-} from '@/lib/bookingService';
+  useBooking,
+  useSaveBookingDays,
+  useUpdateBookingStatus,
+} from '@/hooks/useBookings';
+import type { EditableBookingDay } from '@/lib/bookingService';
 
 export function BookingDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const [booking, setBooking] = useState<BookingRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: booking, isLoading, isError, error: queryError } = useBooking(id);
+  const { mutateAsync: saveBookingDaysMutation } = useSaveBookingDays();
+  const { mutateAsync: updateBookingStatusMutation } = useUpdateBookingStatus();
+
   const [draftDays, setDraftDays] = useState<EditableBookingDay[]>([]);
   const [showBreakdown, setShowBreakdown] = useState(true);
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadBooking = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getBooking(id);
-      setBooking(data);
-      setDraftDays(data.days);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Booking not found');
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
   useEffect(() => {
-    void loadBooking();
-  }, [loadBooking]);
+    if (booking) {
+      setDraftDays(booking.days);
+    }
+  }, [booking]);
 
   const handleToggleDayHoliday = useCallback(
     async (day: EditableBookingDay) => {
@@ -52,20 +39,17 @@ export function BookingDetailScreen() {
       );
       setDraftDays(updatedDays);
       try {
-        const updated = await saveBookingDays({
-          bookingId: booking.id,
-          sitterId: booking.sitter_id,
+        await saveBookingDaysMutation({
+          id: booking.id,
           days: updatedDays,
         });
-        setBooking(updated);
-        setDraftDays(updated.days);
         addToast('Day updated 🐾', 'success');
       } catch {
-        setDraftDays(draftDays); // revert
+        setDraftDays(booking.days); // revert
         addToast('Failed to update day', 'error');
       }
     },
-    [booking, draftDays, addToast],
+    [booking, draftDays, saveBookingDaysMutation, addToast],
   );
 
   const handleToggleDayType = useCallback(
@@ -77,27 +61,24 @@ export function BookingDetailScreen() {
       );
       setDraftDays(updatedDays);
       try {
-        const updated = await saveBookingDays({
-          bookingId: booking.id,
-          sitterId: booking.sitter_id,
+        await saveBookingDaysMutation({
+          id: booking.id,
           days: updatedDays,
         });
-        setBooking(updated);
-        setDraftDays(updated.days);
         addToast('Rate type updated 🐾', 'success');
       } catch {
-        setDraftDays(draftDays);
+        setDraftDays(booking.days);
         addToast('Failed to update day', 'error');
       }
     },
-    [booking, draftDays, addToast],
+    [booking, draftDays, saveBookingDaysMutation, addToast],
   );
 
   const handleCancel = useCallback(async () => {
     if (!booking) return;
     setSaving(true);
     try {
-      await updateBookingStatus(booking.id, booking.sitter_id, 'cancelled');
+      await updateBookingStatusMutation({ id: booking.id, status: 'cancelled' });
       addToast('Booking cancelled', 'info');
       navigate('/bookings');
     } catch (err) {
@@ -106,31 +87,22 @@ export function BookingDetailScreen() {
       setSaving(false);
       setCancelConfirm(false);
     }
-  }, [booking, navigate, addToast]);
+  }, [booking, navigate, addToast, updateBookingStatusMutation]);
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '60vh',
-          color: 'var(--bark-light)',
-          fontSize: 14,
-        }}
-      >
+      <div className="flex flex-col items-center justify-center h-[60vh] text-sm text-bark-light">
         Loading…
       </div>
     );
   }
 
-  if (error || !booking) {
+  if (isError || !booking) {
     return (
-      <div style={{ padding: 24, textAlign: 'center', color: 'var(--terracotta)' }}>
-        <Warning size={40} style={{ marginBottom: 8 }} />
-        <p>{error ?? 'Booking not found'}</p>
-        <button className="btn-sage" style={{ marginTop: 16 }} onClick={() => navigate(-1)}>
+      <div className="p-6 text-center text-terracotta">
+        <Warning size={40} className="mb-2 inline-block" />
+        <p>{queryError instanceof Error ? queryError.message : 'Booking not found'}</p>
+        <button className="btn-sage mt-4" onClick={() => navigate(-1)}>
           Go back
         </button>
       </div>
@@ -140,117 +112,51 @@ export function BookingDetailScreen() {
   const dog = booking.dog;
   const typeLabel = booking.type === 'boarding' ? 'Boarding' : 'Daycare';
   const statusColors: Record<string, string> = {
-    active: 'var(--sage)',
-    completed: 'var(--bark-light)',
-    cancelled: 'var(--terracotta)',
+    active: 'bg-sage',
+    completed: 'bg-bark-light',
+    cancelled: 'bg-terracotta',
   };
 
   return (
-    <div style={{ paddingBottom: 100 }}>
+    <div className="pb-24">
       {/* Header */}
-      <div
-        style={{
-          background: 'var(--cream)',
-          padding: '16px 20px 24px',
-          borderBottom: '1px solid var(--pebble)',
-        }}
-      >
+      <div className="bg-cream px-5 pt-4 pb-6 border-b border-pebble">
         <button
           onClick={() => navigate(-1)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            color: 'var(--bark-light)',
-            fontWeight: 600,
-            fontSize: 14,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '8px 0',
-            marginBottom: 16,
-          }}
+          className="flex items-center gap-1.5 text-bark-light font-semibold text-sm bg-transparent border-none cursor-pointer py-2 mb-4"
         >
           <ArrowLeft size={18} weight="bold" />
           Bookings
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className="flex items-center gap-4">
           {dog ? (
-            <DogAvatar name={dog.name} photoUrl={dog.photo_url} size="lg" />
+            <DogAvatar name={dog.name} src={dog.photo_url} size="lg" />
           ) : (
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 999,
-                background: 'var(--sage-light)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 28,
-              }}
-            >
+            <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-3xl">
               🐾
             </div>
           )}
 
           <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 24,
-                fontWeight: 900,
-                color: 'var(--bark)',
-                letterSpacing: '-0.03em',
-              }}
-            >
+            <h1 className="m-0 text-2xl font-black text-bark tracking-tight">
               {dog?.name ?? 'Unknown Dog'}
             </h1>
             {dog?.owner_name && (
-              <div style={{ fontSize: 12, color: 'var(--bark-light)', marginTop: 2 }}>
+              <div className="text-xs text-bark-light mt-0.5">
                 {dog.owner_name}
                 {dog.owner_phone ? ` · ${dog.owner_phone}` : ''}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  background: 'var(--sage)',
-                  color: 'white',
-                  borderRadius: 99,
-                  padding: '2px 10px',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                }}
-              >
+            <div className="flex gap-1.5 mt-1.5 flex-wrap">
+              <span className="bg-sage text-white rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase">
                 {typeLabel}
               </span>
-              <span
-                style={{
-                  background: statusColors[booking.status] ?? 'var(--pebble)',
-                  color: 'white',
-                  borderRadius: 99,
-                  padding: '2px 10px',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                }}
-              >
+              <span className={`${statusColors[booking.status] ?? 'bg-pebble'} text-white rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase`}>
                 {booking.status}
               </span>
               {booking.is_holiday && (
-                <span
-                  style={{
-                    background: 'var(--blush)',
-                    color: 'var(--terracotta)',
-                    borderRadius: 99,
-                    padding: '2px 10px',
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
+                <span className="bg-blush text-terracotta rounded-full px-2.5 py-0.5 text-[10px] font-bold">
                   🎉 Holiday
                 </span>
               )}
@@ -259,96 +165,38 @@ export function BookingDetailScreen() {
         </div>
       </div>
 
-      <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="px-4 pt-4 flex flex-col gap-3">
         {/* Dates + total */}
-        <div
-          style={{
-            background: 'var(--cream)',
-            borderRadius: 14,
-            padding: '16px 18px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            boxShadow: '0 2px 8px rgba(74,55,40,0.08)',
-          }}
-        >
+        <div className="bg-cream rounded-[14px] py-4 px-4.5 flex justify-between items-center shadow-[0_2px_8px_rgba(74,55,40,0.08)]">
           <div>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--bark-light)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 4,
-              }}
-            >
+            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider mb-1">
               Stay
             </div>
-            <div style={{ fontWeight: 800, color: 'var(--bark)', fontSize: 14 }}>
+            <div className="font-extrabold text-bark text-sm">
               {format(parseISO(booking.start_date), 'MMM d')} →{' '}
               {format(parseISO(booking.end_date), 'MMM d, yyyy')}
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--bark-light)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginBottom: 4,
-              }}
-            >
+          <div className="text-right">
+            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider mb-1">
               Total
             </div>
-            <div
-              style={{
-                fontSize: 26,
-                fontWeight: 900,
-                color: 'var(--terracotta)',
-                letterSpacing: '-0.04em',
-              }}
-            >
+            <div className="text-[26px] font-black text-terracotta tracking-tight">
               ${booking.total_amount.toFixed(2)}
             </div>
           </div>
         </div>
 
         {/* Daily breakdown accordion */}
-        <div
-          style={{
-            background: 'var(--cream)',
-            borderRadius: 14,
-            overflow: 'hidden',
-            boxShadow: '0 2px 8px rgba(74,55,40,0.08)',
-          }}
-        >
+        <div className="bg-cream rounded-[14px] overflow-hidden shadow-[0_2px_8px_rgba(74,55,40,0.08)]">
           <button
             onClick={() => setShowBreakdown((v) => !v)}
-            style={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 18px',
-              background: 'var(--sage-light)',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: 13,
-              color: 'var(--bark)',
-            }}
+            className="w-full flex justify-between items-center py-3.5 px-4.5 bg-sage-light border-none cursor-pointer font-bold text-[13px] text-bark"
           >
             <span>🗓️ Daily Breakdown</span>
             <span
-              style={{
-                fontSize: 16,
-                transition: 'transform 200ms ease',
-                display: 'inline-block',
-                transform: showBreakdown ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
+              className="text-base transition-transform duration-200 inline-block"
+              style={{ transform: showBreakdown ? 'rotate(180deg)' : 'rotate(0deg)' }}
             >
               ▲
             </span>
@@ -357,88 +205,44 @@ export function BookingDetailScreen() {
           {showBreakdown && (
             <div>
               {draftDays.length === 0 ? (
-                <div
-                  style={{
-                    padding: 16,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    color: 'var(--bark-light)',
-                  }}
-                >
+                <div className="p-4 text-center text-[13px] text-bark-light">
                   No daily breakdown available
                 </div>
               ) : (
                 draftDays.map((day, i) => (
                   <div
                     key={day.id}
-                    style={{
-                      padding: '12px 18px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderTop: i > 0 ? '1px solid var(--pebble)' : undefined,
-                    }}
+                    className={`px-4.5 py-3 flex justify-between items-center ${i > 0 ? 'border-t border-pebble' : ''}`}
                   >
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--bark)' }}>
+                      <div className="font-semibold text-[13px] text-bark">
                         {format(parseISO(day.date), 'EEE, MMM d')}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
+                      <div className="flex gap-1.5 mt-1">
                         <button
                           onClick={() => void handleToggleDayType(day)}
                           disabled={booking.status !== 'active'}
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            background: day.rate_type === 'boarding' ? 'var(--sage)' : 'var(--sky)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 99,
-                            padding: '2px 8px',
-                            cursor: booking.status === 'active' ? 'pointer' : 'default',
-                          }}
+                          className={`text-[9px] font-bold uppercase text-white border-none rounded-full px-2 py-0.5 ${day.rate_type === 'boarding' ? 'bg-sage' : 'bg-sky'} ${booking.status === 'active' ? 'cursor-pointer' : 'cursor-default'}`}
                           title="Toggle rate type"
                         >
                           {day.rate_type}
                         </button>
                         {day.is_holiday && (
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                              color: 'var(--terracotta)',
-                              background: 'var(--blush)',
-                              borderRadius: 99,
-                              padding: '2px 8px',
-                            }}
-                          >
+                          <span className="text-[9px] font-bold uppercase text-terracotta bg-blush rounded-full px-2 py-0.5">
                             Holiday
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontWeight: 700, color: 'var(--bark)', fontSize: 15 }}>
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-bold text-bark text-[15px]">
                         ${day.amount.toFixed(2)}
                       </span>
                       {booking.status === 'active' && (
                         <button
                           onClick={() => void handleToggleDayHoliday(day)}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 8,
-                            border: 'none',
-                            cursor: 'pointer',
-                            background: day.is_holiday ? 'var(--blush)' : 'var(--warm-beige)',
-                            fontSize: 16,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
+                          className={`w-8 h-8 rounded-lg border-none cursor-pointer text-base flex items-center justify-center ${day.is_holiday ? 'bg-blush' : 'bg-warm-beige'}`}
                           title="Toggle holiday"
                         >
                           🎉
@@ -454,57 +258,23 @@ export function BookingDetailScreen() {
 
         {/* Cancel */}
         {booking.status === 'active' && (
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-2">
             {cancelConfirm ? (
-              <div
-                style={{
-                  background: 'var(--blush)',
-                  borderRadius: 14,
-                  padding: 16,
-                  border: '1.5px solid var(--terracotta)',
-                }}
-              >
-                <p
-                  style={{
-                    margin: '0 0 12px',
-                    fontWeight: 700,
-                    color: 'var(--terracotta)',
-                    fontSize: 14,
-                  }}
-                >
+              <div className="bg-blush rounded-[14px] p-4 border-[1.5px] border-terracotta">
+                <p className="m-0 mb-3 font-bold text-terracotta text-sm">
                   Cancel this booking? This cannot be undone.
                 </p>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div className="flex gap-2.5">
                   <button
                     onClick={() => void handleCancel()}
                     disabled={saving}
-                    style={{
-                      flex: 1,
-                      minHeight: 44,
-                      background: 'var(--terracotta)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 10,
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: 'pointer',
-                    }}
+                    className="flex-1 min-h-[44px] bg-terracotta text-white border-none rounded-lg font-bold text-sm cursor-pointer"
                   >
                     {saving ? 'Cancelling…' : 'Yes, cancel'}
                   </button>
                   <button
                     onClick={() => setCancelConfirm(false)}
-                    style={{
-                      flex: 1,
-                      minHeight: 44,
-                      background: 'var(--cream)',
-                      color: 'var(--bark)',
-                      border: '1.5px solid var(--pebble)',
-                      borderRadius: 10,
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: 'pointer',
-                    }}
+                    className="flex-1 min-h-[44px] bg-cream text-bark border-[1.5px] border-pebble rounded-lg font-bold text-sm cursor-pointer"
                   >
                     Keep booking
                   </button>
@@ -513,17 +283,7 @@ export function BookingDetailScreen() {
             ) : (
               <button
                 onClick={() => setCancelConfirm(true)}
-                style={{
-                  width: '100%',
-                  minHeight: 48,
-                  background: 'transparent',
-                  color: 'var(--terracotta)',
-                  border: '1.5px solid var(--terracotta)',
-                  borderRadius: 14,
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
+                className="w-full min-h-[48px] bg-transparent text-terracotta border-[1.5px] border-terracotta rounded-[14px] font-bold text-sm cursor-pointer"
               >
                 Cancel booking
               </button>

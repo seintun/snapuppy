@@ -1,142 +1,122 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import {
   createBooking as svcCreateBooking,
   deleteBooking as svcDeleteBooking,
+  getBooking,
   getBookingFormOptions,
   getBookings,
   saveBookingDays as svcSaveBookingDays,
   updateBookingStatus as svcUpdateBookingStatus,
-  type BookingFormOptions,
   type BookingRecord,
   type BookingStatus,
   type CreateBookingInput,
   type EditableBookingDay,
 } from '@/lib/bookingService';
+import { logger } from '@/lib/logger';
 
-interface UseBookingsResult {
-  bookings: BookingRecord[];
-  dogs: BookingFormOptions['dogs'];
-  profile: BookingFormOptions['profile'];
-  loading: boolean;
-  error: string | null;
-  refresh: () => void;
-  createBooking: (input: Omit<CreateBookingInput, 'sitterId'>) => Promise<BookingRecord>;
-  saveBookingDays: (bookingId: string, days: EditableBookingDay[]) => Promise<BookingRecord>;
-  updateBookingStatus: (bookingId: string, status: BookingStatus) => Promise<void>;
-  deleteBooking: (bookingId: string) => Promise<void>;
-}
+// --- QUERIES ---
 
-interface BookingsSnapshot {
-  key: string;
-  bookings: BookingRecord[];
-  dogs: BookingFormOptions['dogs'];
-  profile: BookingFormOptions['profile'];
-  error: string | null;
-}
-
-export function useBookings(): UseBookingsResult {
+/**
+ * Fetches all bookings for the current sitter.
+ * Automatically synchronizes and caches data offline.
+ */
+export function useBookings() {
   const { user } = useAuthContext();
-  const [snapshot, setSnapshot] = useState<BookingsSnapshot | null>(null);
-  const [tick, setTick] = useState(0);
-  const requestKey = user ? `${user.id}:${tick}` : null;
 
-  const refresh = useCallback(() => setTick((value) => value + 1), []);
+  return useQuery({
+    queryKey: ['bookings', user?.id],
+    queryFn: () => getBookings(user!.id),
+    enabled: !!user?.id,
+  });
+}
 
-  useEffect(() => {
-    if (!user || !requestKey) return;
+/**
+ * Fetches a single booking by ID.
+ * Returns cached data immediately if available from the list.
+ */
+export function useBooking(id?: string) {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
 
-    let cancelled = false;
-
-    Promise.all([getBookings(user.id), getBookingFormOptions(user.id)])
-      .then(([nextBookings, options]) => {
-        if (cancelled) return;
-        setSnapshot({
-          key: requestKey,
-          bookings: nextBookings,
-          dogs: options.dogs,
-          profile: options.profile,
-          error: null,
-        });
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setSnapshot({
-          key: requestKey,
-          bookings: [],
-          dogs: [],
-          profile: null,
-          error: err instanceof Error ? err.message : 'Failed to load bookings',
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [requestKey, user]);
-
-  const createBooking = useCallback(
-    async (input: Omit<CreateBookingInput, 'sitterId'>): Promise<BookingRecord> => {
-      if (!user) throw new Error('You must be signed in to create bookings.');
-      const booking = await svcCreateBooking({ ...input, sitterId: user.id });
-      refresh();
-      return booking;
+  return useQuery({
+    queryKey: ['bookings', user?.id, id],
+    queryFn: () => getBooking(id!),
+    enabled: !!user?.id && !!id,
+    initialData: () => {
+      // Pre-populate from the list if possible
+      return queryClient
+        .getQueryData<BookingRecord[]>(['bookings', user?.id])
+        ?.find((b) => b.id === id);
     },
-    [refresh, user],
-  );
+  });
+}
 
-  const saveBookingDays = useCallback(
-    async (bookingId: string, days: EditableBookingDay[]): Promise<BookingRecord> => {
-      if (!user) throw new Error('You must be signed in to update bookings.');
-      const booking = await svcSaveBookingDays({ bookingId, days, sitterId: user.id });
-      refresh();
-      return booking;
+/**
+ * Fetches options needed for creating/editing a booking (Dogs + Profile).
+ */
+export function useBookingOptions() {
+  const { user } = useAuthContext();
+
+  return useQuery({
+    queryKey: ['booking-options', user?.id],
+    queryFn: () => getBookingFormOptions(user!.id),
+    enabled: !!user?.id,
+  });
+}
+
+// --- MUTATIONS ---
+
+export function useCreateBooking() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: Omit<CreateBookingInput, 'sitterId'>) =>
+      svcCreateBooking({ ...input, sitterId: user!.id }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      logger.info('Booking created successfully, cache invalidated');
     },
-    [refresh, user],
-  );
+  });
+}
 
-  const updateBookingStatus = useCallback(
-    async (bookingId: string, status: BookingStatus): Promise<void> => {
-      if (!user) throw new Error('You must be signed in to update bookings.');
-      await svcUpdateBookingStatus(bookingId, user.id, status);
-      refresh();
+export function useUpdateBookingStatus() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: BookingStatus }) =>
+      svcUpdateBookingStatus(id, user!.id, status),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, variables.id] });
     },
-    [refresh, user],
-  );
+  });
+}
 
-  const deleteBooking = useCallback(
-    async (bookingId: string): Promise<void> => {
-      if (!user) throw new Error('You must be signed in to delete bookings.');
-      await svcDeleteBooking(bookingId, user.id);
-      refresh();
+export function useSaveBookingDays() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, days }: { id: string; days: EditableBookingDay[] }) =>
+      svcSaveBookingDays({ bookingId: id, days, sitterId: user!.id }),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, updated.id] });
     },
-    [refresh, user],
-  );
+  });
+}
 
-  const activeSnapshot = requestKey && snapshot?.key === requestKey ? snapshot : null;
+export function useDeleteBooking() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
 
-  return useMemo(
-    () => ({
-      bookings: activeSnapshot?.bookings ?? [],
-      dogs: activeSnapshot?.dogs ?? [],
-      profile: activeSnapshot?.profile ?? null,
-      loading: Boolean(user && requestKey && !activeSnapshot),
-      error: activeSnapshot?.error ?? null,
-      refresh,
-      createBooking,
-      saveBookingDays,
-      updateBookingStatus,
-      deleteBooking,
-    }),
-    [
-      activeSnapshot,
-      refresh,
-      createBooking,
-      saveBookingDays,
-      updateBookingStatus,
-      deleteBooking,
-      requestKey,
-      user,
-    ],
-  );
+  return useMutation({
+    mutationFn: (id: string) => svcDeleteBooking(id, user!.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+    },
+  });
 }

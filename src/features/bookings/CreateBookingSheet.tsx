@@ -4,10 +4,8 @@ import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
 import {
   buildBookingPricing,
-  createBooking,
-  getBookingFormOptions,
-  type BookingFormOptions,
 } from '@/lib/bookingService';
+import { useBookingOptions, useCreateBooking } from '@/hooks/useBookings';
 
 export interface CreateBookingSheetProps {
   isOpen: boolean;
@@ -27,12 +25,13 @@ export function CreateBookingSheet({
   const { user } = useAuthContext();
   const { addToast } = useToast();
 
-  const [options, setOptions] = useState<BookingFormOptions>({ dogs: [], profile: null });
+  const { data: options = { dogs: [], profile: null } } = useBookingOptions();
+  const { mutateAsync: createBookingMutation, isPending: submitting } = useCreateBooking();
+
   const [selectedDogId, setSelectedDogId] = useState('');
   const [startDate, setStartDate] = useState(prefilledDate ?? today());
   const [endDate, setEndDate] = useState(prefilledDate ?? today());
   const [isHoliday, setIsHoliday] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   // Reset on open
   useEffect(() => {
@@ -43,16 +42,6 @@ export function CreateBookingSheet({
     setSelectedDogId('');
     setIsHoliday(false);
   }, [isOpen, prefilledDate]);
-
-  // Load dogs + profile
-  useEffect(() => {
-    if (!isOpen || !user) return;
-    getBookingFormOptions(user.id)
-      .then(setOptions)
-      .catch(() => {
-        /* silent */
-      });
-  }, [isOpen, user]);
 
   const handleStartChange = useCallback(
     (val: string) => {
@@ -93,10 +82,8 @@ export function CreateBookingSheet({
       e.preventDefault();
       if (!selectedDogId || !user) return;
 
-      setSubmitting(true);
       try {
-        await createBooking({
-          sitterId: user.id,
+        await createBookingMutation({
           dogId: selectedDogId,
           startDate,
           endDate,
@@ -109,11 +96,9 @@ export function CreateBookingSheet({
         onClose();
       } catch (err) {
         addToast(err instanceof Error ? err.message : 'Failed to create booking', 'error');
-      } finally {
-        setSubmitting(false);
       }
     },
-    [selectedDogId, user, startDate, endDate, isHoliday, options, addToast, onSuccess, onClose],
+    [selectedDogId, user, startDate, endDate, isHoliday, createBookingMutation, addToast, onSuccess, onClose],
   );
 
   const ratesSet = options.profile && (options.profile.nightly_rate ?? 0) > 0;
@@ -122,7 +107,7 @@ export function CreateBookingSheet({
     <SlideUpSheet isOpen={isOpen} onClose={onClose} title="New Booking 🐾">
       <form
         onSubmit={(e) => void handleSubmit(e)}
-        style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        className="flex flex-col gap-3.5"
       >
         {/* Dog selector */}
         <div className="form-field">
@@ -145,14 +130,14 @@ export function CreateBookingSheet({
             ))}
           </select>
           {options.dogs.length === 0 && (
-            <p style={{ fontSize: 12, color: 'var(--bark-light)', margin: '4px 0 0' }}>
+            <p className="text-xs text-bark-light mt-1 mb-0">
               No dogs yet — add one in the Dogs tab first.
             </p>
           )}
         </div>
 
         {/* Dates */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div className="grid grid-cols-2 gap-2.5">
           <div className="form-field">
             <label className="form-label" htmlFor="booking-start">
               Check-in
@@ -184,164 +169,67 @@ export function CreateBookingSheet({
 
         {/* Holiday toggle */}
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: isHoliday ? 'var(--blush)' : 'var(--cream)',
-            border: `1.5px solid ${isHoliday ? 'var(--terracotta)' : 'var(--pebble)'}`,
-            borderRadius: 10,
-            padding: '10px 14px',
-            transition: 'all 150ms ease',
-          }}
+          className={`flex items-center justify-between rounded-lg px-3.5 py-2.5 transition-all duration-150 border-[1.5px] ${isHoliday ? 'bg-blush border-terracotta' : 'bg-cream border-pebble'}`}
         >
           <div>
             <div
-              style={{
-                fontWeight: 700,
-                fontSize: 14,
-                color: isHoliday ? 'var(--terracotta)' : 'var(--bark)',
-              }}
+              className={`font-bold text-sm ${isHoliday ? 'text-terracotta' : 'text-bark'}`}
             >
               🎉 Holiday booking
             </div>
-            <div style={{ fontSize: 11, color: 'var(--bark-light)', marginTop: 2 }}>
+            <div className="text-[11px] text-bark-light mt-0.5">
               Applies holiday surcharge
             </div>
           </div>
           <label
-            style={{
-              position: 'relative',
-              display: 'inline-block',
-              width: 44,
-              height: 24,
-              cursor: 'pointer',
-            }}
+            className="relative inline-block w-11 h-6 cursor-pointer"
           >
             <input
               type="checkbox"
               checked={isHoliday}
               onChange={(e) => setIsHoliday(e.target.checked)}
-              style={{ opacity: 0, width: 0, height: 0 }}
+              className="opacity-0 w-0 h-0"
             />
             <span
-              style={{
-                position: 'absolute',
-                inset: 0,
-                borderRadius: 99,
-                background: isHoliday ? 'var(--terracotta)' : 'var(--pebble)',
-                transition: 'background 200ms ease',
-              }}
+              className={`absolute inset-0 rounded-full transition-colors duration-200 ${isHoliday ? 'bg-terracotta' : 'bg-pebble'}`}
             />
             <span
-              style={{
-                position: 'absolute',
-                top: 3,
-                left: isHoliday ? 23 : 3,
-                width: 18,
-                height: 18,
-                borderRadius: '50%',
-                background: 'white',
-                transition: 'left 200ms ease',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-              }}
+              className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-all duration-200 shadow-[0_1px_4px_rgba(0,0,0,0.2)] ${isHoliday ? 'left-[23px]' : 'left-[3px]'}`}
             />
           </label>
         </div>
 
         {/* Rate preview */}
-        <div style={{ background: 'var(--sage-light)', borderRadius: 12, padding: 14 }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 8,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--bark-light)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
+        <div className="bg-sage-light rounded-xl p-3.5">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[11px] font-bold text-bark-light uppercase tracking-wider">
               Rate Preview
             </span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--sage)',
-                background: 'white',
-                borderRadius: 99,
-                padding: '2px 8px',
-                textTransform: 'uppercase',
-              }}
-            >
+            <span className="text-[11px] font-bold text-sage bg-white rounded-full px-2 py-0.5 uppercase">
               {pricing?.type ?? (startDate === endDate ? 'daycare' : 'boarding')}
             </span>
           </div>
 
           {!ratesSet && (
-            <p style={{ fontSize: 11, color: 'var(--bark-light)', margin: '0 0 8px' }}>
+            <p className="text-[11px] text-bark-light m-0 mb-2">
               ⚠️ Set your rates in Profile for accurate estimates.
             </p>
           )}
 
           {pricing && pricing.days.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
-              {pricing.days.map((day) => (
-                <div
-                  key={day.date}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: 12,
-                    color: 'var(--bark)',
-                  }}
-                >
-                  <span>{day.date}</span>
-                  <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {day.is_holiday && (
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 700,
-                          color: 'var(--terracotta)',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        Holiday
-                      </span>
-                    )}
-                    <span style={{ fontWeight: 600 }}>${day.amount.toFixed(2)}</span>
-                  </span>
-                </div>
-              ))}
+            <div className="flex flex-col gap-1 mb-2.5">
+              <div className="flex justify-between text-xs text-bark">
+                <span>{startDate} to {endDate}</span>
+                <span className="font-semibold">
+                  {pricing.days.length} {pricing.days.length === 1 ? 'day' : 'days'}
+                </span>
+              </div>
             </div>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              borderTop: '1px solid var(--sage)',
-              paddingTop: 8,
-            }}
-          >
-            <span style={{ fontWeight: 700, color: 'var(--bark)' }}>Total</span>
-            <span
-              style={{
-                fontSize: 22,
-                fontWeight: 900,
-                color: 'var(--terracotta)',
-                letterSpacing: '-0.03em',
-              }}
-            >
+          <div className="flex justify-between items-center border-t border-sage pt-2">
+            <span className="font-bold text-bark">Total</span>
+            <span className="text-[22px] font-black text-terracotta tracking-tight">
               ${(pricing?.totalAmount ?? 0).toFixed(2)}
             </span>
           </div>
@@ -349,9 +237,8 @@ export function CreateBookingSheet({
 
         <button
           type="submit"
-          className="btn-sage"
+          className="btn-sage mt-1"
           disabled={submitting || !selectedDogId}
-          style={{ marginTop: 4 }}
         >
           {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
         </button>

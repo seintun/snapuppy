@@ -59,7 +59,7 @@ export function ProfileScreen() {
       {/* Business Rates */}
       <p className="profile-section-title">Business Rates</p>
       <form className="surface-card" onSubmit={handleSave}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="flex flex-col gap-4">
           <div className="form-field">
             <label className="form-label" htmlFor="nightly-rate">
               Nightly Boarding Rate
@@ -139,31 +139,22 @@ export function ProfileScreen() {
       {/* Account */}
       <p className="profile-section-title">Account</p>
       <div className="surface-card">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-3.5">
           <div className="form-field">
             <span className="form-label">Name</span>
-            <span style={{ fontSize: 16, color: 'var(--bark)' }}>
+            <span className="text-base text-bark">
               {profile?.display_name ?? user?.user_metadata?.full_name ?? '—'}
             </span>
           </div>
           <div className="form-field">
             <span className="form-label">Email</span>
-            <span style={{ fontSize: 16, color: 'var(--bark)' }}>
+            <span className="text-base text-bark">
               {profile?.email ?? user?.email ?? '—'}
             </span>
           </div>
           <button
             onClick={signOut}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: '8px 0 0',
-              fontSize: 15,
-              fontWeight: 700,
-              color: 'var(--terracotta)',
-              cursor: 'pointer',
-              textAlign: 'left',
-            }}
+            className="bg-transparent border-none pt-2 text-[15px] font-bold text-terracotta cursor-pointer text-left"
           >
             Sign out
           </button>
@@ -183,17 +174,7 @@ export function ProfileScreen() {
         ) : (
           <button
             onClick={() => void handleCalendarConnect()}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              fontSize: 15,
-              fontWeight: 700,
-              color: 'var(--sage)',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              textUnderlineOffset: 3,
-            }}
+            className="bg-transparent border-none p-0 text-[15px] font-bold text-sage cursor-pointer underline underline-offset-4"
           >
             Connect Google Calendar
           </button>
