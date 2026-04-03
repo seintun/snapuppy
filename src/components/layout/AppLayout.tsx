@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { BottomTabs } from './BottomTabs';
 import { Fab } from './FAB';
+import { PwaStatus } from './PwaStatus';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 
 export function AppLayout() {
@@ -19,6 +20,7 @@ export function AppLayout() {
 
       <Fab onClick={() => setIsQuickAddOpen(true)} />
       <BottomTabs />
+      <PwaStatus />
 
       <SlideUpSheet
         isOpen={isQuickAddOpen}

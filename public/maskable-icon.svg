@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Snapuppy">
+  <rect width="512" height="512" rx="120" fill="#8FB886"/>
+  <g fill="#FDFBF7">
+    <ellipse cx="256" cy="290" rx="98" ry="118"/>
+    <ellipse cx="170" cy="190" rx="42" ry="54"/>
+    <ellipse cx="342" cy="190" rx="42" ry="54"/>
+    <ellipse cx="120" cy="250" rx="34" ry="44"/>
+    <ellipse cx="392" cy="250" rx="34" ry="44"/>
+  </g>
+</svg>
