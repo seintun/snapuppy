@@ -15,33 +15,44 @@ function DogIcon() {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      {/* Ears */}
-      <ellipse cx="18" cy="45" rx="8.5" ry="20" transform="rotate(20 18 45)" fill="#D4845A" />
-      <ellipse cx="62" cy="45" rx="8.5" ry="20" transform="rotate(-20 62 45)" fill="#D4845A" />
-      
+      {/* One ear up */}
+      <path d="M24 12 L14 37 L34 34 Z" fill="#D4845A" />
+      <path d="M24 18 L19 32 L30 30 Z" fill="#F3BA9D" />
+
+      {/* One floppy ear */}
+      <ellipse cx="62" cy="42" rx="8" ry="18" transform="rotate(-22 62 42)" fill="#D4845A" />
+      <ellipse cx="62" cy="43" rx="4.5" ry="11" transform="rotate(-22 62 43)" fill="#F3BA9D" />
+
       {/* Head */}
-      <circle cx="40" cy="38" r="25" fill="#8FB886" />
-      
+      <circle cx="40" cy="39" r="24" fill="#8FB886" />
+
+      {/* Cheeks */}
+      <circle cx="28" cy="46" r="3" fill="#F6D7C5" />
+      <circle cx="52" cy="46" r="3" fill="#F6D7C5" />
+
       {/* Muzzle */}
-      <ellipse cx="40" cy="48" rx="15" ry="11" fill="#FDFBF7" />
-      
+      <ellipse cx="40" cy="50" rx="15" ry="10.5" fill="#FDFBF7" />
+
       {/* Eyes */}
-      <circle cx="30" cy="34" r="3.5" fill="#4A3728" />
-      <circle cx="50" cy="34" r="3.5" fill="#4A3728" />
-      <circle cx="31" cy="32.5" r="1.5" fill="#FFFFFF" />
-      <circle cx="51" cy="32.5" r="1.5" fill="#FFFFFF" />
-      
+      <ellipse cx="31" cy="36" rx="3.2" ry="3.8" fill="#4A3728" />
+      <ellipse cx="49" cy="36" rx="3.2" ry="3.8" fill="#4A3728" />
+      <circle cx="32" cy="34.5" r="1.2" fill="#FFFFFF" />
+      <circle cx="50" cy="34.5" r="1.2" fill="#FFFFFF" />
+
       {/* Nose */}
-      <ellipse cx="40" cy="44" rx="5" ry="3.5" fill="#4A3728" />
-      
-      {/* Tongue */}
-      <path d="M37 50.5 V56 C37 59 43 59 43 56 V50.5 Z" fill="#D4845A" />
-      
-      {/* Line from nose to mouth */}
-      <path d="M40 47 V50" stroke="#4A3728" strokeWidth="2" strokeLinecap="round" />
-      
-      {/* Mouth */}
-      <path d="M34 49 Q40 54 46 49" stroke="#4A3728" strokeWidth="2" strokeLinecap="round" fill="none" />
+      <ellipse cx="40" cy="46" rx="4.8" ry="3.2" fill="#4A3728" />
+
+      {/* Smile and tongue out */}
+      <path d="M40 48.5 V51" stroke="#4A3728" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M34 51 Q40 56 46 51"
+        stroke="#4A3728"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path d="M37 52 C36 56.5 37.8 61 40 61 C42.2 61 44 56.5 43 52 Z" fill="#D4845A" />
+      <path d="M40 52.8 V60" stroke="#B9654A" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
 }
