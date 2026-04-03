@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { LoginScreen, RequireAuth } from '@/features/auth';
+import { AuthCallbackScreen, LoginScreen, RequireAuth } from '@/features/auth';
 import { BookingsScreen, BookingDetailScreen } from '@/features/bookings';
 import { CalendarScreen } from '@/features/calendar';
 import { DogDetailScreen, DogsScreen } from '@/features/dogs';
@@ -10,6 +10,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginScreen />} />
+      <Route path="/auth/callback" element={<AuthCallbackScreen />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>

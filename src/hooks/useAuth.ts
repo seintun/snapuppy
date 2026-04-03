@@ -48,7 +48,7 @@ export function useAuth(): AuthState {
             // Refresh the profile to get updated is_guest flag
             const refreshed = await getProfile(currentUser.id);
             if (mounted) setProfile(refreshed);
-            fetched = refreshed; // Update local variable for GCal check below
+            fetched = refreshed;
           } catch {
             // If marking as guest fails, continue anyway
           }

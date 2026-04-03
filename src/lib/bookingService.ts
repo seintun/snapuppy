@@ -8,6 +8,12 @@ import {
   type BookingType,
   type ProfileRateSettings,
 } from '@/lib/rate-calculator';
+import {
+  createEvent,
+  updateEvent,
+  type CreateEventRequest,
+  type UpdateEventRequest,
+} from '@/lib/gcal';
 import type { Tables, TablesInsert } from '@/types/database';
 
 type BookingRow = Tables<'bookings'>;
@@ -72,6 +78,92 @@ async function getSupabase() {
   return mod.supabase;
 }
 
+interface GCalContext {
+  accessToken: string;
+  calendarId: string;
+}
+
+async function getGCalContext(sitterId: string): Promise<GCalContext | null> {
+  const supabase = await getSupabase();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const accessToken = session?.provider_token;
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('gcal_calendar_id')
+    .eq('id', sitterId)
+    .single();
+
+  if (!profile?.gcal_calendar_id) {
+    return null;
+  }
+
+  return { accessToken, calendarId: profile.gcal_calendar_id };
+}
+
+async function syncBookingToGCal(
+  sitterId: string,
+  booking: BookingRecord,
+  existingEventId?: string,
+): Promise<string | null> {
+  try {
+    const gcal = await getGCalContext(sitterId);
+    if (!gcal || !booking.dog) {
+      return null;
+    }
+
+    const summary = `${booking.dog.name} - ${booking.type === 'boarding' ? 'Boarding' : 'Daycare'}`;
+    const description = [
+      `Owner: ${booking.dog.owner_name ?? 'N/A'}`,
+      booking.dog.owner_phone ? `Phone: ${booking.dog.owner_phone}` : null,
+      `Rate: $${booking.total_amount.toFixed(2)}`,
+      booking.is_holiday ? '🎉 Holiday booking' : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    if (existingEventId) {
+      // Update existing event
+      const updateReq: UpdateEventRequest = {
+        accessToken: gcal.accessToken,
+        calendarId: gcal.calendarId,
+        eventId: existingEventId,
+        event: {
+          summary,
+          description,
+          start: { date: booking.start_date },
+          end: { date: booking.end_date },
+        },
+      };
+      await updateEvent(updateReq);
+      return existingEventId;
+    } else {
+      // Create new event
+      const createReq: CreateEventRequest = {
+        accessToken: gcal.accessToken,
+        calendarId: gcal.calendarId,
+        event: {
+          summary,
+          description,
+          start: { date: booking.start_date },
+          end: { date: booking.end_date },
+        },
+      };
+      const gcalEvent = await createEvent(createReq);
+      return gcalEvent.id;
+    }
+  } catch (err) {
+    console.warn('GCal sync failed (non-fatal):', err);
+    return null;
+  }
+}
+
 export function buildBookingPricing(input: {
   startDate: string;
   endDate: string;
@@ -98,7 +190,10 @@ export function buildBookingPricing(input: {
 export function repriceBookingDays(
   days: ReadonlyArray<EditableBookingDay>,
   rates: ProfileRateSettings,
-  overrides: Record<string, Partial<Pick<EditableBookingDay, 'rate_type' | 'is_holiday' | 'amount'>>> = {},
+  overrides: Record<
+    string,
+    Partial<Pick<EditableBookingDay, 'rate_type' | 'is_holiday' | 'amount'>>
+  > = {},
 ): RepricedBookingDays {
   const nextDays = days.map((day) => {
     const override = overrides[day.date];
@@ -129,10 +224,11 @@ export function repriceBookingDays(
 export async function getBookingFormOptions(sitterId: string): Promise<BookingFormOptions> {
   const supabase = await getSupabase();
 
-  const [{ data: dogs, error: dogsError }, { data: profile, error: profileError }] = await Promise.all([
-    supabase.from('dogs').select('*').eq('sitter_id', sitterId).order('name'),
-    supabase.from('profiles').select('*').eq('id', sitterId).maybeSingle(),
-  ]);
+  const [{ data: dogs, error: dogsError }, { data: profile, error: profileError }] =
+    await Promise.all([
+      supabase.from('dogs').select('*').eq('sitter_id', sitterId).order('name'),
+      supabase.from('profiles').select('*').eq('id', sitterId).maybeSingle(),
+    ]);
 
   if (dogsError) throw dogsError;
   if (profileError) throw profileError;
@@ -238,11 +334,24 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     throw daysError;
   }
 
-  return mapBookingRow({
+  const bookingWithDays = mapBookingRow({
     ...createdBooking,
     dog,
     days: createdDays ?? [],
   });
+
+  // Best-effort GCal sync - save booking regardless of GCal success
+  const gcalEventId = await syncBookingToGCal(input.sitterId, bookingWithDays);
+
+  // If GCal sync succeeded, update the booking with the event ID
+  if (gcalEventId) {
+    await supabase
+      .from('bookings')
+      .update({ gcal_event_id: gcalEventId })
+      .eq('id', createdBooking.id);
+  }
+
+  return bookingWithDays;
 }
 
 export async function saveBookingDays(input: SaveBookingDaysInput): Promise<BookingRecord> {
@@ -288,13 +397,20 @@ export async function saveBookingDays(input: SaveBookingDaysInput): Promise<Book
 
   if (bookingError) throw bookingError;
 
-  return {
+  const updatedBooking: BookingRecord = {
     ...booking,
     total_amount: repriced.totalAmount,
     is_holiday: repriced.isHoliday,
     days: repriced.days,
     updated_at: new Date().toISOString(),
   };
+
+  // Best-effort GCal sync - booking is saved regardless of GCal success
+  if (booking.gcal_event_id) {
+    await syncBookingToGCal(input.sitterId, updatedBooking, booking.gcal_event_id);
+  }
+
+  return updatedBooking;
 }
 
 export async function updateBookingStatus(
@@ -314,7 +430,10 @@ export async function updateBookingStatus(
 
 export async function deleteBooking(bookingId: string, sitterId: string): Promise<void> {
   const supabase = await getSupabase();
-  const { error: daysError } = await supabase.from('booking_days').delete().eq('booking_id', bookingId);
+  const { error: daysError } = await supabase
+    .from('booking_days')
+    .delete()
+    .eq('booking_id', bookingId);
   if (daysError) throw daysError;
 
   const { error } = await supabase

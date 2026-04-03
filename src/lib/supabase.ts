@@ -17,14 +17,29 @@ const supabaseAnonKey = requiredEnv('VITE_SUPABASE_ANON_KEY');
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-export const signInWithGoogle = () =>
-  supabase.auth.signInWithOAuth({
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       scopes: 'openid email profile https://www.googleapis.com/auth/calendar',
       redirectTo: `${window.location.origin}/auth/callback`,
+      // Skip the automatic redirect so we can open in a real browser tab.
+      // This is required when running as a PWA — Google rejects OAuth from
+      // standalone/webview contexts (Error 403: app_domain rejected).
+      skipBrowserRedirect: true,
     },
   });
+
+  if (error || !data.url) throw error ?? new Error('No OAuth URL returned');
+
+  // Open in a new tab to guarantee a full browser context.
+  // window.open falls back gracefully if popups are blocked.
+  const newTab = window.open(data.url, '_blank', 'noopener,noreferrer');
+  if (!newTab) {
+    // Popup was blocked — fall back to same-tab redirect.
+    window.location.href = data.url;
+  }
+};
 
 export const signOut = () => supabase.auth.signOut();
 
