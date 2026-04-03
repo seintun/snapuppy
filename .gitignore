@@ -40,3 +40,7 @@ supabase/.temp/
 # OMX and TS build cache
 .omx/
 *.tsbuildinfo
+
+# Local git worktrees
+.worktrees/
+worktrees/
