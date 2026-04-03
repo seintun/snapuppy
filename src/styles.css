@@ -729,3 +729,31 @@ textarea {
   background: var(--blush);
   color: #7b2f1c;
 }
+
+.btn-secondary {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--pebble);
+  background: var(--cream);
+  color: var(--bark);
+  font-weight: 700;
+  padding: 0 14px;
+}
+
+.btn-danger {
+  min-height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: var(--terracotta);
+  color: #fff;
+  font-weight: 700;
+}
+
+.btn-icon {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--pebble);
+  background: var(--cream);
+  color: var(--bark-light);
+}
