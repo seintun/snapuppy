@@ -52,3 +52,9 @@ export async function signInAnonymously(): Promise<void> {
   const { error } = await supabase.auth.signInAnonymously();
   if (error) throw error;
 }
+
+export const signInWithPassword = (email: string, password: string) =>
+  supabase.auth.signInWithPassword({ email, password });
+
+export const signUpWithPassword = (email: string, password: string) =>
+  supabase.auth.signUp({ email, password });

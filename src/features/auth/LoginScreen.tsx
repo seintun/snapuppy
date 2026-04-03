@@ -22,7 +22,13 @@ function PawIcon() {
 
 function GoogleIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
       <path
         d="M19.6 10.23c0-.68-.06-1.36-.17-2H10v3.79h5.39a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.9-1.75 2.98-4.32 2.98-7.31z"
         fill="#4285F4"
@@ -44,9 +50,15 @@ function GoogleIcon() {
 }
 
 export function LoginScreen() {
-  const { signIn, signInAnonymously } = useAuthContext();
+  const { signIn, signInAnonymously, signInWithPassword, signUpWithPassword } = useAuthContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSigningInAnonymously, setIsSigningInAnonymously] = useState(false);
+  const [authMode, setAuthMode] = useState<'select' | 'email-signin' | 'email-signup'>('select');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const enableGuestLogin = import.meta.env.VITE_ENABLE_GUEST_LOGIN !== 'false';
 
@@ -68,16 +80,127 @@ export function LoginScreen() {
     }
   }
 
+  async function handleEmailSignIn() {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      await signInWithPassword(email, password);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Sign in failed');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }
+
+  async function handleEmailSignUp() {
+    if (password !== confirmPassword) {
+      setAuthError('Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError('Password must be at least 6 characters');
+      return;
+    }
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      await signUpWithPassword(email, password);
+      setAuthError('Check your email to confirm your account');
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Sign up failed');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }
+
+  if (authMode !== 'select') {
+    return (
+      <div className="login-screen">
+        <div className="login-logo">
+          <PawIcon />
+        </div>
+        <h1 className="login-title">Snapuppy</h1>
+        <div style={{ width: '100%', maxWidth: 320, marginTop: 16, padding: '0 16px' }}>
+          <h2 style={{ marginBottom: 16, fontSize: 18 }}>
+            {authMode === 'email-signin' ? 'Sign in with email' : 'Create account'}
+          </h2>
+          <div className="form-field">
+            <label className="form-label" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              className="form-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </div>
+          <div className="form-field">
+            <label className="form-label" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              className="form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+          {authMode === 'email-signup' && (
+            <div className="form-field">
+              <label className="form-label" htmlFor="confirm-password">
+                Confirm Password
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                className="form-input"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+          )}
+          {authError && (
+            <p style={{ color: 'var(--terracotta)', fontSize: 14, marginTop: 8 }}>{authError}</p>
+          )}
+          <button
+            className="btn-sage"
+            onClick={() =>
+              void (authMode === 'email-signin' ? handleEmailSignIn() : handleEmailSignUp())
+            }
+            disabled={isAuthLoading}
+            style={{ marginTop: 16, width: '100%' }}
+          >
+            {isAuthLoading
+              ? 'Loading...'
+              : authMode === 'email-signin'
+                ? 'Sign in'
+                : 'Create account'}
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={() => setAuthMode('select')}
+            style={{ marginTop: 12, width: '100%' }}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-screen">
       <div className="login-logo" style={{ animation: 'stagger-fade-in 400ms ease-out both' }}>
         <PawIcon />
       </div>
 
-      <h1
-        className="login-title"
-        style={{ animation: 'stagger-fade-in 400ms 80ms ease-out both' }}
-      >
+      <h1 className="login-title" style={{ animation: 'stagger-fade-in 400ms 80ms ease-out both' }}>
         Snapuppy
       </h1>
 
@@ -119,6 +242,23 @@ export function LoginScreen() {
             </button>
           </div>
         )}
+
+        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            className="btn-secondary"
+            onClick={() => setAuthMode('email-signin')}
+            style={{ minHeight: 44 }}
+          >
+            Sign in with email
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={() => setAuthMode('email-signup')}
+            style={{ minHeight: 44 }}
+          >
+            Create account
+          </button>
+        </div>
       </div>
 
       <p

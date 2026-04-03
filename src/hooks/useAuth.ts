@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { onAuthStateChange, signInWithGoogle, signOut as supabaseSignOut, supabase, signInAnonymously as supabaseSignInAnonymously } from '@/lib/supabase';
+import {
+  onAuthStateChange,
+  signInWithGoogle,
+  signOut as supabaseSignOut,
+  supabase,
+  signInAnonymously as supabaseSignInAnonymously,
+  signInWithPassword as supabaseSignInWithPassword,
+  signUpWithPassword as supabaseSignUpWithPassword,
+} from '@/lib/supabase';
 import { getOrCreateSnapuppyCalendar } from '@/lib/gcal';
 import { getProfile, updateProfile } from '@/features/profile/profileService';
 import { markProfileAsGuest } from '@/features/guest/guestService';
@@ -14,6 +22,8 @@ export interface AuthState {
   loading: boolean;
   signIn: () => Promise<void>;
   signInAnonymously: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -47,7 +57,9 @@ export function useAuth(): AuthState {
         // Skip GCal calendar creation for guest users
         if (!fetched.gcal_calendar_id && !fetched.is_guest) {
           try {
-            const { data: { session } } = await supabase.auth.getSession();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
             const accessToken = session?.provider_token;
             if (accessToken) {
               const calendarId = await getOrCreateSnapuppyCalendar(accessToken);
@@ -93,11 +105,30 @@ export function useAuth(): AuthState {
     await supabaseSignInAnonymously();
   }, []);
 
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await supabaseSignInWithPassword(email, password);
+    if (error) throw error;
+  }, []);
+
+  const signUpWithPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await supabaseSignUpWithPassword(email, password);
+    if (error) throw error;
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabaseSignOut();
     setUser(null);
     setProfile(null);
   }, []);
 
-  return { user, profile, loading, signIn, signInAnonymously, signOut };
+  return {
+    user,
+    profile,
+    loading,
+    signIn,
+    signInAnonymously,
+    signInWithPassword,
+    signUpWithPassword,
+    signOut,
+  };
 }
