@@ -9,7 +9,11 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
-      <main className="app-content">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+
+      <main id="main-content" className="app-content">
         <Outlet />
       </main>
 
