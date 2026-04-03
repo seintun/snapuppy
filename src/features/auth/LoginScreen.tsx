@@ -53,7 +53,9 @@ export function LoginScreen() {
   const { signIn, signInWithPassword, signUpWithPassword } = useAuthContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const [authMode, setAuthMode] = useState<'select' | 'email-signin' | 'email-signup'>('select');
+  const [useEmail, setUseEmail] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -69,176 +71,190 @@ export function LoginScreen() {
     }
   }
 
-  async function handleEmailSignIn() {
-    setIsAuthLoading(true);
+  async function handleEmailAuth(e: React.FormEvent) {
+    e.preventDefault();
     setAuthError(null);
+
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        setAuthError('Passwords do not match');
+        return;
+      }
+      if (password.length < 6) {
+        setAuthError('Password must be at least 6 characters');
+        return;
+      }
+    }
+
+    setIsAuthLoading(true);
     try {
-      await signInWithPassword(email, password);
+      if (isSignUp) {
+        await signUpWithPassword(email, password);
+        setAuthError('Check your email to confirm your account');
+      } else {
+        await signInWithPassword(email, password);
+      }
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Sign in failed');
+      setAuthError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setIsAuthLoading(false);
     }
-  }
-
-  async function handleEmailSignUp() {
-    if (password !== confirmPassword) {
-      setAuthError('Passwords do not match');
-      return;
-    }
-    if (password.length < 6) {
-      setAuthError('Password must be at least 6 characters');
-      return;
-    }
-    setIsAuthLoading(true);
-    setAuthError(null);
-    try {
-      await signUpWithPassword(email, password);
-      setAuthError('Check your email to confirm your account');
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Sign up failed');
-    } finally {
-      setIsAuthLoading(false);
-    }
-  }
-
-  if (authMode !== 'select') {
-    return (
-      <div className="login-screen">
-        <div className="login-logo">
-          <PawIcon />
-        </div>
-        <h1 className="login-title">Snapuppy</h1>
-        <div style={{ width: '100%', maxWidth: 320, marginTop: 16, padding: '0 16px' }}>
-          <h2 style={{ marginBottom: 16, fontSize: 18 }}>
-            {authMode === 'email-signin' ? 'Sign in with email' : 'Create account'}
-          </h2>
-          <div className="form-field">
-            <label className="form-label" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </div>
-          <div className="form-field">
-            <label className="form-label" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          {authMode === 'email-signup' && (
-            <div className="form-field">
-              <label className="form-label" htmlFor="confirm-password">
-                Confirm Password
-              </label>
-              <input
-                id="confirm-password"
-                type="password"
-                className="form-input"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
-          )}
-          {authError && (
-            <p style={{ color: 'var(--terracotta)', fontSize: 14, marginTop: 8 }}>{authError}</p>
-          )}
-          <button
-            className="btn-sage"
-            onClick={() =>
-              void (authMode === 'email-signin' ? handleEmailSignIn() : handleEmailSignUp())
-            }
-            disabled={isAuthLoading}
-            style={{ marginTop: 16, width: '100%' }}
-          >
-            {isAuthLoading
-              ? 'Loading...'
-              : authMode === 'email-signin'
-                ? 'Sign in'
-                : 'Create account'}
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={() => setAuthMode('select')}
-            style={{ marginTop: 12, width: '100%' }}
-          >
-            Back
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
     <div className="login-screen">
-      <div className="login-logo" style={{ animation: 'stagger-fade-in 400ms ease-out both' }}>
-        <PawIcon />
+      <div style={{ textAlign: 'center', marginBottom: 24, animation: 'stagger-fade-in 400ms ease-out both' }}>
+        <div className="login-logo">
+          <PawIcon />
+        </div>
+        <h1 className="login-title">Snapuppy</h1>
+        <p className="login-tagline">
+          Your dog sitting command center
+        </p>
       </div>
 
-      <h1 className="login-title" style={{ animation: 'stagger-fade-in 400ms 80ms ease-out both' }}>
-        Snapuppy
-      </h1>
-
-      <p
-        className="login-tagline"
-        style={{ animation: 'stagger-fade-in 400ms 160ms ease-out both' }}
-      >
-        Your dog sitting command center
-      </p>
-
       <div
+        className="surface-card"
         style={{
           width: '100%',
-          maxWidth: 320,
-          marginTop: 16,
-          animation: 'stagger-fade-in 400ms 240ms ease-out both',
+          maxWidth: 340,
+          padding: '24px',
+          animation: 'stagger-fade-in 400ms 160ms ease-out both',
         }}
       >
-        <button
-          className="btn-google"
-          onClick={() => void handleSignIn()}
-          disabled={isSigningIn}
-          aria-label="Sign in with Google"
-        >
-          <GoogleIcon />
-          {isSigningIn ? 'Connecting…' : 'Continue with Google'}
-        </button>
+        {!useEmail ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <button
+              className="btn-google"
+              onClick={() => void handleSignIn()}
+              disabled={isSigningIn}
+              aria-label="Sign in with Google"
+            >
+              <GoogleIcon />
+              {isSigningIn ? 'Connecting…' : 'Continue with Google'}
+            </button>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '8px 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--pebble)' }} />
+              <span style={{ fontSize: 13, color: 'var(--bark-light)', fontWeight: 600, textTransform: 'uppercase' }}>OR</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--pebble)' }} />
+            </div>
 
-        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button
-            className="btn-secondary"
-            onClick={() => setAuthMode('email-signin')}
-            style={{ minHeight: 44 }}
-          >
-            Sign in with email
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={() => setAuthMode('email-signup')}
-            style={{ minHeight: 44 }}
-          >
-            Create account
-          </button>
-        </div>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setUseEmail(true);
+                setIsSignUp(false);
+              }}
+              style={{ minHeight: 44 }}
+            >
+              Log in with email
+            </button>
+            <button
+              style={{ background: 'none', border: 'none', color: 'var(--sage)', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginTop: 4 }}
+              onClick={() => {
+                setUseEmail(true);
+                setIsSignUp(true);
+              }}
+            >
+              Create an account
+            </button>
+          </div>
+        ) : (
+          <form style={{ display: 'flex', flexDirection: 'column', gap: 16 }} onSubmit={handleEmailAuth}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={() => setUseEmail(false)}
+                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--bark-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 14 }}
+              >
+                ← Back
+              </button>
+              <h2 style={{ margin: '0 auto 0 12px', fontSize: 18, color: 'var(--bark)' }}>
+                {isSignUp ? 'Create account' : 'Welcome back'}
+              </h2>
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                required
+                className="form-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            
+            <div className="form-field">
+              <label className="form-label" htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                required
+                className="form-input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+
+            {isSignUp && (
+              <div className="form-field" style={{ animation: 'stagger-fade-in 200ms ease-out both' }}>
+                <label className="form-label" htmlFor="confirm-password">Confirm Password</label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  required
+                  className="form-input"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+
+            {authError && (
+              <div style={{ padding: '8px 12px', background: 'var(--blush)', color: '#7b2f1c', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+                {authError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="btn-sage"
+              disabled={isAuthLoading}
+              style={{ marginTop: 8 }}
+            >
+              {isAuthLoading
+                ? 'Loading...'
+                : isSignUp
+                  ? 'Sign Up'
+                  : 'Log In'}
+            </button>
+
+            <p style={{ margin: '12px 0 0', textAlign: 'center', fontSize: 14, color: 'var(--bark-light)' }}>
+              {isSignUp ? "Already have an account? " : "Don't have an account? "}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setAuthError(null);
+                }}
+                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--sage)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+              >
+                {isSignUp ? 'Log in' : 'Sign up'}
+              </button>
+            </p>
+          </form>
+        )}
       </div>
 
       <p
         className="login-footer"
-        style={{ animation: 'stagger-fade-in 400ms 320ms ease-out both' }}
+        style={{ animation: 'stagger-fade-in 400ms 320ms ease-out both', marginTop: 24 }}
       >
         For professional dog sitters
       </p>
