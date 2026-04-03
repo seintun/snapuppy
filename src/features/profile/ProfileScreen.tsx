@@ -1,185 +1,213 @@
-import { useEffect, useState } from 'react';
-import { useAuthContext } from '@/features/auth';
-import { updateProfile } from './profileService';
-import { signInWithGoogle } from '@/lib/supabase';
+import { useCallback, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
+import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
 
 export function ProfileScreen() {
-  const { user, profile, signOut } = useAuthContext();
+  const { signOut } = useAuthContext();
   const { addToast } = useToast();
+  
+  const { data: profile, isLoading } = useProfile();
+  const { mutateAsync: updateProfileMutation, isPending: saving } = useUpdateProfile();
 
-  const [nightlyRate, setNightlyRate] = useState('');
-  const [daycareRate, setDaycareRate] = useState('');
-  const [holidaySurcharge, setHolidaySurcharge] = useState('');
-  const [cutoffTime, setCutoffTime] = useState('11:00');
-  const [saving, setSaving] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(ProfileSchema),
+    defaultValues: {
+      businessName: '',
+      nightlyRate: 0,
+      daycareRate: 0,
+      holidaySurcharge: 0,
+      cutoffTime: '11:00',
+    },
+  });
 
+  // Sync form with profile data when it loads
   useEffect(() => {
     if (profile) {
-      setNightlyRate(String(profile.nightly_rate ?? ''));
-      setDaycareRate(String(profile.daycare_rate ?? ''));
-      setHolidaySurcharge(String(profile.holiday_surcharge ?? ''));
-      setCutoffTime(profile.cutoff_time ?? '11:00');
-    }
-  }, [profile]);
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (!user) return;
-    setSaving(true);
-    try {
-      await updateProfile(user.id, {
-        nightly_rate: parseFloat(nightlyRate) || 0,
-        daycare_rate: parseFloat(daycareRate) || 0,
-        holiday_surcharge: parseFloat(holidaySurcharge) || 0,
-        cutoff_time: cutoffTime,
+      reset({
+        businessName: profile.business_name,
+        nightlyRate: profile.nightly_rate,
+        daycareRate: profile.daycare_rate,
+        holidaySurcharge: profile.holiday_surcharge,
+        cutoffTime: profile.cutoff_time,
       });
-      addToast('Woof! Rates saved.', 'success');
-    } catch {
-      addToast('Could not save rates. Please try again.', 'error');
-    } finally {
-      setSaving(false);
     }
-  }
+  }, [profile, reset]);
 
-  async function handleCalendarConnect() {
-    try {
-      await signInWithGoogle();
-    } catch {
-      addToast('Could not connect Google Calendar.', 'error');
-    }
-  }
+  const onSave = useCallback(
+    async (data: ProfileFormData) => {
+      try {
+        await updateProfileMutation({
+          business_name: data.businessName,
+          nightly_rate: data.nightlyRate,
+          daycare_rate: data.daycareRate,
+          holiday_surcharge: data.holidaySurcharge,
+          cutoff_time: data.cutoffTime,
+        });
+        addToast('Profile saved 🐾', 'success');
+      } catch (err) {
+        addToast(err instanceof Error ? err.message : 'Failed to save profile', 'error');
+      }
+    },
+    [updateProfileMutation, addToast],
+  );
 
-  const hasCalendar = Boolean(profile?.gcal_calendar_id);
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-sm text-bark-light">
+        Loading profile…
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="page-title">Profile</h1>
+    <div className="pb-10">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="page-title !m-0">Profile</h1>
+        <button
+          onClick={() => void signOut()}
+          className="text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
+        >
+          Sign Out
+        </button>
+      </div>
 
-      {/* Business Rates */}
-      <p className="profile-section-title">Business Rates</p>
-      <form className="surface-card" onSubmit={handleSave}>
-        <div className="flex flex-col gap-4">
-          <div className="form-field">
-            <label className="form-label" htmlFor="nightly-rate">
-              Nightly Boarding Rate
-            </label>
-            <div className="input-with-prefix">
-              <span className="input-prefix">$</span>
-              <input
-                id="nightly-rate"
-                type="number"
-                min="0"
-                step="0.01"
-                className="form-input"
-                value={nightlyRate}
-                onChange={(e) => setNightlyRate(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label className="form-label" htmlFor="daycare-rate">
-              Daycare Rate
-            </label>
-            <div className="input-with-prefix">
-              <span className="input-prefix">$</span>
-              <input
-                id="daycare-rate"
-                type="number"
-                min="0"
-                step="0.01"
-                className="form-input"
-                value={daycareRate}
-                onChange={(e) => setDaycareRate(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label className="form-label" htmlFor="holiday-surcharge">
-              Holiday Surcharge
-            </label>
-            <div className="input-with-prefix">
-              <span className="input-prefix">+$</span>
-              <input
-                id="holiday-surcharge"
-                type="number"
-                min="0"
-                step="0.01"
-                className="form-input"
-                value={holidaySurcharge}
-                onChange={(e) => setHolidaySurcharge(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label className="form-label" htmlFor="cutoff-time">
-              Checkout Cutoff Time
+      <form onSubmit={(e) => void handleSubmit(onSave)(e)} className="flex flex-col gap-6">
+        {/* Business Settings */}
+        <div className="surface-card">
+          <h2 className="profile-section-title !mt-0">Business Info</h2>
+          <div className="form-field mt-3">
+            <label className="form-label" htmlFor="business-name">
+              Business Name
             </label>
             <input
-              id="cutoff-time"
-              type="time"
-              className="form-input"
-              value={cutoffTime}
-              onChange={(e) => setCutoffTime(e.target.value)}
+              id="business-name"
+              type="text"
+              className={`form-input ${errors.businessName ? 'border-terracotta' : ''}`}
+              placeholder="e.g. Happy Paws"
+              {...register('businessName')}
             />
+            {errors.businessName && (
+              <p className="text-xs text-terracotta mt-1">{errors.businessName.message}</p>
+            )}
           </div>
-
-          <button type="submit" className="btn-sage" disabled={saving}>
-            {saving ? 'Saving…' : 'Save Rates'}
-          </button>
         </div>
+
+        {/* Standard Rates */}
+        <div className="surface-card">
+          <h2 className="profile-section-title !mt-0">Standard Rates</h2>
+          <div className="grid grid-cols-1 gap-4 mt-3">
+            <div className="form-field">
+              <label className="form-label" htmlFor="nightly-rate">
+                Nightly Rate (Boarding)
+              </label>
+              <div className="flex">
+                <span className="flex items-center bg-sage-light rounded-l-lg px-3 font-bold text-bark-light border border-pebble border-r-0 text-sm">
+                  $
+                </span>
+                <input
+                  id="nightly-rate"
+                  type="number"
+                  step="0.01"
+                  className={`form-input rounded-l-none flex-1 ${
+                    errors.nightlyRate ? 'border-terracotta' : ''
+                  }`}
+                  {...register('nightlyRate', { valueAsNumber: true })}
+                />
+              </div>
+              {errors.nightlyRate && (
+                <p className="text-xs text-terracotta mt-1">{errors.nightlyRate.message}</p>
+              )}
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="daycare-rate">
+                Daycare Rate
+              </label>
+              <div className="flex">
+                <span className="flex items-center bg-sage-light rounded-l-lg px-3 font-bold text-bark-light border border-pebble border-r-0 text-sm">
+                  $
+                </span>
+                <input
+                  id="daycare-rate"
+                  type="number"
+                  step="0.01"
+                  className={`form-input rounded-l-none flex-1 ${
+                    errors.daycareRate ? 'border-terracotta' : ''
+                  }`}
+                  {...register('daycareRate', { valueAsNumber: true })}
+                />
+              </div>
+              {errors.daycareRate && (
+                <p className="text-xs text-terracotta mt-1">{errors.daycareRate.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Special Rules */}
+        <div className="surface-card">
+          <h2 className="profile-section-title !mt-0">Surcharges & Rules</h2>
+          <div className="grid grid-cols-1 gap-4 mt-3">
+            <div className="form-field">
+              <label className="form-label" htmlFor="holiday-surcharge">
+                Holiday Surcharge (Per Night)
+              </label>
+              <div className="flex">
+                <span className="flex items-center bg-sage-light rounded-l-lg px-3 font-bold text-bark-light border border-pebble border-r-0 text-sm">
+                  + $
+                </span>
+                <input
+                  id="holiday-surcharge"
+                  type="number"
+                  step="0.01"
+                  className={`form-input rounded-l-none flex-1 ${
+                    errors.holidaySurcharge ? 'border-terracotta' : ''
+                  }`}
+                  {...register('holidaySurcharge', { valueAsNumber: true })}
+                />
+              </div>
+              {errors.holidaySurcharge && (
+                <p className="text-xs text-terracotta mt-1">{errors.holidaySurcharge.message}</p>
+              )}
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="cutoff-time">
+                Pickup Cut-off Time
+              </label>
+              <input
+                id="cutoff-time"
+                type="time"
+                className={`form-input ${errors.cutoffTime ? 'border-terracotta' : ''}`}
+                {...register('cutoffTime')}
+              />
+              <p className="text-[11px] text-bark-light leading-snug">
+                Pickups after this time will incur an additional daycare charge on the final day.
+              </p>
+              {errors.cutoffTime && (
+                <p className="text-xs text-terracotta mt-1">{errors.cutoffTime.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="btn-sage mt-2 sticky bottom-[calc(84px+env(safe-area-inset-bottom))] shadow-lg shadow-sage/30 z-10"
+          disabled={saving || !isDirty}
+        >
+          {saving ? 'Saving Changes…' : 'Save Profile Changes 🐾'}
+        </button>
       </form>
-
-      {/* Account */}
-      <p className="profile-section-title">Account</p>
-      <div className="surface-card">
-        <div className="flex flex-col gap-3.5">
-          <div className="form-field">
-            <span className="form-label">Name</span>
-            <span className="text-base text-bark">
-              {profile?.display_name ?? user?.user_metadata?.full_name ?? '—'}
-            </span>
-          </div>
-          <div className="form-field">
-            <span className="form-label">Email</span>
-            <span className="text-base text-bark">
-              {profile?.email ?? user?.email ?? '—'}
-            </span>
-          </div>
-          <button
-            onClick={signOut}
-            className="bg-transparent border-none pt-2 text-[15px] font-bold text-terracotta cursor-pointer text-left"
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
-
-      {/* Google Calendar */}
-      <p className="profile-section-title">Google Calendar</p>
-      <div className="surface-card">
-        {hasCalendar ? (
-          <span className="badge badge--sage">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Snapuppy Bookings calendar connected
-          </span>
-        ) : (
-          <button
-            onClick={() => void handleCalendarConnect()}
-            className="bg-transparent border-none p-0 text-[15px] font-bold text-sage cursor-pointer underline underline-offset-4"
-          >
-            Connect Google Calendar
-          </button>
-        )}
-      </div>
     </div>
   );
 }
