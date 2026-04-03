@@ -26,7 +26,7 @@ export interface GoogleCalendarReminders {
 }
 
 export interface GoogleCalendarEventInput {
-  summary?: string;
+  summary: string;
   description?: string;
   location?: string;
   start: GoogleCalendarEventDateTime;
@@ -153,12 +153,11 @@ export async function updateEvent(request: UpdateEventRequest): Promise<GoogleCa
 }
 
 export async function deleteEvent(request: DeleteEventRequest): Promise<DeleteEventResponse> {
-  await googleCalendarRequest<null>(request, {
+  await googleCalendarRequest<void>(request, {
     method: 'DELETE',
     path: ['events', request.eventId],
     query: { sendUpdates: request.sendUpdates },
     allowEmptyResponse: true,
-    allowedStatuses: [204],
   });
 
   return {
@@ -171,7 +170,7 @@ export async function deleteEvent(request: DeleteEventRequest): Promise<DeleteEv
 export async function checkForChanges(
   request: CheckForChangesRequest,
 ): Promise<CheckForChangesResponse> {
-  const response = await googleCalendarRequest<GoogleCalendarEvent | null>(request, {
+  const response = await googleCalendarRequest<GoogleCalendarEvent>(request, {
     method: 'GET',
     path: ['events', request.eventId],
     extraHeaders: request.etag ? { 'If-None-Match': request.etag } : undefined,
@@ -253,7 +252,7 @@ async function googleCalendarRequest<T>(
     return {
       status: response.status,
       headers: response.headers,
-      body: null as T,
+      body: undefined as T,
     };
   }
 
@@ -268,9 +267,7 @@ async function googleCalendarRequest<T>(
 
 async function buildGoogleCalendarError(response: Response): Promise<GoogleCalendarError> {
   const payload = await parseUnknownResponseBody(response);
-  const message =
-    extractGoogleCalendarErrorMessage(payload) ??
-    `Google Calendar request failed with status ${response.status}`;
+  const message = extractGoogleCalendarErrorMessage(payload) ?? `Google Calendar request failed with status ${response.status}`;
   const code =
     typeof payload === 'object' && payload !== null && 'error' in payload
       ? readErrorCode((payload as { error?: unknown }).error)
@@ -327,7 +324,7 @@ async function parseUnknownResponseBody(response: Response): Promise<unknown> {
 }
 
 function asGoogleCalendarEvent(payload: unknown): GoogleCalendarEvent {
-  if (typeof payload !== 'object' || payload === null || !('id' in payload)) {
+  if (typeof payload !== 'object' || payload === null || !('id' in payload) || !('summary' in payload)) {
     throw new GoogleCalendarError('Google Calendar returned an invalid event payload', {
       details: payload,
     });
@@ -342,7 +339,7 @@ function buildUrl(
   definition: Pick<GoogleCalendarRequestDefinition, 'path' | 'query'>,
 ): string {
   const url = new URL(
-    ['calendars', encodeURIComponent(calendarId), ...definition.path.map(encodeURIComponent)].join('/'),
+    [`calendars`, encodeURIComponent(calendarId), ...definition.path.map(encodeURIComponent)].join('/'),
     `${baseUrl.replace(/\/$/, '')}/`,
   );
 
