@@ -1,9 +1,37 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuthContext } from '@/features/auth/useAuthContext';
+import { supabase } from '@/lib/supabase';
+import { getMonthQueryRange, type CalendarBooking } from '@/features/calendar/calendarUtils';
 import {
   createBooking as svcCreateBooking,
   deleteBooking as svcDeleteBooking,
-  getBooking,
+...
+/**
+ * Fetches bookings for a specific month for the calendar view.
+ * Uses keepPreviousData for smooth transitions between months.
+ */
+export function useCalendarBookings(month: Date) {
+  const { user } = useAuthContext();
+
+  return useQuery({
+    queryKey: ['calendar-bookings', user?.id, month.toISOString().substring(0, 7)],
+    queryFn: async () => {
+      const { rangeStart, rangeEnd } = getMonthQueryRange(month);
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('id, start_date, end_date, type, is_holiday, status, dog_id, dogs(name, photo_url)')
+        .lte('start_date', rangeEnd)
+        .gte('end_date', rangeStart)
+        .neq('status', 'cancelled');
+
+      if (error) throw error;
+      return data as unknown as CalendarBooking[];
+    },
+    enabled: !!user?.id,
+    placeholderData: keepPreviousData,
+  });
+}
+
   getBookingFormOptions,
   getBookings,
   saveBookingDays as svcSaveBookingDays,
