@@ -62,13 +62,13 @@ export function DogsScreen() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-none">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
         {dogs.length === 0 ? (
           <div className="mt-12 opacity-40">
             <EmptyState title="No dogs yet" description="Add your first furry client to get started." />
           </div>
         ) : (
-          <div className="flex flex-col gap-2 -mx-4 px-4 pb-20">
+          <div className="flex flex-col gap-2 px-1 pb-20">
             {dogs.map((dog) => (
               <Link key={dog.id} to={`/dogs/${dog.id}`} className="block">
                 <Card className="p-2.5 px-3 border border-pebble/10" pressable>
