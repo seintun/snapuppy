@@ -14,6 +14,7 @@ import {
   formatBookingRange,
   formatCurrency,
   getStatusLabel,
+  getDurationText,
 } from './bookingUi';
 
 interface GroupedBookings {
@@ -80,30 +81,32 @@ export function BookingsScreen() {
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
       {/* Ultra-Density Header */}
       <div className="sticky top-0 z-20 bg-warm-beige/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-pebble/10">
-        <div className="flex items-start justify-between mb-3">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-black text-bark tracking-tight leading-none">Bookings</h1>
-            <p className="text-[9px] font-black text-bark-light/40 uppercase tracking-[0.2em] mt-1.5">
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="px-1">
+            <h1 className="text-2xl font-black text-bark tracking-tight leading-none mb-1.5">Bookings</h1>
+            <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em]">
               {filteredBookings.length} {getStatusLabel(filter)}
             </p>
           </div>
           
-          {/* Top-Right Mini Filters */}
-          <div className="flex rounded-full bg-pebble/10 p-0.5 shadow-inner mt-1">
-            {bookingStatusOptions.map((status) => (
-              <button
-                key={status}
-                type="button"
-                className={`py-1 px-2 rounded-full text-[7.5px] font-black uppercase tracking-widest transition-all ${
-                  filter === status
-                    ? 'bg-white text-sage shadow-sm scale-[1.05]'
-                    : 'text-bark-light/40 hover:text-bark'
-                }`}
-                onClick={() => setFilter(status)}
-              >
-                {getStatusLabel(status)}
-              </button>
-            ))}
+          {/* Failsafe Compact Filter Bar - Optimized for No Overlap */}
+          <div className="flex items-center">
+            <div className="inline-flex rounded-full bg-pebble/10 p-0.5 shadow-sm border border-pebble/5">
+              {bookingStatusOptions.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={`py-1.25 px-3 rounded-full text-[8px] font-black transition-all cursor-pointer ${
+                    filter === status
+                      ? 'bg-white text-sage shadow-md scale-[1.02]'
+                      : 'text-bark-light/40 hover:text-bark'
+                  }`}
+                  onClick={() => setFilter(status)}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -149,41 +152,59 @@ export function BookingsScreen() {
                   </div>
                   <div className="flex flex-col gap-2">
                     {groupedBookings[monthYear].map((booking) => (
-                      <Card
-                        key={booking.id}
-                        className="p-3 border border-pebble/5"
-                        pressable
-                        onClick={() => navigate(`/bookings/${booking.id}`)}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="relative shrink-0">
-                            <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="md" />
-                            <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm ${booking.type === 'daycare' ? 'bg-sky' : 'bg-sage'}`}>
-                              {booking.type === 'daycare' ? <Sun size={10} weight="fill" className="text-white" /> : <Moon size={10} weight="fill" className="text-white" />}
-                            </div>
-                          </div>
+                      <div key={booking.id} className="relative pl-3 border-l-[1.5px] border-pebble/20 ml-2">
+                        {/* Timeline Node Connector */}
+                        <div className="absolute -left-[5.5px] top-3.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-sage shadow-sm z-10" />
 
-                          <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <h3 className="font-black text-bark truncate text-sm leading-tight mb-1">
-                                {booking.dog?.name ?? 'Unknown'}
-                              </h3>
-                              <p className="text-[10px] font-black text-bark/70 uppercase tracking-tighter">
+                        <Card
+                          className="p-0 border border-pebble/5 overflow-hidden flex flex-col mb-3 shadow-sm"
+                          pressable
+                          onClick={() => navigate(`/bookings/${booking.id}`)}
+                        >
+                          {/* Timeline Date Header */}
+                          <div className="flex items-center justify-between px-3 py-1.5 bg-pebble/5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[10px] font-black text-bark uppercase tracking-tight truncate">
                                 {formatBookingRange(booking)}
-                              </p>
+                              </span>
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-black text-terracotta leading-none mb-1.5">
-                                {formatCurrency(booking.total_amount)}
-                              </p>
-                              <span className="text-[8px] font-black bg-sage/10 text-sage px-2 py-0.5 rounded-full shadow-sm border border-sage/5 tracking-widest">
-                                {booking.days.length} DAYS
+                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-sage shadow-sm border border-sage/10 shrink-0">
+                              <span className="text-[8px] font-black text-white leading-none uppercase tracking-tighter">
+                                {getDurationText(booking)}
                               </span>
                             </div>
                           </div>
-                          <CaretRight size={14} weight="bold" className="text-pebble/30 shrink-0 ml-1" />
-                        </div>
-                      </Card>
+
+                          <div className="h-px bg-pebble/10 w-full" />
+
+                          {/* Info Body */}
+                          <div className="flex items-center gap-3 p-2.5 pt-1.5">
+                            <div className="relative shrink-0">
+                              <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="md" />
+                              <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm ${booking.type === 'daycare' ? 'bg-sky' : 'bg-sage'}`}>
+                                {booking.type === 'daycare' ? <Sun size={10} weight="fill" className="text-white" /> : <Moon size={10} weight="fill" className="text-white" />}
+                              </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <h3 className="font-black text-bark truncate text-sm leading-tight">
+                                  {booking.dog?.name ?? 'Unknown'}
+                                </h3>
+                                <p className="text-[9px] font-black text-bark-light/40 uppercase tracking-widest mt-0.5">
+                                  {booking.dog?.owner_name || 'Individual'}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-base font-black text-terracotta leading-none">
+                                  {formatCurrency(booking.total_amount)}
+                                </p>
+                              </div>
+                            </div>
+                            <CaretRight size={14} weight="bold" className="text-pebble/30 shrink-0 ml-1" />
+                          </div>
+                        </Card>
+                      </div>
                     ))}
                   </div>
                 </div>

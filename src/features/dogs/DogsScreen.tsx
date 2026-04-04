@@ -87,7 +87,7 @@ export function DogsScreen() {
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             onClick={(e) => handleDeleteClick(e, dog.id, dog.name)}
-                            className="p-1.5 text-bark-light/30 hover:text-terracotta rounded-lg transition-all"
+                            className="p-1.5 text-bark-light/30 hover:text-terracotta rounded-lg transition-all cursor-pointer"
                             title="Remove dog"
                           >
                             <Trash size={14} weight="bold" />

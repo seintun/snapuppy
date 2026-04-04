@@ -34,14 +34,14 @@ export function ConfirmModal({
           <button
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-bark bg-pebble/10 hover:bg-pebble/20 transition-all border border-pebble/5 active:scale-95 disabled:opacity-50"
+            className="flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-bark bg-pebble/10 hover:bg-pebble/20 transition-all border border-pebble/5 active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={() => void onConfirm()}
             disabled={loading}
-            className={`flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white transition-all shadow-lg shadow-terracotta/20 active:scale-95 disabled:opacity-50 ${
+            className={`flex-1 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white transition-all shadow-lg shadow-terracotta/20 active:scale-95 disabled:opacity-50 cursor-pointer ${
               variant === 'danger' ? 'bg-terracotta hover:bg-terracotta/90' : 'bg-sage hover:bg-sage/90'
             }`}
           >
