@@ -3,7 +3,7 @@ import { DogAvatar } from '@/components/ui/DogAvatar';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { CreateBookingSheet } from '@/features/bookings/CreateBookingSheet';
 import { useCalendarBookings } from '@/hooks/useBookings';
-import { CaretLeft, CaretRight, PawPrint } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { addMonths, format, isSameDay, isSameMonth, isToday, subMonths } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
@@ -18,6 +18,8 @@ import {
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_VISIBLE_LANES = 4;
+const LANE_H = 16; 
+const LANE_GAP = 1;
 
 // ─── Per-dog color palette (Vibrant & Distinct) ──────────────────────────
 const DOG_PALETTE = [
@@ -72,9 +74,9 @@ function WeekRow({
   };
 
   return (
-    <div className="border-b border-pebble/10 last:border-b-0 h-full flex flex-col overflow-hidden">
-      {/* Date Row */}
-      <div className="grid grid-cols-7 relative pt-0.5">
+    <div className="border-b border-pebble/10 last:border-b-0 h-full flex flex-col bg-cream/5 overflow-hidden">
+      {/* Date Header: Clear vertical space */}
+      <div className="grid grid-cols-7 relative h-8 shrink-0 pt-1 pointer-events-none z-10">
         {week.map((day, i) => {
           const inMonth = isSameMonth(day, currentMonth);
           const today = isToday(day);
@@ -82,35 +84,27 @@ function WeekRow({
           const dateStr = format(day, 'yyyy-MM-dd');
           
           const dayBookings = getBookingsForWeek(bookings, dateStr, dateStr);
-          const totalDogs = dayBookings.length;
-          const isArriving = dayBookings.some(b => b.start_date === dateStr);
-          const isDeparting = dayBookings.some(b => b.end_date === dateStr);
+          const isArriving = dayBookings.some((b) => b.start_date === dateStr);
+          const isDeparting = dayBookings.some((b) => b.end_date === dateStr);
 
           return (
             <div
               key={i}
               onClick={() => inMonth && onDateClick(day)}
-              className={`flex flex-col items-center select-none relative transition-all h-full
-                ${inMonth ? (selected ? 'bg-sage/10 ring-1 ring-inset ring-sage/20' : 'hover:bg-sage/5 cursor-pointer') : 'opacity-10 pointer-events-none'}`}
+              className={`flex flex-col items-center select-none pointer-events-auto h-full px-0.5
+                ${inMonth ? (selected ? 'bg-sage/10' : 'hover:bg-sage/5 cursor-pointer') : 'opacity-10 pointer-events-none'}`}
             >
               <div
-                className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-black transition-all mt-0.5
-                  ${selected ? 'bg-sage text-white shadow-lg scale-110' : today ? 'bg-terracotta text-white' : 'text-bark'}`}
+                className={`w-4 h-4 flex items-center justify-center rounded-full text-[8.5px] font-black
+                  ${selected ? 'bg-sage text-white' : today ? 'bg-terracotta text-white' : 'text-bark'}`}
               >
                 {format(day, 'd')}
               </div>
               
-              <div className="flex flex-col items-center mt-0.5 pointer-events-none">
-                {totalDogs > 0 && inMonth && (
-                  <span className="text-[10px] font-black text-sage flex items-center gap-1 px-2 py-0.5 bg-white/90 rounded-full border border-pebble/10 shadow-sm backdrop-blur-[4px] leading-none mb-1 ring-1 ring-white">
-                    <span className="text-[8px]">🐾</span>
-                    <span className="opacity-40 text-[7px] font-bold">x</span>
-                    {totalDogs}
-                  </span>
-                )}
-                <div className="flex gap-1 h-2 items-center">
-                  {isArriving && <div className="w-1.5 h-1.5 rounded-full bg-sage shadow-sm border border-white" aria-label="Arrival" />}
-                  {isDeparting && <div className="w-1.5 h-1.5 rounded-full bg-terracotta shadow-sm border border-white" aria-label="Departure" />}
+              <div className="flex flex-col items-center pointer-events-none h-2 mt-0.5">
+                <div className="flex gap-0.5 h-1 items-center mt-0.5">
+                  {isArriving && <div className="w-1 h-1 rounded-full bg-sage shadow-sm border border-white" aria-label="Arrival" />}
+                  {isDeparting && <div className="w-1 h-1 rounded-full bg-terracotta shadow-sm border border-white" aria-label="Departure" />}
                 </div>
               </div>
             </div>
@@ -118,55 +112,53 @@ function WeekRow({
         })}
       </div>
 
-      {/* Booking Bars */}
-      <div
-        className="relative px-0.5 pb-0.5 ml-px flex-1"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gridTemplateRows: `repeat(${visibleLanes || 1}, 1fr)`,
-          gap: `1px 0`,
-        }}
-      >
-        {visibleBookings.map((b) => {
-          const lane = laneMap[b.id];
-          const c = dogColor(b.dog_id);
-          const bStart = b.start_date;
-          const bEnd = b.end_date;
+      {/* Booking Bars: Separated below header */}
+      <div className="relative px-0.5 ml-px flex-1 flex flex-col overflow-hidden">
+        <div 
+          className="grid flex-1 items-start"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            gridTemplateRows: `repeat(${visibleLanes || 1}, ${LANE_H}px)`,
+            gap: `${LANE_GAP}px 0`,
+          }}
+        >
+          {visibleBookings.map((b) => {
+            const lane = laneMap[b.id];
+            const c = dogColor(b.dog_id);
+            const bStart = b.start_date;
+            const bEnd = b.end_date;
+            const isStartInWeek = bStart >= weekStartStr;
+            const isEndInWeek = bEnd <= weekEndStr;
+            const colStart = (isStartInWeek ? dayIdx(bStart) : 0) + 1;
+            const colEnd = (isEndInWeek ? dayIdx(bEnd) : 6) + 2;
+            const rL = isStartInWeek ? '4px' : '0';
+            const rR = isEndInWeek ? '4px' : '0';
 
-          const isStartInWeek = bStart >= weekStartStr;
-          const isEndInWeek = bEnd <= weekEndStr;
-
-          const colStart = (isStartInWeek ? dayIdx(bStart) : 0) + 1;
-          const colEnd = (isEndInWeek ? dayIdx(bEnd) : 6) + 2;
-
-          const rL = isStartInWeek ? '4px' : '0';
-          const rR = isEndInWeek ? '4px' : '0';
-
-          return (
-            <button
-              key={b.id}
-              onClick={(e) => { e.stopPropagation(); onBookingClick(b.id); }}
-              className="flex items-center px-1.5 overflow-hidden whitespace-nowrap cursor-pointer transition-all hover:brightness-95 active:scale-[0.98] shadow-sm backdrop-blur-[2px]"
-              style={{
-                gridColumn: `${colStart} / ${colEnd}`,
-                gridRow: lane + 1,
-                background: c.bg,
-                color: c.text,
-                borderRadius: `${rL} ${rR} ${rR} ${rL}`,
-                fontSize: '8px',
-                fontWeight: 900,
-                margin: '0.25px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                minHeight: '13px',
-              }}
-            >
-              <span className="truncate drop-shadow-sm uppercase tracking-tighter">
-                {isStartInWeek || (week[0].getDay() === 0 && !isStartInWeek) ? b.dogs?.name : ''}
-              </span>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={b.id}
+                onClick={(e) => { e.stopPropagation(); onBookingClick(b.id); }}
+                className="flex items-center px-1 overflow-hidden whitespace-nowrap cursor-pointer transition-all hover:brightness-95 active:scale-[0.98] shadow-sm"
+                style={{
+                  gridColumn: `${colStart} / ${colEnd}`,
+                  gridRow: lane + 1,
+                  background: c.bg,
+                  color: c.text,
+                  borderRadius: `${rL} ${rR} ${rR} ${rL}`,
+                  fontSize: '7px',
+                  fontWeight: 900,
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  height: `${LANE_H}px`,
+                }}
+              >
+                <span className="truncate drop-shadow-sm uppercase tracking-tighter">
+                  {(isStartInWeek || (week[0].getDay() === 0 && !isStartInWeek)) ? b.dogs?.name : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -194,50 +186,50 @@ export function CalendarMain() {
   }, [bookings, selectedDate]);
 
   return (
-    <div className="flex flex-col h-full bg-transparent pb-24 -mx-4 overflow-hidden">
-      {/* Navigation Header */}
-      <div className="mx-4 mt-1 px-4 py-2 glass-card rounded-[24px] flush-shadow mb-2 border-b border-white/20">
+    <div className="flex flex-col h-full bg-transparent -mx-4 overflow-hidden relative pb-10">
+      {/* Month Navigation */}
+      <div className="mx-4 mt-1 px-4 py-1.5 glass-card rounded-[24px] flush-shadow mb-1 border-b border-white/20">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="w-9 h-9 flex items-center justify-center text-bark-light hover:bg-pebble/20 rounded-full transition-all active:scale-75"
+            className="w-8 h-8 flex items-center justify-center text-bark-light hover:bg-pebble/20 rounded-full transition-all active:scale-75"
           >
-            <CaretLeft size={18} weight="bold" />
+            <CaretLeft size={16} weight="bold" />
           </button>
           
           <div className="text-center group cursor-pointer" onClick={() => setCurrentMonth(new Date())}>
-            <h2 className="font-black text-lg text-bark uppercase tracking-[0.2em] group-hover:text-sage transition-colors leading-none">{format(currentMonth, 'MMMM')}</h2>
-            <p className="text-[9px] font-bold text-bark-light tracking-[0.3em] mt-0.5 opacity-60 text-center">{format(currentMonth, 'yyyy')}</p>
+            <h2 className="font-black text-base text-bark uppercase tracking-[0.2em] group-hover:text-sage transition-colors leading-none">{format(currentMonth, 'MMMM')}</h2>
+            <p className="text-[8px] font-bold text-bark-light tracking-[0.3em] mt-0.5 opacity-60 text-center">{format(currentMonth, 'yyyy')}</p>
           </div>
 
           <button
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="w-9 h-9 flex items-center justify-center text-bark-light hover:bg-pebble/20 rounded-full transition-all active:scale-75"
+            className="w-8 h-8 flex items-center justify-center text-bark-light hover:bg-pebble/20 rounded-full transition-all active:scale-75"
           >
-            <CaretRight size={18} weight="bold" />
+            <CaretRight size={16} weight="bold" />
           </button>
         </div>
       </div>
 
-      {/* Week Labels */}
-      <div className="grid grid-cols-7 px-4 mb-1.5 gap-1">
+      {/* Day Labels */}
+      <div className="grid grid-cols-7 px-4 mb-0.5">
         {DAY_LABELS.map((d, i) => (
-          <div key={i} className="text-center text-[8.5px] font-black text-bark-light opacity-70 uppercase tracking-[0.15em]">
+          <div key={i} className="text-center text-[7px] font-black text-bark-light opacity-50 uppercase tracking-[0.1em]">
             {d}
           </div>
         ))}
       </div>
 
-      {/* Calendar Grid */}
+      {/* Grid: Flex to fit viewport exactly */}
       <div 
-        className="mx-3 glass-card rounded-[24px] flush-shadow overflow-hidden mb-2 border border-white/20 flex-1"
+        className="mx-3 glass-card rounded-[24px] flush-shadow overflow-hidden mb-1 border border-white/20 flex-1 flex flex-col"
         style={{
           display: 'grid',
           gridTemplateRows: `repeat(${weeks.length}, 1fr)`,
         }}
       >
         {isLoading && !bookings.length ? (
-          <div className="flex items-center justify-center text-bark-light font-black uppercase tracking-widest opacity-40 text-[10px]">Syncing...</div>
+          <div className="flex items-center justify-center text-bark-light font-black uppercase tracking-widest opacity-40 text-[9px]">Syncing...</div>
         ) : (
           weeks.map((week, wi) => (
             <WeekRow
@@ -253,11 +245,12 @@ export function CalendarMain() {
         )}
       </div>
 
-      <div className="mx-6 flex items-center gap-2 bg-sage/5 p-2 rounded-xl border border-sage/10 mb-1">
-        <PawPrint size={14} weight="duotone" className="text-sage" />
-        <p className="text-[8.5px] font-bold text-bark leading-tight">
-          Tap a date to see the daily pups. Full status at <span className="text-sage font-black">🏠 Home</span>.
-        </p>
+      <div className="mx-6 flex items-center justify-center -mt-1 opacity-60">
+        <div className="px-3 py-0.5 bg-sage/5 rounded-full border border-sage/10 backdrop-blur-sm">
+          <p className="text-[7.5px] font-black text-bark/40 uppercase tracking-tighter">
+            Full status at <span className="text-sage">🏠 Home</span>
+          </p>
+        </div>
       </div>
 
       <AddButton
@@ -267,7 +260,6 @@ export function CalendarMain() {
         ariaLabel="New booking"
       />
 
-      {/* Daily Agenda Detail */}
       <SlideUpSheet
         isOpen={!!selectedDate}
         onClose={() => setSelectedDate(null)}
