@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from './useAuthContext';
-import { EmailSchema } from '@/lib/schemas';
+import { EmailSchema, PasswordSchema } from '@/lib/schemas';
 
-const MAGIC_LINK_COOLDOWN_MS = 60_000;
+const MAGIC_LINK_COOLDOWN_MS = 30_000;
 const MAGIC_LINK_COOLDOWN_STORAGE_KEY = 'snapuppy.magic_link_next_allowed_at';
 
 function DogIcon() {
@@ -16,34 +16,19 @@ function DogIcon() {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      {/* One ear up */}
       <path d="M24 12 L14 37 L34 34 Z" fill="#D4845A" />
       <path d="M24 18 L19 32 L30 30 Z" fill="#F3BA9D" />
-
-      {/* One floppy ear */}
       <ellipse cx="62" cy="42" rx="8" ry="18" transform="rotate(-22 62 42)" fill="#D4845A" />
       <ellipse cx="62" cy="43" rx="4.5" ry="11" transform="rotate(-22 62 43)" fill="#F3BA9D" />
-
-      {/* Head */}
       <circle cx="40" cy="39" r="24" fill="#8FB886" />
-
-      {/* Cheeks */}
       <circle cx="28" cy="46" r="3" fill="#F6D7C5" />
       <circle cx="52" cy="46" r="3" fill="#F6D7C5" />
-
-      {/* Muzzle */}
       <ellipse cx="40" cy="50" rx="15" ry="10.5" fill="#FDFBF7" />
-
-      {/* Eyes */}
       <ellipse cx="31" cy="36" rx="3.2" ry="3.8" fill="#4A3728" />
       <ellipse cx="49" cy="36" rx="3.2" ry="3.8" fill="#4A3728" />
       <circle cx="32" cy="34.5" r="1.2" fill="#FFFFFF" />
       <circle cx="50" cy="34.5" r="1.2" fill="#FFFFFF" />
-
-      {/* Nose */}
       <ellipse cx="40" cy="46" rx="4.8" ry="3.2" fill="#4A3728" />
-
-      {/* Smile and tongue out */}
       <path d="M40 48.5 V51" stroke="#4A3728" strokeWidth="1.8" strokeLinecap="round" />
       <path
         d="M34 51 Q40 56 46 51"
@@ -58,10 +43,15 @@ function DogIcon() {
   );
 }
 
-export function LoginScreen() {
-  const { user, loading, signIn } = useAuthContext();
+type AuthMode = 'magic-link' | 'password-login' | 'password-signup';
 
+export function LoginScreen() {
+  const { user, loading, signIn, signInWithPassword, signUp } = useAuthContext();
+
+  const [authMode, setAuthMode] = useState<AuthMode>('magic-link');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -123,7 +113,6 @@ export function LoginScreen() {
         window.localStorage.setItem(MAGIC_LINK_COOLDOWN_STORAGE_KEY, String(nextTime));
         setAuthError('Too many requests. Please wait about a minute, then try again.');
       } else {
-        // Sanitize: don't expose raw server errors to the UI
         setAuthError('Could not send magic link. Please try again.');
       }
     } finally {
@@ -131,7 +120,7 @@ export function LoginScreen() {
     }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleMagicLinkSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const result = EmailSchema.safeParse({ email: email.trim() });
@@ -141,6 +130,76 @@ export function LoginScreen() {
     }
 
     await sendMagicLink(result.data.email);
+  }
+
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAuthError(null);
+    setIsSending(true);
+
+    if (authMode === 'password-signup') {
+      const emailResult = EmailSchema.safeParse({ email: email.trim() });
+      if (!emailResult.success) {
+        setAuthError(emailResult.error.issues[0]?.message ?? 'Invalid email address.');
+        setIsSending(false);
+        return;
+      }
+
+      const pwResult = PasswordSchema.safeParse({ password });
+      if (!pwResult.success) {
+        setAuthError(pwResult.error.issues[0]?.message ?? 'Password too weak.');
+        setIsSending(false);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setAuthError('Passwords do not match.');
+        setIsSending(false);
+        return;
+      }
+
+      try {
+        await signUp(emailResult.data.email, password);
+        setAuthError('Check your email to confirm your account, then sign in.');
+        setAuthMode('password-login');
+      } catch (error) {
+        setAuthError(error instanceof Error ? error.message : 'Could not create account.');
+      }
+    } else {
+      const emailResult = EmailSchema.safeParse({ email: email.trim() });
+      if (!emailResult.success) {
+        setAuthError(emailResult.error.issues[0]?.message ?? 'Invalid email address.');
+        setIsSending(false);
+        return;
+      }
+
+      try {
+        await signInWithPassword(emailResult.data.email, password);
+      } catch (error) {
+        setAuthError('Invalid email or password.');
+      }
+    }
+
+    setIsSending(false);
+  }
+
+  function switchToPasswordLogin() {
+    setAuthMode('password-login');
+    setAuthError(null);
+    setConfirmPassword('');
+  }
+
+  function switchToPasswordSignup() {
+    setAuthMode('password-signup');
+    setAuthError(null);
+    setConfirmPassword('');
+  }
+
+  function switchToMagicLink() {
+    setAuthMode('magic-link');
+    setAuthError(null);
+    setPassword('');
+    setConfirmPassword('');
   }
 
   return (
@@ -186,8 +245,8 @@ export function LoginScreen() {
                   : 'Resend magic link'}
             </button>
           </div>
-        ) : (
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        ) : authMode === 'magic-link' ? (
+          <form className="flex flex-col gap-4" onSubmit={handleMagicLinkSubmit}>
             <h2 className="m-0 text-xl text-bark">Start in 10 seconds</h2>
             <p className="m-0 text-bark-light text-sm leading-relaxed">
               No password. No setup headaches. Just your email and done.
@@ -222,6 +281,130 @@ export function LoginScreen() {
                   ? `Try again in ${secondsLeft}s`
                   : 'Send me a magic link 🐾'}
             </button>
+
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="text-xs text-bark-light">Or</span>
+              <button
+                type="button"
+                className="text-xs text-sage font-bold hover:underline"
+                onClick={switchToPasswordLogin}
+              >
+                Sign in with password
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form className="flex flex-col gap-4" onSubmit={handlePasswordSubmit}>
+            <h2 className="m-0 text-xl text-bark">
+              {authMode === 'password-signup' ? 'Create account' : 'Welcome back'}
+            </h2>
+            <p className="m-0 text-bark-light text-sm leading-relaxed">
+              {authMode === 'password-signup'
+                ? 'Choose a password to get started.'
+                : 'Enter your credentials to sign in.'}
+            </p>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                className="form-input"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="form-field">
+              <label className="form-label" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                className="form-input"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                autoComplete={authMode === 'password-signup' ? 'new-password' : 'current-password'}
+              />
+            </div>
+
+            {authMode === 'password-signup' && (
+              <div className="form-field">
+                <label className="form-label" htmlFor="confirmPassword">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  required
+                  className="form-input"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+              </div>
+            )}
+
+            {authError && (
+              <div className="p-2 px-3 bg-blush text-terracotta rounded-lg text-[13px] font-semibold">
+                {authError}
+              </div>
+            )}
+
+            <button type="submit" className="btn-sage mt-2" disabled={isSending}>
+              {isSending
+                ? 'Please wait...'
+                : authMode === 'password-signup'
+                  ? 'Create account'
+                  : 'Sign in'}
+            </button>
+
+            <div className="flex items-center justify-center gap-2 mt-2">
+              {authMode === 'password-signup' ? (
+                <>
+                  <span className="text-xs text-bark-light">Already have an account?</span>
+                  <button
+                    type="button"
+                    className="text-xs text-sage font-bold hover:underline"
+                    onClick={switchToPasswordLogin}
+                  >
+                    Sign in
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-bark-light">Or</span>
+                  <button
+                    type="button"
+                    className="text-xs text-sage font-bold hover:underline"
+                    onClick={switchToMagicLink}
+                  >
+                    Use magic link
+                  </button>
+                </>
+              )}
+            </div>
+
+            {authMode === 'password-login' && (
+              <div className="flex items-center justify-center">
+                <button
+                  type="button"
+                  className="text-xs text-sage font-bold hover:underline"
+                  onClick={switchToPasswordSignup}
+                >
+                  No account? Create one
+                </button>
+              </div>
+            )}
           </form>
         )}
       </div>

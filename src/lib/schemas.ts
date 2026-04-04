@@ -141,3 +141,13 @@ export const EmailSchema = z.object({
 });
 
 export type EmailFormData = z.infer<typeof EmailSchema>;
+
+export const PasswordSchema = z.object({
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(72, 'Password must be 72 characters or fewer')
+    .refine((p) => /[A-Z]/.test(p), 'Password must contain at least one uppercase letter')
+    .refine((p) => /[a-z]/.test(p), 'Password must contain at least one lowercase letter')
+    .refine((p) => /[0-9]/.test(p), 'Password must contain at least one number'),
+});

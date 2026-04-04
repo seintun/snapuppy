@@ -6,6 +6,8 @@ import {
   signOut as supabaseSignOut,
   supabase,
   signInAnonymously as supabaseSignInAnonymously,
+  signUpWithPassword,
+  signInWithPassword as signInWithPasswordFn,
 } from '@/lib/supabase';
 import { getProfile } from '@/features/profile/profileService';
 import { markProfileAsGuest } from '@/features/guest/guestService';
@@ -18,6 +20,8 @@ export interface AuthState {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signInAnonymously: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -115,6 +119,16 @@ export function useAuth(): AuthState {
     if (error) throw error;
   }, []);
 
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { error } = await signUpWithPassword(email, password);
+    if (error) throw error;
+  }, []);
+
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await signInWithPasswordFn(email, password);
+    if (error) throw error;
+  }, []);
+
   const signInAnonymously = useCallback(async () => {
     await supabaseSignInAnonymously();
   }, []);
@@ -130,6 +144,8 @@ export function useAuth(): AuthState {
     profile,
     loading,
     signIn,
+    signUp,
+    signInWithPassword,
     signInAnonymously,
     signOut,
   };
