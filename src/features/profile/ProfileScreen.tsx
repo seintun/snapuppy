@@ -5,7 +5,7 @@ import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
-import { SignOut, Buildings, CurrencyDollar, Sun, Clock } from '@phosphor-icons/react';
+import { SignOut, Buildings, CurrencyDollar, Clock } from '@phosphor-icons/react';
 import { TimePicker } from '@/components/ui/TimePicker';
 
 export function ProfileScreen() {
@@ -97,7 +97,6 @@ export function ProfileScreen() {
       )}
 
       <form onSubmit={(e) => void handleSubmit(onSave)(e)} className="flex flex-col gap-3">
-
         {/* ── Business Info ── */}
         <div className="surface-card !p-3">
           <div className="flex items-center gap-1.5 mb-2">
@@ -133,7 +132,10 @@ export function ProfileScreen() {
           <div className="grid grid-cols-2 gap-2.5">
             {/* Nightly */}
             <div>
-              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="nightly-rate">
+              <label
+                className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
+                htmlFor="nightly-rate"
+              >
                 🌙 Boarding / night
               </label>
               <div className="flex">
@@ -157,7 +159,10 @@ export function ProfileScreen() {
 
             {/* Daycare */}
             <div>
-              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="daycare-rate">
+              <label
+                className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
+                htmlFor="daycare-rate"
+              >
                 ☀️ Daycare / day
               </label>
               <div className="flex">
@@ -181,7 +186,10 @@ export function ProfileScreen() {
 
             {/* Holiday surcharge */}
             <div>
-              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="holiday-surcharge">
+              <label
+                className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
+                htmlFor="holiday-surcharge"
+              >
                 🎄 Holiday surcharge
               </label>
               <div className="flex">
@@ -199,13 +207,18 @@ export function ProfileScreen() {
                 />
               </div>
               {errors.holidaySurcharge && (
-                <p className="text-[10px] text-terracotta mt-0.5">{errors.holidaySurcharge.message}</p>
+                <p className="text-[10px] text-terracotta mt-0.5">
+                  {errors.holidaySurcharge.message}
+                </p>
               )}
             </div>
 
             {/* Cutoff time */}
             <div>
-              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="cutoff-time">
+              <label
+                className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
+                htmlFor="cutoff-time"
+              >
                 🕐 Pickup cut-off
               </label>
               <div className="flex">
@@ -215,7 +228,9 @@ export function ProfileScreen() {
                 <div className="flex-1">
                   <TimePicker
                     value={watch('cutoffTime')}
-                    onChange={(v) => setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })}
+                    onChange={(v) =>
+                      setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })
+                    }
                     error={!!errors.cutoffTime}
                     className="rounded-l-none border-l-0"
                     hideIcon={true}

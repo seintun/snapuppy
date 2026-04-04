@@ -25,7 +25,7 @@ function isMissingBreedError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const maybeError = error as { code?: string; message?: string };
   return (
-    maybeError.code === 'PGRST204' || 
+    maybeError.code === 'PGRST204' ||
     (typeof maybeError.message === 'string' && maybeError.message.toLowerCase().includes('breed'))
   );
 }
@@ -50,7 +50,7 @@ export async function getDogs(sitterId: string): Promise<Dog[]> {
       .order('name');
 
     if (fallbackError) throw fallbackError;
-    return (fallbackData ?? []).map(dog => ({ ...dog, breed: null } as Dog));
+    return (fallbackData ?? []).map((dog) => ({ ...dog, breed: null }) as Dog);
   }
 
   throw error;
@@ -69,7 +69,7 @@ export async function getDog(id: string, sitterId?: string): Promise<Dog> {
   if (isMissingBreedError(error)) {
     let fallbackQuery = supabase.from('dogs').select(DOG_SELECT_FALLBACK).eq('id', id);
     if (sitterId) fallbackQuery = fallbackQuery.eq('sitter_id', sitterId);
-    
+
     const { data: fallbackData, error: fallbackError } = await fallbackQuery.single();
     if (fallbackError) throw fallbackError;
     return { ...fallbackData, breed: null } as Dog;
@@ -79,7 +79,11 @@ export async function getDog(id: string, sitterId?: string): Promise<Dog> {
 }
 
 export async function createDog(dog: DogInsert): Promise<Dog> {
-  const { data, error } = await supabase.from('dogs').insert(dog).select(DOG_SELECT_WITH_BREED).single();
+  const { data, error } = await supabase
+    .from('dogs')
+    .insert(dog)
+    .select(DOG_SELECT_WITH_BREED)
+    .single();
 
   if (!error) {
     return data as Dog;
@@ -87,15 +91,14 @@ export async function createDog(dog: DogInsert): Promise<Dog> {
 
   // Fallback for missing breed column
   if (isMissingBreedError(error)) {
-    const cleanDog = { ...dog };
-    delete (cleanDog as any).breed;
-    
+    const { breed: _breed, ...cleanDog } = dog;
+
     const { data: fallbackData, error: fallbackError } = await supabase
       .from('dogs')
       .insert(cleanDog)
       .select(DOG_SELECT_FALLBACK)
       .single();
-    
+
     if (fallbackError) throw fallbackError;
     return { ...fallbackData, breed: null } as Dog;
   }
@@ -117,8 +120,7 @@ export async function updateDog(id: string, updates: DogUpdate): Promise<Dog> {
 
   // Fallback for missing breed column
   if (isMissingBreedError(error)) {
-    const cleanUpdates = { ...updates };
-    delete (cleanUpdates as any).breed;
+    const { breed: _breed, ...cleanUpdates } = updates;
 
     const { data: fallbackData, error: fallbackError } = await supabase
       .from('dogs')
@@ -142,14 +144,39 @@ export async function deleteDog(id: string, sitterId?: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function uploadDogPhoto(dogId: string, file: File): Promise<string> {
-  const { error } = await supabase.storage
+export async function uploadDogPhoto(sitterId: string, dogId: string, file: File): Promise<string> {
+  // Sanitize filename: Replace non-alphanumeric chars (except . and -) with underscores
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const preferredPath = `${sitterId}/${dogId}/${cleanName}`;
+  const legacyPath = `${dogId}/${cleanName}`;
+
+  const { error: preferredError } = await supabase.storage
     .from('dog-photos')
-    .upload(`${dogId}/${file.name}`, file, { upsert: true });
+    .upload(preferredPath, file, { upsert: true });
 
-  if (error) throw error;
+  if (!preferredError) {
+    const { data } = supabase.storage.from('dog-photos').getPublicUrl(preferredPath);
+    return data.publicUrl;
+  }
 
-  const { data } = supabase.storage.from('dog-photos').getPublicUrl(`${dogId}/${file.name}`);
+  const isRlsError =
+    (typeof preferredError === 'object' &&
+      preferredError !== null &&
+      'statusCode' in preferredError &&
+      String((preferredError as { statusCode?: string }).statusCode) === '403') ||
+    (typeof preferredError.message === 'string' &&
+      preferredError.message.toLowerCase().includes('row-level security'));
 
+  if (!isRlsError) {
+    throw preferredError;
+  }
+
+  const { error: legacyError } = await supabase.storage
+    .from('dog-photos')
+    .upload(legacyPath, file, { upsert: true });
+
+  if (legacyError) throw legacyError;
+
+  const { data } = supabase.storage.from('dog-photos').getPublicUrl(legacyPath);
   return data.publicUrl;
 }

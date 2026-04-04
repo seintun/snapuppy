@@ -38,11 +38,12 @@ const PROFILE_SELECT_FALLBACK = `
 function isMissingBusinessNameError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const maybeError = error as { code?: string; message?: string };
-  
+
   // PGRST204 is the PostgREST error for "column not found"
   return (
-    maybeError.code === 'PGRST204' || 
-    (typeof maybeError.message === 'string' && maybeError.message.toLowerCase().includes('business_name'))
+    maybeError.code === 'PGRST204' ||
+    (typeof maybeError.message === 'string' &&
+      maybeError.message.toLowerCase().includes('business_name'))
   );
 }
 
@@ -86,8 +87,7 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
 
   // Fallback: Strip business_name and try again
   if (isMissingBusinessNameError(error)) {
-    const cleanUpdates = { ...updates };
-    delete (cleanUpdates as any).business_name;
+    const { business_name: _businessName, ...cleanUpdates } = updates;
 
     const { data: fallbackData, error: fallbackError } = await supabase
       .from('profiles')

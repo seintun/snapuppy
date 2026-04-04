@@ -14,13 +14,21 @@ export function SlideUpSheet({ isOpen, onClose, title, children }: SlideUpSheetP
   const draggingTransform = isDragging || offset > 0 ? `translateY(${offset}px)` : undefined;
 
   useEffect(() => {
+    let frame = 0;
+
     if (isOpen) {
-      requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
         setIsVisible(true);
       });
     } else {
-      setIsVisible(false);
+      frame = requestAnimationFrame(() => {
+        setIsVisible(false);
+      });
     }
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, [isOpen]);
 
   // Close on Escape

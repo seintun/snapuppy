@@ -4,6 +4,7 @@ import {
   getDogs,
   getDog,
   createDog as svcCreateDog,
+  updateDog as svcUpdateDog,
   deleteDog as svcDeleteDog,
 } from '@/features/dogs/dogService';
 import type { Database } from '@/types/database';
@@ -75,6 +76,24 @@ export function useDeleteDog() {
     mutationFn: (dogId: string) => svcDeleteDog(dogId, user!.id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['booking-options', user?.id] });
+    },
+  });
+}
+/**
+ * Mutation to update an existing dog.
+ * Invalidates the dogs query on success.
+ */
+export function useUpdateDog() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Database['public']['Tables']['dogs']['Update'] }): Promise<Dog> =>
+      svcUpdateDog(id, updates),
+    onSuccess: (data: Dog) => {
+      void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id, data.id] });
       void queryClient.invalidateQueries({ queryKey: ['booking-options', user?.id] });
     },
   });

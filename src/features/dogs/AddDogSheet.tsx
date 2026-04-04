@@ -3,10 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useToast } from '@/components/ui/useToast';
-import { useCreateDog } from '@/hooks/useDogs';
+import { useCreateDog, useUpdateDog } from '@/hooks/useDogs';
 import { useDogBreeds } from '@/hooks/useDogBreeds';
 import { DogSchema, type DogFormData } from '@/lib/schemas';
-import { updateDog, uploadDogPhoto } from './dogService';
+import { uploadDogPhoto } from './dogService';
+import { useAuthContext } from '@/features/auth/useAuthContext';
 import type { Database } from '@/types/database';
 
 type Dog = Database['public']['Tables']['dogs']['Row'];
@@ -19,8 +20,11 @@ interface AddDogSheetProps {
 }
 
 export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSheetProps) {
+  const { user } = useAuthContext();
   const { addToast } = useToast();
-  const { mutateAsync: createDogMutation, isPending: submitting } = useCreateDog();
+  const { mutateAsync: createDogMutation, isPending: creating } = useCreateDog();
+  const { mutateAsync: updateDogMutation, isPending: updating } = useUpdateDog();
+  const submitting = creating || updating;
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: fetchableBreeds } = useDogBreeds();
@@ -111,17 +115,20 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
 
         if (editingDog) {
           let photoUrl = editingDog.photo_url ?? null;
-          if (selectedPhoto) {
-            photoUrl = await uploadDogPhoto(editingDog.id, selectedPhoto);
+          if (selectedPhoto && user?.id) {
+            photoUrl = await uploadDogPhoto(user.id, editingDog.id, selectedPhoto);
           }
 
-          await updateDog(editingDog.id, {
-            name: data.name,
-            breed: data.breed || null,
-            owner_name: data.ownerName || null,
-            owner_phone: data.ownerPhone || null,
-            notes: data.notes || null,
-            photo_url: photoUrl,
+          await updateDogMutation({
+            id: editingDog.id,
+            updates: {
+              name: data.name,
+              breed: data.breed || null,
+              owner_name: data.ownerName || null,
+              owner_phone: data.ownerPhone || null,
+              notes: data.notes || null,
+              photo_url: photoUrl,
+            },
           });
           addToast(`${data.name} updated successfully! 🐾`, 'success');
         } else {
@@ -134,9 +141,12 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
             photo_url: null,
           });
 
-          if (selectedPhoto) {
-            const photoUrl = await uploadDogPhoto(createdDog.id, selectedPhoto);
-            await updateDog(createdDog.id, { photo_url: photoUrl });
+          if (selectedPhoto && user?.id) {
+            const photoUrl = await uploadDogPhoto(user.id, createdDog.id, selectedPhoto);
+            await updateDogMutation({
+              id: createdDog.id,
+              updates: { photo_url: photoUrl },
+            });
           }
 
           addToast(`${data.name} added successfully! 🐾`, 'success');
@@ -150,20 +160,21 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
         setIsSaving(false);
       }
     },
-    [createDogMutation, addToast, editingDog, onClose, onSuccess],
+    [createDogMutation, updateDogMutation, addToast, editingDog, onClose, onSuccess, user?.id],
   );
 
   return (
-    <SlideUpSheet
-      isOpen={isOpen}
-      onClose={onClose}
-      title={editingDog ? 'Edit Dog' : 'Add New Dog'}
-    >
-      <form onSubmit={(e) => void handleSubmit(onFormSubmit)(e)} className="flex flex-col gap-5 pt-2">
+    <SlideUpSheet isOpen={isOpen} onClose={onClose} title={editingDog ? 'Edit Dog' : 'Add New Dog'}>
+      <form
+        onSubmit={(e) => void handleSubmit(onFormSubmit)(e)}
+        className="flex flex-col gap-5 pt-2"
+      >
         {/* Profile Photo Upload Zone */}
         <div className="flex flex-col items-center gap-2 mb-2">
           <label className="relative group cursor-pointer">
-            <div className={`w-28 h-28 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${photoPreview ? 'border-sage/40' : 'border-pebble/30 bg-pebble/5 hover:bg-pebble/10'}`}>
+            <div
+              className={`w-28 h-28 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden transition-all ${photoPreview ? 'border-sage/40' : 'border-pebble/30 bg-pebble/5 hover:bg-pebble/10'}`}
+            >
               {photoPreview ? (
                 <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
               ) : (
@@ -175,7 +186,7 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
                 </div>
               )}
             </div>
-            
+
             <input
               type="file"
               accept="image/*"
@@ -183,7 +194,7 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
               className="hidden"
               {...register('photoFile')}
             />
-            
+
             <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-sage text-white flex items-center justify-center border-2 border-cream shadow-md scale-95 group-hover:scale-110 transition-transform">
               <span className="text-xs font-bold">{photoPreview ? '✎' : '+'}</span>
             </div>
@@ -193,7 +204,10 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
         {/* Name & Breed */}
         <div className="grid grid-cols-2 gap-4">
           <div className="form-field">
-            <label className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block" htmlFor="dog-name">
+            <label
+              className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block"
+              htmlFor="dog-name"
+            >
               Name *
             </label>
             <input
@@ -204,10 +218,17 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
               placeholder="Pup's name"
               {...register('name')}
             />
-            {errors.name && <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">{errors.name.message}</p>}
+            {errors.name && (
+              <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">
+                {errors.name.message}
+              </p>
+            )}
           </div>
           <div className="form-field relative" ref={breedRef}>
-            <label className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block" htmlFor="dog-breed">
+            <label
+              className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block"
+              htmlFor="dog-breed"
+            >
               Breed
             </label>
             <input
@@ -220,7 +241,11 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
               {...register('breed')}
               onFocus={() => setShowBreeds(true)}
             />
-            {errors.breed && <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">{errors.breed.message}</p>}
+            {errors.breed && (
+              <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">
+                {errors.breed.message}
+              </p>
+            )}
             {showBreeds && filteredBreeds.length > 0 && (
               <ul className="absolute left-0 top-full z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-pebble/10 bg-cream py-1 shadow-lg backdrop-blur-sm bg-cream/95">
                 {filteredBreeds.map((breed: string) => (
@@ -243,7 +268,10 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
         {/* Owner Info side by side */}
         <div className="grid grid-cols-2 gap-4">
           <div className="form-field">
-            <label className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block" htmlFor="owner-name">
+            <label
+              className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block"
+              htmlFor="owner-name"
+            >
               Owner Name
             </label>
             <input
@@ -255,11 +283,16 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
               {...register('ownerName')}
             />
             {errors.ownerName && (
-              <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">{errors.ownerName.message}</p>
+              <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">
+                {errors.ownerName.message}
+              </p>
             )}
           </div>
           <div className="form-field">
-            <label className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block" htmlFor="owner-phone">
+            <label
+              className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block"
+              htmlFor="owner-phone"
+            >
               Owner Phone
             </label>
             <input
@@ -272,7 +305,7 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
                   const input = e.target as HTMLInputElement;
                   let val = input.value.replace(/\D/g, '');
                   if (val.length > 10) val = val.slice(0, 10);
-                  
+
                   let formatted = '';
                   if (val.length > 0) {
                     if (val.length <= 3) {
@@ -283,19 +316,24 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
                       formatted = `(${val.slice(0, 3)}) ${val.slice(3, 6)}-${val.slice(6)}`;
                     }
                   }
-                  
+
                   input.value = formatted;
                 },
               })}
             />
             {errors.ownerPhone && (
-              <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">{errors.ownerPhone.message}</p>
+              <p className="text-[9px] font-bold text-terracotta mt-1 leading-none">
+                {errors.ownerPhone.message}
+              </p>
             )}
           </div>
         </div>
 
         <div className="form-field">
-          <label className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block" htmlFor="dog-notes">
+          <label
+            className="text-[10px] font-black text-bark/40 uppercase tracking-[0.1em] mb-1.5 block"
+            htmlFor="dog-notes"
+          >
             Special Instructions / Notes
           </label>
           <textarea
@@ -305,10 +343,18 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
             placeholder="Any allergies, quirks, or routine treats we should know about?"
             {...register('notes')}
           />
-          {errors.notes && <p className="text-[10px] font-bold text-terracotta mt-1 leading-none">{errors.notes.message}</p>}
+          {errors.notes && (
+            <p className="text-[10px] font-bold text-terracotta mt-1 leading-none">
+              {errors.notes.message}
+            </p>
+          )}
         </div>
 
-        <button type="submit" className="btn-sage w-full py-3.5 mt-2 shadow-lg active:shadow-sm transition-all" disabled={submitting || isSaving}>
+        <button
+          type="submit"
+          className="btn-sage w-full py-3.5 mt-2 shadow-lg active:shadow-sm transition-all"
+          disabled={submitting || isSaving}
+        >
           {submitting || isSaving
             ? 'Saving…'
             : editingDog
