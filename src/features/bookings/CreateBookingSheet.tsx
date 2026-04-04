@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CaretDown, Check, CalendarBlank } from '@phosphor-icons/react';
-import { format, addMonths, subMonths, isSameDay, isToday } from 'date-fns';
+import { CaretDown, CaretLeft, CaretRight, Check, CalendarBlank, PawPrint } from '@phosphor-icons/react';
+import { format, addMonths, subMonths, isSameDay, isToday, isAfter, isBefore, parseISO } from 'date-fns';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
@@ -102,21 +102,45 @@ function DogDropdown({
   );
 }
 
-function DatePicker({
-  label,
-  value,
-  onChange,
-  error,
+/** Single unified date-range picker — one calendar, two-tap flow */
+function DateRangePicker({
+  startDate,
+  endDate,
+  onStartChange,
+  onEndChange,
+  startError,
+  endError,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
+  startDate: string;
+  endDate: string;
+  onStartChange: (v: string) => void;
+  onEndChange: (v: string) => void;
+  startError?: string;
+  endError?: string;
 }) {
+  // 'start' = next tap sets check-in, 'end' = next tap sets check-out
+  const [selecting, setSelecting] = useState<'start' | 'end'>('start');
   const [isOpen, setIsOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(value ? new Date(value) : new Date());
+  const [hoverDate, setHoverDate] = useState<Date | null>(null);
+  const [viewMonth, setViewMonth] = useState(
+    startDate ? new Date(startDate + 'T12:00:00') : new Date(),
+  );
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const selectedDate = value ? new Date(value) : null;
+  const startD = startDate ? parseISO(startDate) : null;
+  const endD = endDate ? parseISO(endDate) : null;
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isOpen]);
 
   const daysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -124,116 +148,279 @@ function DatePicker({
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const days: (Date | null)[] = [];
-
-    for (let i = 0; i < firstDay.getDay(); i++) {
-      days.push(null);
-    }
-
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push(new Date(year, month, i));
-    }
-
+    for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+    for (let i = 1; i <= lastDay.getDate(); i++) days.push(new Date(year, month, i));
     return days;
   };
 
-  const handleSelect = (date: Date) => {
-    onChange(format(date, 'yyyy-MM-dd'));
-    setIsOpen(false);
+  // Confirmed range: between settled start and end dates
+  const isConfirmedRange = (date: Date) => {
+    if (!startD || !endD) return false;
+    return isAfter(date, startD) && isBefore(date, endD);
   };
 
-  const isSelected = (date: Date) => selectedDate && isSameDay(date, selectedDate);
-  const isTodayDate = (date: Date) => isToday(date);
+  // Live hover preview: when picking end date, show potential range
+  const isHoverRange = (date: Date) => {
+    if (selecting !== 'end' || !startD || !hoverDate) return false;
+    const rangeEnd = isAfter(hoverDate, startD) ? hoverDate : startD;
+    const rangeStart = isAfter(hoverDate, startD) ? startD : hoverDate;
+    return isAfter(date, rangeStart) && isBefore(date, rangeEnd);
+  };
+
+  const isHoverEnd = (date: Date) =>
+    selecting === 'end' && hoverDate && isSameDay(date, hoverDate) && startD && !isSameDay(date, startD);
+
+  const handleDaySelect = (date: Date) => {
+    const str = format(date, 'yyyy-MM-dd');
+    if (selecting === 'start') {
+      onStartChange(str);
+      // If new start is after current end, clear end
+      if (endD && isAfter(date, endD)) onEndChange(str);
+      setSelecting('end');
+    } else {
+      // If picked before start, swap roles
+      if (startD && isBefore(date, startD)) {
+        onEndChange(startDate);
+        onStartChange(str);
+      } else {
+        onEndChange(str);
+      }
+      setIsOpen(false);
+      setSelecting('start');
+    }
+  };
+
+  const openFor = (mode: 'start' | 'end') => {
+    setSelecting(mode);
+    setIsOpen(true);
+  };
+
+  const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  const triggerBase =
+    'flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border-1.5 bg-white transition-all duration-150 cursor-pointer';
+  const triggerActive = 'border-sage shadow-[0_0_0_3px_rgba(143,184,134,0.15)]';
+  const triggerIdle = 'border-pebble hover:border-sage/50';
+  const triggerError = 'border-terracotta';
 
   return (
-    <div className="form-field">
-      <label className="form-label">{label}</label>
-      <div className="relative">
+    <div className="form-field" ref={wrapperRef}>
+      {/* Two trigger pills side by side */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Check-in */}
         <button
           type="button"
-          className={`form-input w-full flex items-center gap-3 py-3 ${error ? 'border-terracotta' : ''}`}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => openFor('start')}
+          className={`${triggerBase} ${
+            isOpen && selecting === 'start'
+              ? triggerActive
+              : startError
+                ? triggerError
+                : triggerIdle
+          }`}
         >
-          <CalendarBlank size={20} className="text-sage" />
           <span
-            className={`flex-1 text-left ${value ? 'text-bark font-medium' : 'text-bark-light'}`}
+            className={`flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors ${
+              isOpen && selecting === 'start' ? 'bg-sage text-white' : 'bg-sage-light text-sage'
+            }`}
           >
-            {value ? format(new Date(value), 'MMM d, yyyy') : 'Select'}
+            <CalendarBlank size={13} weight="bold" />
           </span>
-          <CaretDown
-            size={18}
-            className={`text-bark-light transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          />
+          <div className="text-left min-w-0">
+            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider leading-none mb-0.5">
+              Check-in
+            </div>
+            <div
+              className={`text-sm font-bold truncate ${
+                startDate ? 'text-bark' : 'text-bark-light font-medium'
+              }`}
+            >
+              {startDate ? format(parseISO(startDate), 'MMM d') : 'Select'}
+            </div>
+          </div>
         </button>
 
-        {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-cream border border-pebble rounded-2xl shadow-xl z-20 p-4">
-            {/* Month navigation */}
-            <div className="flex items-center justify-between mb-4">
+        {/* Check-out */}
+        <button
+          type="button"
+          onClick={() => openFor('end')}
+          className={`${triggerBase} ${
+            isOpen && selecting === 'end'
+              ? triggerActive
+              : endError
+                ? triggerError
+                : triggerIdle
+          }`}
+        >
+          <span
+            className={`flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors ${
+              isOpen && selecting === 'end' ? 'bg-terracotta text-white' : 'bg-blush/60 text-terracotta'
+            }`}
+          >
+            <CalendarBlank size={13} weight="bold" />
+          </span>
+          <div className="text-left min-w-0">
+            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider leading-none mb-0.5">
+              Check-out
+            </div>
+            <div
+              className={`text-sm font-bold truncate ${
+                endDate ? 'text-bark' : 'text-bark-light font-medium'
+              }`}
+            >
+              {endDate ? format(parseISO(endDate), 'MMM d') : 'Select'}
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* Validation errors */}
+      {(startError || endError) && (
+        <p className="text-xs text-terracotta mt-1 flex items-center gap-1">
+          <span>⚠</span> {startError ?? endError}
+        </p>
+      )}
+
+      {/* Single shared calendar dropdown */}
+      {isOpen && (
+        <div
+          className="mt-2 z-30"
+          style={{ animation: 'cal-drop-in 0.18s cubic-bezier(0.22,1,0.36,1) both' }}
+        >
+          <div
+            className="bg-cream border border-pebble rounded-2xl overflow-hidden"
+            style={{ boxShadow: '0 8px 32px rgba(74,55,40,0.14)' }}
+          >
+            {/* Context hint */}
+            <div
+              className={`flex items-center gap-2 px-4 py-2.5 border-b border-pebble/60 ${
+                selecting === 'start' ? 'bg-sage-light/30' : 'bg-blush/20'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  selecting === 'start' ? 'bg-sage' : 'bg-terracotta'
+                }`}
+              />
+              <span className="text-xs font-bold text-bark">
+                {selecting === 'start' ? 'Tap to set check-in date' : 'Tap to set check-out date'}
+              </span>
+            </div>
+
+            {/* Month header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-pebble/40">
               <button
                 type="button"
                 onClick={() => setViewMonth(subMonths(viewMonth, 1))}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-sage-light/50 text-sage hover:bg-sage-light transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-sage hover:bg-sage-light transition-colors"
               >
-                <CaretDown size={18} className="rotate-90" />
+                <CaretLeft size={16} weight="bold" />
               </button>
-              <span className="font-bold text-bark text-sm">{format(viewMonth, 'MMMM yyyy')}</span>
+              <span className="font-extrabold text-bark text-sm tracking-tight">
+                {format(viewMonth, 'MMMM yyyy')}
+              </span>
               <button
                 type="button"
                 onClick={() => setViewMonth(addMonths(viewMonth, 1))}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-sage-light/50 text-sage hover:bg-sage-light transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-sage hover:bg-sage-light transition-colors"
               >
-                <CaretDown size={18} className="-rotate-90" />
+                <CaretRight size={16} weight="bold" />
               </button>
             </div>
 
-            {/* Day labels */}
-            <div className="grid grid-cols-7 mb-2">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <div key={i} className="text-center text-[11px] font-bold text-bark-light">
-                  {d}
-                </div>
-              ))}
+            <div className="p-3">
+              {/* Day labels */}
+              <div className="grid grid-cols-7 mb-1">
+                {WEEKDAY_LABELS.map((d, i) => (
+                  <div
+                    key={i}
+                    className={`text-center text-[10px] font-bold py-1 ${
+                      i === 0 || i === 6 ? 'text-terracotta/50' : 'text-bark-light'
+                    }`}
+                  >
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7" onMouseLeave={() => setHoverDate(null)}>
+                {daysInMonth(viewMonth).map((date, i) => {
+                  if (!date) return <div key={i} />;
+                  const isStart = startD && isSameDay(date, startD);
+                  // Show end highlight only if dates differ (boarding); same-day = daycare, show start only
+                  const isEnd = endD && isSameDay(date, endD) && !isSameDay(date, startD ?? new Date(0));
+                  const confirmedRange = isConfirmedRange(date);
+                  const hoverRange = isHoverRange(date);
+                  const hoverEnd = isHoverEnd(date);
+                  const todayCell = isToday(date);
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleDaySelect(date)}
+                      onMouseEnter={() => setHoverDate(date)}
+                      className={`relative h-10 w-full text-[13px] font-semibold transition-all duration-75 flex items-center justify-center ${
+                        isStart
+                          ? 'bg-sage text-white rounded-xl shadow-sm z-10'
+                          : isEnd
+                            ? 'bg-terracotta text-white rounded-xl shadow-sm z-10'
+                            : hoverEnd
+                              ? 'bg-terracotta/70 text-white rounded-xl z-10'
+                              : confirmedRange
+                                ? 'bg-sage-light text-bark'
+                                : hoverRange
+                                  ? 'bg-sage-light/50 text-bark'
+                                  : todayCell
+                                    ? 'text-terracotta font-bold rounded-xl hover:bg-sage-light/40'
+                                    : isWeekend
+                                      ? 'text-bark-light hover:bg-sage-light/40 rounded-xl'
+                                      : 'text-bark hover:bg-sage-light/50 rounded-xl'
+                      }`}
+                    >
+                      {date.getDate()}
+                      {todayCell && !isStart && !isEnd && !hoverEnd && (
+                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-terracotta" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Calendar days */}
-            <div className="grid grid-cols-7 gap-1">
-              {daysInMonth(viewMonth).map((date, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  disabled={!date}
-                  onClick={() => date && handleSelect(date)}
-                  className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
-                    !date
-                      ? 'invisible'
-                      : isSelected(date)
-                        ? 'bg-sage text-white shadow-md'
-                        : isTodayDate(date)
-                          ? 'bg-terracotta text-white'
-                          : 'text-bark hover:bg-sage-light/50'
-                  }`}
-                >
-                  {date?.getDate()}
-                </button>
-              ))}
+            {/* Footer */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-t border-pebble/60 bg-warm-beige/40">
+              <button
+                type="button"
+                onClick={() => { setIsOpen(false); setSelecting('start'); }}
+                className="text-xs font-bold text-bark-light hover:text-bark transition-colors px-2 py-1"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const todayStr = format(new Date(), 'yyyy-MM-dd');
+                  if (selecting === 'start') {
+                    onStartChange(todayStr);
+                    setSelecting('end');
+                  } else {
+                    onEndChange(todayStr);
+                    setIsOpen(false);
+                    setSelecting('start');
+                  }
+                }}
+                className="flex items-center gap-1.5 text-xs font-bold text-sage bg-sage-light/60 hover:bg-sage-light px-3 py-1.5 rounded-full transition-colors"
+              >
+                <PawPrint size={11} weight="fill" />
+                Today
+              </button>
             </div>
-
-            {/* Quick today button */}
-            <button
-              type="button"
-              onClick={() => {
-                const todayStr = format(new Date(), 'yyyy-MM-dd');
-                onChange(todayStr);
-                setIsOpen(false);
-              }}
-              className="w-full mt-3 py-2 text-xs font-bold text-sage bg-sage-light/30 rounded-lg hover:bg-sage-light/50 transition-colors"
-            >
-              Today
-            </button>
           </div>
-        )}
-      </div>
-      {error && <p className="text-xs text-terracotta mt-1">{error}</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -255,6 +442,7 @@ export function CreateBookingSheet({
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<CreateBookingFormData>({
     resolver: zodResolver(CreateBookingSchema),
@@ -336,31 +524,19 @@ export function CreateBookingSheet({
         <DogDropdown
           dogs={options.dogs}
           value={selectedDogId}
-          onChange={(v) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (window as any).__rHF?.(v) || (() => {});
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const e = { target: { value: v } } as any;
-            register('dogId').onChange(e);
-          }}
+          onChange={(v) => setValue('dogId', v, { shouldValidate: true, shouldDirty: true })}
           error={errors.dogId?.message}
         />
 
-        {/* Dates */}
-        <div className="grid grid-cols-2 gap-3">
-          <DatePicker
-            label="Check-in"
-            value={startDate}
-            onChange={(v) => register('startDate').onChange({ target: { value: v } })}
-            error={errors.startDate?.message}
-          />
-          <DatePicker
-            label="Check-out"
-            value={endDate}
-            onChange={(v) => register('endDate').onChange({ target: { value: v } })}
-            error={errors.endDate?.message}
-          />
-        </div>
+        {/* Unified date-range picker */}
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartChange={(v) => setValue('startDate', v, { shouldValidate: true, shouldDirty: true })}
+          onEndChange={(v) => setValue('endDate', v, { shouldValidate: true, shouldDirty: true })}
+          startError={errors.startDate?.message}
+          endError={errors.endDate?.message}
+        />
 
         {/* Holiday toggle */}
         <div

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from './useAuthContext';
+import { EmailSchema } from '@/lib/schemas';
 
 const MAGIC_LINK_COOLDOWN_MS = 60_000;
 const MAGIC_LINK_COOLDOWN_STORAGE_KEY = 'snapuppy.magic_link_next_allowed_at';
@@ -112,8 +113,8 @@ export function LoginScreen() {
       setNow(Date.now());
       window.localStorage.setItem(MAGIC_LINK_COOLDOWN_STORAGE_KEY, String(nextTime));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send magic link.';
-      const isRateLimit = /rate\s*limit|429/i.test(message);
+      const raw = error instanceof Error ? error.message : '';
+      const isRateLimit = /rate\s*limit|429/i.test(raw);
 
       if (isRateLimit) {
         const nextTime = Date.now() + MAGIC_LINK_COOLDOWN_MS;
@@ -122,7 +123,8 @@ export function LoginScreen() {
         window.localStorage.setItem(MAGIC_LINK_COOLDOWN_STORAGE_KEY, String(nextTime));
         setAuthError('Too many requests. Please wait about a minute, then try again.');
       } else {
-        setAuthError(message);
+        // Sanitize: don't expose raw server errors to the UI
+        setAuthError('Could not send magic link. Please try again.');
       }
     } finally {
       setIsSending(false);
@@ -132,13 +134,13 @@ export function LoginScreen() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      setAuthError('Please enter an email address.');
+    const result = EmailSchema.safeParse({ email: email.trim() });
+    if (!result.success) {
+      setAuthError(result.error.issues[0]?.message ?? 'Invalid email address.');
       return;
     }
 
-    await sendMagicLink(normalizedEmail);
+    await sendMagicLink(result.data.email);
   }
 
   return (

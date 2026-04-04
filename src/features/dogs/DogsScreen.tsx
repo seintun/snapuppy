@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash } from '@phosphor-icons/react';
+import { Trash } from '@phosphor-icons/react';
 import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Fab } from '@/components/layout/FAB';
 import { useToast } from '@/components/ui/useToast';
 import { useDogs, useDeleteDog } from '@/hooks/useDogs';
 import { AddDogSheet } from './AddDogSheet';
@@ -100,13 +101,6 @@ export function DogsScreen() {
             {dogs.length} client{dogs.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => setIsAddOpen(true)}
-          className="w-11 h-11 rounded-xl bg-sage flex items-center justify-center text-white shadow-md hover:scale-105 active:scale-95 transition-transform"
-          aria-label="Add dog"
-        >
-          <Plus size={22} weight="bold" />
-        </button>
       </div>
 
       {dogs.length === 0 ? (
@@ -146,6 +140,8 @@ export function DogsScreen() {
       )}
 
       <AddDogSheet isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
+
+      <Fab onClick={() => setIsAddOpen(true)} />
 
       <ConfirmModal
         isOpen={!!deleteConfirm}

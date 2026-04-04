@@ -91,6 +91,7 @@ export function ProfileScreen() {
             <input
               id="business-name"
               type="text"
+              maxLength={100}
               className={`form-input ${errors.businessName ? 'border-terracotta' : ''}`}
               placeholder="e.g. Happy Paws"
               {...register('businessName')}
@@ -117,6 +118,8 @@ export function ProfileScreen() {
                   id="nightly-rate"
                   type="number"
                   step="0.01"
+                  min="0"
+                  max="9999.99"
                   className={`form-input rounded-l-none flex-1 ${
                     errors.nightlyRate ? 'border-terracotta' : ''
                   }`}
@@ -140,6 +143,8 @@ export function ProfileScreen() {
                   id="daycare-rate"
                   type="number"
                   step="0.01"
+                  min="0"
+                  max="9999.99"
                   className={`form-input rounded-l-none flex-1 ${
                     errors.daycareRate ? 'border-terracotta' : ''
                   }`}
@@ -169,6 +174,8 @@ export function ProfileScreen() {
                   id="holiday-surcharge"
                   type="number"
                   step="0.01"
+                  min="0"
+                  max="9999.99"
                   className={`form-input rounded-l-none flex-1 ${
                     errors.holidaySurcharge ? 'border-terracotta' : ''
                   }`}

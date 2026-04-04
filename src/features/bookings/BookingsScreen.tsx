@@ -1,6 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
@@ -9,6 +8,7 @@ import { type BookingStatus } from '@/lib/bookingService';
 import { useBookings } from '@/hooks/useBookings';
 import { useVirtualList } from '@/hooks/useVirtualList';
 import { CreateBookingSheet } from './CreateBookingSheet';
+import { Fab } from '@/components/layout/FAB';
 import {
   bookingStatusOptions,
   formatBookingRange,
@@ -73,15 +73,6 @@ export function BookingsScreen() {
               </button>
             ))}
           </div>
-
-          <button
-            className="w-11 h-11 rounded-xl bg-sage flex items-center justify-center text-white shadow-md hover:scale-105 active:scale-95 transition-transform"
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            aria-label="Add booking"
-          >
-            <Plus size={22} weight="bold" />
-          </button>
         </div>
       </div>
 
@@ -158,6 +149,7 @@ export function BookingsScreen() {
       ) : null}
 
       <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+      <Fab onClick={() => setIsCreateOpen(true)} />
     </>
   );
 }
