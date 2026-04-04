@@ -24,19 +24,20 @@ const LANE_GAP = 2; // px gap between lanes
 
 // ─── Per-dog color palette (hashed from dog_id for consistency) ────────────────
 // 5 distinct, on-brand colors with solid bg + white/dark text
+// ─── Per-dog color palette (harmonious & distinct) ──────────────────────────
 const DOG_PALETTE = [
-  { bg: '#8FB886', text: '#fff' }, // sage
-  { bg: '#D4845A', text: '#fff' }, // terracotta
-  { bg: '#5BA4C8', text: '#fff' }, // sky
-  { bg: '#9B7EC8', text: '#fff' }, // purple
-  { bg: '#C8946A', text: '#fff' }, // amber
-  { bg: '#6A9B94', text: '#fff' }, // teal
-  { bg: '#D46A6A', text: '#fff' }, // rose
-  { bg: '#A4C85B', text: '#fff' }, // lime
-  { bg: '#6A72C8', text: '#fff' }, // indigo
-  { bg: '#C8B85B', text: '#fff' }, // mustard
-  { bg: '#8B7355', text: '#fff' }, // bark
-  { bg: '#728C69', text: '#fff' }, // forest
+  { bg: '#9DBE94', text: '#fff' }, // Soft Sage
+  { bg: '#DB9B7D', text: '#fff' }, // Muted Terracotta
+  { bg: '#87AFC7', text: '#fff' }, // Soft Blue
+  { bg: '#B4A2D1', text: '#fff' }, // Dusty Purple
+  { bg: '#D4C29A', text: '#fff' }, // Sand
+  { bg: '#8FB4AC', text: '#fff' }, // Pale Teal
+  { bg: '#D19BA6', text: '#fff' }, // Muted Rose
+  { bg: '#C2D194', text: '#fff' }, // Green Apple
+  { bg: '#9AA7D4', text: '#fff' }, // Periwinkle
+  { bg: '#D4C894', text: '#fff' }, // Soft Gold
+  { bg: '#A69282', text: '#fff' }, // Warm Grey
+  { bg: '#9DB48F', text: '#fff' }, // Olive
 ];
 
 function dogColor(dogId: string) {
@@ -53,8 +54,9 @@ function TodayCard({
   bookings: CalendarBooking[];
   onBookingClick: (id: string) => void;
 }) {
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+  const today = new Date();
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
 
   const arriving = bookings.filter(
     (b) => b.start_date === todayStr || b.start_date === tomorrowStr,
@@ -63,15 +65,21 @@ function TodayCard({
     (b) => b.end_date === todayStr || b.end_date === tomorrowStr,
   );
 
-  if (arriving.length === 0 && departing.length === 0) return null;
-
   return (
     <div className="mx-2 mb-2 bg-cream rounded-2xl border border-pebble/60 shadow-sm overflow-hidden">
+      <div className="px-3 py-2 border-b border-pebble/30 bg-warm-beige/30 flex justify-between items-center">
+        <span className="text-[10px] font-black text-bark-light uppercase tracking-widest">
+          {format(today, 'EEEE, MMM do')}
+        </span>
+        <span className="text-[9px] font-bold text-sage bg-white px-2 py-0.5 rounded-full border border-pebble/40">
+           Today
+        </span>
+      </div>
       <div className="grid grid-cols-2 divide-x divide-pebble/40">
         {/* Arriving */}
         <div className="p-2.5">
-          <div className="text-[9px] font-black uppercase tracking-widest text-sage mb-1.5">
-            🐾 Arriving
+          <div className="text-[9px] font-black uppercase tracking-widest text-sage mb-1.5 flex items-center gap-1">
+             <PawPrint size={10} weight="fill" /> Arriving
           </div>
           {arriving.length === 0 ? (
             <div className="text-[9px] text-bark-light italic">None</div>
@@ -104,8 +112,8 @@ function TodayCard({
 
         {/* Departing */}
         <div className="p-2.5">
-          <div className="text-[9px] font-black uppercase tracking-widest text-terracotta mb-1.5">
-            🚗 Departing
+          <div className="text-[9px] font-black uppercase tracking-widest text-terracotta mb-1.5 flex items-center gap-1">
+             <span className="text-[10px]">🚗</span> Departing
           </div>
           {departing.length === 0 ? (
             <div className="text-[9px] text-bark-light italic">None</div>
@@ -173,7 +181,7 @@ function WeekRow({
   return (
     <div className="border-b border-pebble/30 last:border-b-0">
       {/* Date number row */}
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 relative">
         {week.map((day, i) => {
           const inMonth = isSameMonth(day, currentMonth);
           const todayCell = isToday(day);
@@ -186,21 +194,34 @@ function WeekRow({
             <div
               key={i}
               onClick={() => inMonth && onDateTap(day)}
-              className={`border-r border-pebble/20 last:border-r-0 pt-1 flex flex-col items-center select-none cursor-pointer transition-colors
-                ${inMonth ? 'hover:bg-sage-light/20 active:bg-sage-light/40' : 'opacity-25 pointer-events-none'}
+              className={`border-r border-pebble/20 last:border-r-0 pt-1 pb-1 flex flex-col items-center select-none cursor-pointer transition-all duration-150 relative group
+                ${inMonth 
+                  ? (todayCell 
+                    ? 'bg-sage-light/10 hover:bg-sage/10 hover:shadow-[inset_0_0_0_1px_rgba(143,184,134,0.3)]' 
+                    : 'hover:bg-warm-beige hover:shadow-[inset_0_0_0_1px_rgba(232,224,216,0.6)]') 
+                  : 'opacity-25 pointer-events-none'}
                 ${i === 0 ? 'border-l border-pebble/20' : ''}`}
             >
               <div
-                className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-black leading-none
-                  ${todayCell ? 'bg-sage text-white shadow-sm' : inMonth ? 'text-bark' : 'text-bark-light'}`}
+                className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-black leading-none mb-1 transition-transform group-hover:scale-110
+                  ${todayCell ? 'bg-sage text-white shadow-md ring-2 ring-sage/20' : inMonth ? 'text-bark' : 'text-bark-light'}`}
               >
                 {format(day, 'd')}
               </div>
-              {hiddenCount > 0 && (
-                <div className="text-[7px] font-black text-bark-light/70 leading-none mb-0.5">
-                  +{hiddenCount}
-                </div>
-              )}
+              
+              {/* Dog count indicator */}
+              <div className="flex items-center justify-center min-h-[14px] transition-transform group-hover:scale-105">
+                {dayAllBookings.length > 0 && (
+                  <div className={`px-1.5 py-0.5 rounded-full text-[8px] font-black flex items-center gap-0.5 shadow-sm
+                    ${todayCell ? 'bg-white text-sage' : 'bg-sage-light text-bark'}`}>
+                    <span>🐾</span>
+                    <span>{dayAllBookings.length}</span>
+                  </div>
+                )}
+                {hiddenCount > 0 && (
+                   <span className="text-[7px] font-black text-bark-light/60 ml-0.5">+{hiddenCount}</span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -398,6 +419,7 @@ export function CalendarMain() {
           ))
         )}
       </div>
+
 
       {/* FAB */}
       <button
