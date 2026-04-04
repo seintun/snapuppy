@@ -86,13 +86,13 @@ function PasscodeInput({
   }
 
   return (
-    <div className="flex flex-col gap-4 animate-fade-in">
-      <div className="text-center">
-        <p className="text-sm text-bark-light">We sent a code to</p>
-        <p className="text-base font-bold text-bark">{email}</p>
+    <div className="flex flex-col gap-6 animate-fade-in">
+      <div className="text-center py-2">
+        <p className="text-sm text-bark-light mb-1">We sent a code to</p>
+        <p className="text-lg font-bold text-bark">{email}</p>
       </div>
 
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-center gap-3">
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <input
             key={i}
@@ -108,14 +108,14 @@ function PasscodeInput({
               if (digit) handleDigitInput(i, digit);
             }}
             onKeyDown={(e) => handleKeyDown(i, e)}
-            className="w-12 h-14 text-center text-xl font-bold bg-cream border-2 border-pebble rounded-xl focus:border-sage focus:outline-none transition-colors"
+            className="w-14 h-16 text-2xl font-bold text-center bg-cream border-2 border-pebble rounded-2xl focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all"
           />
         ))}
       </div>
 
       <button
         type="button"
-        className="btn-sage mt-2"
+        className="btn-sage py-4 text-base mt-2"
         onClick={() => onSubmit(value)}
         disabled={value.length !== 6 || isVerifying}
       >
@@ -124,7 +124,7 @@ function PasscodeInput({
 
       <button
         type="button"
-        className="text-xs text-bark-light hover:text-sage text-center font-semibold"
+        className="text-sm text-bark-light hover:text-sage text-center font-semibold py-2"
         onClick={onChangeEmail}
       >
         ← Change email
@@ -239,24 +239,26 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-5">
-      <div className="text-center mb-4 animate-fade-in">
-        <div className="flex justify-center mb-1">
+    <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-8">
+      <div className="text-center mb-6 animate-fade-in">
+        <div className="flex justify-center mb-2">
           <DogIcon />
         </div>
-        <h1 className="text-[28px] font-extrabold text-bark m-0">Snapuppy</h1>
+        <h1 className="text-[32px] font-extrabold text-bark m-0">Snapuppy</h1>
+        <p className="text-sm text-bark-light mt-1">Dog sitter command center</p>
       </div>
 
-      <div className="surface-card w-full max-w-[320px] p-5 animate-fade-in">
-        <div className="flex bg-pebble/30 rounded-xl p-1 mb-4">
+      <div className="surface-card w-full max-w-[360px] p-6 rounded-2xl shadow-lg animate-fade-in">
+        <div className="flex bg-pebble/40 rounded-2xl p-1.5 mb-6">
           <button
             type="button"
             onClick={() => {
               setAction('sign-in');
               setStep('credentials');
               setAuthError(null);
+              setConfirmPassword('');
             }}
-            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${action === 'sign-in' ? 'bg-cream text-bark shadow-sm' : 'text-bark-light'}`}
+            className={`flex-1 py-3.5 text-base font-bold rounded-xl transition-all ${action === 'sign-in' ? 'bg-sage text-white shadow-md' : 'text-bark-light hover:text-bark'}`}
           >
             Sign In
           </button>
@@ -266,8 +268,9 @@ export function LoginScreen() {
               setAction('sign-up');
               setStep('credentials');
               setAuthError(null);
+              setConfirmPassword('');
             }}
-            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${action === 'sign-up' ? 'bg-cream text-bark shadow-sm' : 'text-bark-light'}`}
+            className={`flex-1 py-3 text-base font-bold rounded-xl transition-all ${action === 'sign-up' ? 'bg-sage text-white shadow-md' : 'text-bark-light hover:text-bark'}`}
           >
             Sign Up
           </button>
@@ -286,11 +289,12 @@ export function LoginScreen() {
             isVerifying={isVerifying}
           />
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             <div className="form-field">
+              <label className="form-label text-xs uppercase tracking-wide">Email</label>
               <input
                 type="email"
-                placeholder="Email"
+                placeholder="you@example.com"
                 className="form-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -299,9 +303,10 @@ export function LoginScreen() {
             </div>
 
             <div className="form-field">
+              <label className="form-label text-xs uppercase tracking-wide">Password</label>
               <input
                 type="password"
-                placeholder="Password"
+                placeholder="••••••••"
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -309,28 +314,35 @@ export function LoginScreen() {
               />
             </div>
 
-            <div className="form-field">
-              <input
-                type="password"
-                placeholder="Confirm Password"
-                className="form-input"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
+            {action === 'sign-up' && (
+              <div className="form-field animate-fade-in">
+                <label className="form-label text-xs uppercase tracking-wide">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  className="form-input"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </div>
+            )}
 
             {authError && (
-              <div className="p-2 px-3 bg-blush text-terracotta rounded-lg text-xs font-semibold text-center">
+              <div className="p-3 bg-blush/80 text-terracotta rounded-xl text-sm font-semibold text-center border border-blush">
                 {authError}
               </div>
             )}
 
             <button
               type="button"
-              className="btn-sage mt-2"
+              className="btn-sage mt-3 py-4 text-base"
               onClick={handleSendCode}
-              disabled={isSending || !email || !password || !confirmPassword}
+              disabled={
+                isSending || !email || !password || (action === 'sign-up' && !confirmPassword)
+              }
             >
               {isSending ? 'Sending...' : isCoolingDown ? `Wait ${secondsLeft}s` : 'Send Code'}
             </button>
