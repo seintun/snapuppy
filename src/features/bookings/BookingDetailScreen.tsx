@@ -1,15 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Warning } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
-import {
-  useBooking,
-  useSaveBookingDays,
-  useUpdateBookingStatus,
-} from '@/hooks/useBookings';
-import type { EditableBookingDay } from '@/lib/bookingService';
+import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
 
 export function BookingDetailScreen() {
   const { id } = useParams<{ id: string }>();
@@ -17,62 +12,10 @@ export function BookingDetailScreen() {
   const { addToast } = useToast();
 
   const { data: booking, isLoading, isError, error: queryError } = useBooking(id);
-  const { mutateAsync: saveBookingDaysMutation } = useSaveBookingDays();
   const { mutateAsync: updateBookingStatusMutation } = useUpdateBookingStatus();
 
-  const [draftDays, setDraftDays] = useState<EditableBookingDay[]>([]);
-  const [showBreakdown, setShowBreakdown] = useState(true);
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (booking) {
-      setDraftDays(booking.days);
-    }
-  }, [booking]);
-
-  const handleToggleDayHoliday = useCallback(
-    async (day: EditableBookingDay) => {
-      if (!booking) return;
-      const updatedDays = draftDays.map((d) =>
-        d.id === day.id ? { ...d, is_holiday: !d.is_holiday } : d,
-      );
-      setDraftDays(updatedDays);
-      try {
-        await saveBookingDaysMutation({
-          id: booking.id,
-          days: updatedDays,
-        });
-        addToast('Day updated 🐾', 'success');
-      } catch {
-        setDraftDays(booking.days); // revert
-        addToast('Failed to update day', 'error');
-      }
-    },
-    [booking, draftDays, saveBookingDaysMutation, addToast],
-  );
-
-  const handleToggleDayType = useCallback(
-    async (day: EditableBookingDay) => {
-      if (!booking) return;
-      const newType = day.rate_type === 'boarding' ? 'daycare' : 'boarding';
-      const updatedDays = draftDays.map((d) =>
-        d.id === day.id ? { ...d, rate_type: newType as 'boarding' | 'daycare' } : d,
-      );
-      setDraftDays(updatedDays);
-      try {
-        await saveBookingDaysMutation({
-          id: booking.id,
-          days: updatedDays,
-        });
-        addToast('Rate type updated 🐾', 'success');
-      } catch {
-        setDraftDays(booking.days);
-        addToast('Failed to update day', 'error');
-      }
-    },
-    [booking, draftDays, saveBookingDaysMutation, addToast],
-  );
 
   const handleCancel = useCallback(async () => {
     if (!booking) return;
@@ -110,7 +53,6 @@ export function BookingDetailScreen() {
   }
 
   const dog = booking.dog;
-  const typeLabel = booking.type === 'boarding' ? 'Boarding' : 'Daycare';
   const statusColors: Record<string, string> = {
     active: 'bg-sage',
     completed: 'bg-bark-light',
@@ -120,140 +62,102 @@ export function BookingDetailScreen() {
   return (
     <div className="pb-24">
       {/* Header */}
-      <div className="bg-cream px-5 pt-4 pb-6 border-b border-pebble">
+      <div className="bg-cream px-4 pt-2 pb-4 border-b border-pebble/60 shadow-[0_2px_8px_rgba(74,55,40,0.04)]">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-bark-light font-semibold text-sm bg-transparent border-none cursor-pointer py-2 mb-4"
+          className="flex items-center gap-1.5 text-bark-light hover:text-bark font-bold text-xs bg-transparent border-none cursor-pointer py-1 mb-3 transition-colors"
         >
-          <ArrowLeft size={18} weight="bold" />
-          Bookings
+          <ArrowLeft size={16} weight="bold" />
+          Back
         </button>
 
-        <div className="flex items-center gap-4">
-          {dog ? (
-            <DogAvatar name={dog.name} src={dog.photo_url} size="lg" />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-3xl">
-              🐾
-            </div>
-          )}
-
-          <div>
-            <h1 className="m-0 text-2xl font-black text-bark tracking-tight">
-              {dog?.name ?? 'Unknown Dog'}
-            </h1>
-            {dog?.owner_name && (
-              <div className="text-xs text-bark-light mt-0.5">
-                {dog.owner_name}
-                {dog.owner_phone ? ` · ${dog.owner_phone}` : ''}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {dog ? (
+              <DogAvatar name={dog.name} src={dog.photo_url} size="md" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center text-xl">
+                🐾
               </div>
             )}
-            <div className="flex gap-1.5 mt-1.5 flex-wrap">
-              <span className="bg-sage text-white rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase">
-                {typeLabel}
-              </span>
-              <span className={`${statusColors[booking.status] ?? 'bg-pebble'} text-white rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase`}>
-                {booking.status}
-              </span>
-              {booking.is_holiday && (
-                <span className="bg-blush text-terracotta rounded-full px-2.5 py-0.5 text-[10px] font-bold">
-                  🎉 Holiday
-                </span>
-              )}
+
+            <div>
+              <h1 className="m-0 text-xl font-black text-bark tracking-tight leading-none">
+                {dog?.name ?? 'Unknown Dog'}
+              </h1>
+              <div className="text-[11px] text-bark-light mt-1.5 font-bold tracking-wide">
+                {format(parseISO(booking.start_date), 'MMM d')} →{' '}
+                {format(parseISO(booking.end_date), 'MMM d, yyyy')}
+              </div>
             </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-1.5">
+            <span className={`${statusColors[booking.status] ?? 'bg-pebble'} text-white rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider drop-shadow-sm`}>
+              {booking.status}
+            </span>
+            {booking.is_holiday && (
+              <span className="bg-terracotta text-white rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider drop-shadow-sm">
+                Holiday
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       <div className="px-4 pt-4 flex flex-col gap-3">
-        {/* Dates + total */}
-        <div className="bg-cream rounded-[14px] py-4 px-4.5 flex justify-between items-center shadow-[0_2px_8px_rgba(74,55,40,0.08)]">
-          <div>
-            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider mb-1">
-              Stay
+        {/* Reservation Summary */}
+        <div className="bg-cream rounded-[14px] shadow-[0_2px_8px_rgba(74,55,40,0.08)] overflow-hidden">
+          
+          <div className="p-4 bg-[linear-gradient(to_bottom,var(--color-sage-light)_0%,transparent_150%)]">
+            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider mb-3">
+              Invoice Breakdown
             </div>
-            <div className="font-extrabold text-bark text-sm">
-              {format(parseISO(booking.start_date), 'MMM d')} →{' '}
-              {format(parseISO(booking.end_date), 'MMM d, yyyy')}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider mb-1">
-              Total
-            </div>
-            <div className="text-[26px] font-black text-terracotta tracking-tight">
-              ${booking.total_amount.toFixed(2)}
-            </div>
-          </div>
-        </div>
-
-        {/* Daily breakdown accordion */}
-        <div className="bg-cream rounded-[14px] overflow-hidden shadow-[0_2px_8px_rgba(74,55,40,0.08)]">
-          <button
-            onClick={() => setShowBreakdown((v) => !v)}
-            className="w-full flex justify-between items-center py-3.5 px-4.5 bg-sage-light border-none cursor-pointer font-bold text-[13px] text-bark"
-          >
-            <span>🗓️ Daily Breakdown</span>
-            <span
-              className="text-base transition-transform duration-200 inline-block"
-              style={{ transform: showBreakdown ? 'rotate(180deg)' : 'rotate(0deg)' }}
-            >
-              ▲
-            </span>
-          </button>
-
-          {showBreakdown && (
-            <div>
-              {draftDays.length === 0 ? (
-                <div className="p-4 text-center text-[13px] text-bark-light">
-                  No daily breakdown available
-                </div>
-              ) : (
-                draftDays.map((day, i) => (
-                  <div
-                    key={day.id}
-                    className={`px-4.5 py-3 flex justify-between items-center ${i > 0 ? 'border-t border-pebble' : ''}`}
-                  >
-                    <div>
-                      <div className="font-semibold text-[13px] text-bark">
-                        {format(parseISO(day.date), 'EEE, MMM d')}
-                      </div>
-                      <div className="flex gap-1.5 mt-1">
-                        <button
-                          onClick={() => void handleToggleDayType(day)}
-                          disabled={booking.status !== 'active'}
-                          className={`text-[9px] font-bold uppercase text-white border-none rounded-full px-2 py-0.5 ${day.rate_type === 'boarding' ? 'bg-sage' : 'bg-sky'} ${booking.status === 'active' ? 'cursor-pointer' : 'cursor-default'}`}
-                          title="Toggle rate type"
-                        >
-                          {day.rate_type}
-                        </button>
-                        {day.is_holiday && (
-                          <span className="text-[9px] font-bold uppercase text-terracotta bg-blush rounded-full px-2 py-0.5">
-                            Holiday
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5">
-                      <span className="font-bold text-bark text-[15px]">
-                        ${day.amount.toFixed(2)}
+            <div className="flex flex-col gap-3">
+              {Object.values(
+                booking.days.reduce((acc, day) => {
+                  const key = `${day.rate_type}-${day.is_holiday}-${day.amount}`;
+                  if (!acc[key]) {
+                    acc[key] = {
+                      count: 0,
+                      amount: day.amount,
+                      type: day.rate_type,
+                      holiday: day.is_holiday,
+                      total: 0
+                    };
+                  }
+                  acc[key].count++;
+                  acc[key].total += day.amount;
+                  return acc;
+                }, {} as Record<string, { count: number; amount: number; type: string; holiday: boolean; total: number }>)
+              ).map((item, i) => (
+                <div key={i} className="flex justify-between items-center text-[13px] text-bark">
+                  <div className="flex items-center flex-wrap gap-x-2">
+                    <span className="font-bold capitalize">{item.type}</span>
+                    {item.holiday && (
+                      <span className="text-[10px] font-black text-terracotta uppercase bg-white/60 border border-terracotta/20 px-1.5 py-[1px] rounded-md drop-shadow-sm">
+                        Holiday
                       </span>
-                      {booking.status === 'active' && (
-                        <button
-                          onClick={() => void handleToggleDayHoliday(day)}
-                          className={`w-8 h-8 rounded-lg border-none cursor-pointer text-base flex items-center justify-center ${day.is_holiday ? 'bg-blush' : 'bg-warm-beige'}`}
-                          title="Toggle holiday"
-                        >
-                          🎉
-                        </button>
-                      )}
-                    </div>
+                    )}
+                    <span className="text-bark-light font-medium ml-1">
+                      × {item.count} {item.type === 'boarding' ? (item.count === 1 ? 'night' : 'nights') : 'day'}
+                    </span>
                   </div>
-                ))
-              )}
+                  <div className="text-right">
+                    <div className="font-bold text-[14px]">${item.total.toFixed(2)}</div>
+                    <div className="text-[10px] text-bark-light font-medium mt-0.5">${item.amount.toFixed(2)}/each</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
+
+            <div className="flex justify-between items-end mt-4 pt-4 border-t border-pebble/50">
+              <span className="font-bold text-bark text-sm pb-1">Total</span>
+              <span className="text-[28px] leading-none font-black text-terracotta tracking-tight">
+                ${booking.total_amount.toFixed(2)}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Cancel */}

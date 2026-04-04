@@ -51,7 +51,7 @@ export function generateBookingDays(input: {
   startDate: string;
   endDate: string;
   rates: ProfileRateSettings;
-  holidayDates?: Iterable<BookingDateInput>;
+  holidayDates?: true | Iterable<BookingDateInput>;
   pickupDateTime?: string;
 }): BookingDayCalculationRow[] {
   const start = new Date(input.startDate + 'T00:00:00');
@@ -67,8 +67,9 @@ export function generateBookingDays(input: {
   const holidaySurcharge = input.rates.holiday_surcharge ?? 0;
 
   // Build holiday set
+  const allHolidays = input.holidayDates === true;
   const holidaySet = new Set<string>();
-  if (input.holidayDates) {
+  if (input.holidayDates && input.holidayDates !== true) {
     for (const d of input.holidayDates) {
       holidaySet.add(toDateStr(d));
     }
@@ -77,7 +78,7 @@ export function generateBookingDays(input: {
   if (dayDiff === 0) {
     // Daycare — single day
     const dateStr = input.startDate;
-    const is_holiday = holidaySet.has(dateStr);
+    const is_holiday = allHolidays || holidaySet.has(dateStr);
     const amount = roundCurrency(daycareRate + (is_holiday ? holidaySurcharge : 0));
     return [{ date: dateStr, rate_type: 'daycare', is_holiday, amount }];
   }
@@ -88,7 +89,7 @@ export function generateBookingDays(input: {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
-    const is_holiday = holidaySet.has(dateStr);
+    const is_holiday = allHolidays || holidaySet.has(dateStr);
     const amount = roundCurrency(nightlyRate + (is_holiday ? holidaySurcharge : 0));
     rows.push({ date: dateStr, rate_type: 'boarding', is_holiday, amount });
   }
@@ -108,7 +109,7 @@ export function calculateBookingPricing(
     startDate,
     endDate,
     rates: { ...rates, cutoff_time: null },
-    holidayDates: isHoliday ? [startDate] : [],
+    holidayDates: isHoliday ? true : [],
   });
   const type = detectBookingType(startDate, endDate);
   const totalAmount = calculateBookingTotal(days);

@@ -56,7 +56,7 @@ export interface CreateBookingInput {
   endDate: string;
   status?: BookingStatus;
   pickupDateTime?: string;
-  holidayDates?: Iterable<BookingDateInput>;
+  holidayDates?: true | Iterable<BookingDateInput>;
 }
 
 export interface SaveBookingDaysInput {
@@ -78,7 +78,7 @@ export function buildBookingPricing(input: {
   startDate: string;
   endDate: string;
   rates: ProfileRateSettings;
-  holidayDates?: Iterable<BookingDateInput>;
+  holidayDates?: true | Iterable<BookingDateInput>;
   pickupDateTime?: string;
 }): BookingPricingSummary {
   const days = generateBookingDays({
@@ -112,8 +112,8 @@ export function repriceBookingDays(
     const amount =
       override?.amount ??
       toCurrencyAmount(
-        (rate_type === 'boarding' ? rates.nightly_rate : rates.daycare_rate) +
-          (is_holiday ? rates.holiday_surcharge : 0),
+        (rate_type === 'boarding' ? (rates.nightly_rate ?? 0) : (rates.daycare_rate ?? 0)) +
+          (is_holiday ? (rates.holiday_surcharge ?? 0) : 0),
       );
 
     return {

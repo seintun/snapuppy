@@ -488,7 +488,7 @@ export function CreateBookingSheet({
           holiday_surcharge: options.profile.holiday_surcharge ?? 0,
           cutoff_time: options.profile.cutoff_time ?? '11:00',
         },
-        holidayDates: isHoliday ? [startDate] : [],
+        holidayDates: isHoliday ? true : [],
       });
     } catch {
       return null;
@@ -502,7 +502,7 @@ export function CreateBookingSheet({
       try {
         await createBookingMutation({
           ...data,
-          holidayDates: data.isHoliday ? [data.startDate] : [],
+          holidayDates: data.isHoliday ? true : [],
         });
 
         addToast('Woof! Booking confirmed! 🐾', 'success');
@@ -583,20 +583,25 @@ export function CreateBookingSheet({
           )}
 
           {pricing && pricing.days.length > 0 && (
-            <div className="flex flex-col gap-1 mb-2.5">
-              {pricing.days.map((day) => (
-                <div key={day.date} className="flex justify-between text-xs text-bark">
-                  <span>{day.date}</span>
-                  <span className="flex gap-1.5 items-center">
-                    {day.is_holiday && (
-                      <span className="text-[9px] font-bold text-terracotta uppercase">
-                        Holiday
-                      </span>
-                    )}
-                    <span className="font-semibold">${day.amount.toFixed(2)}</span>
+            <div className="flex flex-col pb-2">
+              <div className="flex justify-between items-center text-[13px] text-bark">
+                <div className="flex items-center">
+                  <span className="font-bold">
+                    {pricing.type === 'boarding' ? 'Boarding' : 'Daycare'}
+                  </span>
+                  {pricing.isHoliday && (
+                    <span className="text-[10px] font-black text-terracotta uppercase bg-white px-1.5 py-[1px] rounded-md ml-2 drop-shadow-sm">
+                      Holiday
+                    </span>
+                  )}
+                  <span className="text-bark-light font-medium ml-2">
+                    × {pricing.days.length} {pricing.type === 'boarding' ? (pricing.days.length === 1 ? 'night' : 'nights') : 'day'}
                   </span>
                 </div>
-              ))}
+                <span className="text-bark-light font-semibold text-xs">
+                  ${pricing.days[0].amount.toFixed(2)}/{pricing.type === 'boarding' ? 'nt' : 'day'}
+                </span>
+              </div>
             </div>
           )}
 
