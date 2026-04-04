@@ -5,6 +5,9 @@ import { AuthCallbackScreen, LoginScreen, RequireAuth } from '@/features/auth';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ErrorScreen } from '@/components/ui/ErrorScreen';
 
+const DashboardScreen = lazy(() =>
+  import('@/features/dashboard').then((m) => ({ default: m.DashboardScreen })),
+);
 const CalendarScreen = lazy(() =>
   import('@/features/calendar').then((m) => ({ default: m.CalendarScreen })),
 );
@@ -52,7 +55,15 @@ export default function App() {
               index
               element={
                 <Suspense fallback={<LoadingFallback />}>
-                  <Navigate to="/calendar" replace />
+                  <Navigate to="/today" replace />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/today"
+              element={
+                <Suspense fallback={<LoadingFallback />}>
+                  <DashboardScreen />
                 </Suspense>
               }
             />
