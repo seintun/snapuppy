@@ -1,9 +1,10 @@
 import { DogAvatar } from '@/components/ui/DogAvatar';
+import { AddButton } from '@/components/ui/AddButton';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import { CreateBookingSheet } from '@/features/bookings/CreateBookingSheet';
 import { useCalendarBookings } from '@/hooks/useBookings';
-import { CaretLeft, CaretRight, PawPrint, Plus } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, PawPrint } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { addDays, addMonths, format, isSameMonth, isToday, subMonths } from 'date-fns';
 import { useCallback, useState } from 'react';
@@ -47,7 +48,7 @@ function dogColor(dogId: string) {
 }
 
 // ─── Constants for consistent high-contrast colors ────────────────────────────
-const COLOR_TODAY = '#576574';      // High-contrast blueish-grey for "Today"
+const COLOR_TODAY = '#576574'; // High-contrast blueish-grey for "Today"
 const COLOR_BADGE_ACTIVE = '#D4845A'; // High-contrast terracotta for badges
 
 // ─── Today Info Card ──────────────────────────────────────────────────────────
@@ -65,9 +66,7 @@ function TodayCard({
   const arriving = bookings.filter(
     (b) => b.start_date === todayStr || b.start_date === tomorrowStr,
   );
-  const departing = bookings.filter(
-    (b) => b.end_date === todayStr || b.end_date === tomorrowStr,
-  );
+  const departing = bookings.filter((b) => b.end_date === todayStr || b.end_date === tomorrowStr);
 
   return (
     <div className="mx-2 mb-2 bg-cream rounded-2xl border border-pebble/60 shadow-sm overflow-hidden">
@@ -75,21 +74,21 @@ function TodayCard({
         <span className="text-[11px] font-black text-bark uppercase tracking-widest">
           {format(today, 'EEEE, MMM do')}
         </span>
-        <span 
+        <span
           className="text-[10px] font-black text-white px-3 py-0.5 rounded-full shadow-sm"
           style={{ background: COLOR_TODAY }}
         >
-           Today
+          Today
         </span>
       </div>
       <div className="grid grid-cols-2 divide-x divide-pebble/40">
         {/* Arriving */}
         <div className="p-2.5">
-          <div 
+          <div
             className="text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1"
             style={{ color: '#4B6584' }} // Deeper contrast for Arrival
           >
-             <PawPrint size={11} weight="fill" /> Arriving
+            <PawPrint size={11} weight="fill" /> Arriving
           </div>
           {arriving.length === 0 ? (
             <div className="text-[10px] text-bark-light italic">None</div>
@@ -123,7 +122,7 @@ function TodayCard({
         {/* Departing */}
         <div className="p-2.5">
           <div className="text-[10px] font-black uppercase tracking-widest text-terracotta mb-2 flex items-center gap-1">
-             <span className="text-[11px]">👋</span> Departing
+            <span className="text-[11px]">👋</span> Departing
           </div>
           {departing.length === 0 ? (
             <div className="text-[10px] text-bark-light italic">None</div>
@@ -160,9 +159,8 @@ function TodayCard({
 
 function hiddenCountForDay(bookings: CalendarBooking[], day: Date, laneMap: BookingLaneMap) {
   const dayBookings = getBookingsForDate(bookings, day);
-  return dayBookings.filter(
-    (b) => (laneMap[b.id] ?? MAX_VISIBLE_LANES) >= MAX_VISIBLE_LANES,
-  ).length;
+  return dayBookings.filter((b) => (laneMap[b.id] ?? MAX_VISIBLE_LANES) >= MAX_VISIBLE_LANES)
+    .length;
 }
 
 // ─── Week Row (Google Calendar-style spanning bars) ───────────────────────────
@@ -210,11 +208,13 @@ function WeekRow({
               key={i}
               onClick={() => inMonth && onDateTap(day)}
               className={`border-r border-pebble/20 last:border-r-0 pt-1.5 pb-2 flex flex-col items-center select-none cursor-pointer transition-all duration-150 relative group
-                ${inMonth 
-                  ? (todayCell 
-                    ? 'bg-pebble/5 hover:bg-pebble/10 hover:shadow-[inset_0_0_0_1.5px_rgba(87,101,116,0.2)]' 
-                    : 'hover:bg-warm-beige hover:shadow-[inset_0_0_0_1px_rgba(232,224,216,0.6)]') 
-                  : 'opacity-25 pointer-events-none'}
+                ${
+                  inMonth
+                    ? todayCell
+                      ? 'bg-pebble/5 hover:bg-pebble/10 hover:shadow-[inset_0_0_0_1.5px_rgba(87,101,116,0.2)]'
+                      : 'hover:bg-warm-beige hover:shadow-[inset_0_0_0_1px_rgba(232,224,216,0.6)]'
+                    : 'opacity-25 pointer-events-none'
+                }
                 ${i === 0 ? 'border-l border-pebble/20' : ''}`}
             >
               <div
@@ -224,20 +224,25 @@ function WeekRow({
               >
                 {format(day, 'd')}
               </div>
-              
+
               {/* Dog count indicator */}
               <div className="flex items-center justify-center min-h-[18px] transition-transform group-hover:scale-105">
                 {dayAllBookings.length > 0 && (
-                  <div 
+                  <div
                     className="px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 shadow-md border border-white/40"
-                    style={{ background: todayCell ? COLOR_BADGE_ACTIVE : '#FDFBF7', color: todayCell ? '#fff' : COLOR_BADGE_ACTIVE }}
+                    style={{
+                      background: todayCell ? COLOR_BADGE_ACTIVE : '#FDFBF7',
+                      color: todayCell ? '#fff' : COLOR_BADGE_ACTIVE,
+                    }}
                   >
                     <PawPrint size={11} weight="fill" />
                     <span className="drop-shadow-sm">{dayAllBookings.length}</span>
                   </div>
                 )}
                 {hiddenCount > 0 && (
-                   <span className="text-[9px] font-black text-bark-light/80 ml-1.5">+{hiddenCount}</span>
+                  <span className="text-[9px] font-black text-bark-light/80 ml-1.5">
+                    +{hiddenCount}
+                  </span>
                 )}
               </div>
             </div>
@@ -400,9 +405,7 @@ export function CalendarMain() {
       </div>
 
       {/* Today's arrivals/departures card */}
-      {isSameMonthView && (
-        <TodayCard bookings={bookings} onBookingClick={handleBookingClick} />
-      )}
+      {isSameMonthView && <TodayCard bookings={bookings} onBookingClick={handleBookingClick} />}
 
       {/* Weekday labels */}
       <div className="grid grid-cols-7 px-2 mb-0.5">
@@ -438,18 +441,15 @@ export function CalendarMain() {
         )}
       </div>
 
-
-      {/* FAB */}
-      <button
+      <AddButton
         onClick={() => {
           setBookingSheetDate(format(new Date(), 'yyyy-MM-dd'));
           setIsSheetOpen(true);
         }}
-        className="fixed right-5 bottom-[88px] w-14 h-14 rounded-full bg-terracotta text-white flex items-center justify-center shadow-lg shadow-terracotta/30 transition-all hover:scale-105 active:scale-95 z-40"
-        aria-label="New booking"
-      >
-        <Plus size={28} weight="bold" />
-      </button>
+        variant="calendar"
+        isActive={isSheetOpen}
+        ariaLabel="New booking"
+      />
 
       {/* New booking sheet */}
       <CreateBookingSheet
@@ -466,8 +466,7 @@ export function CalendarMain() {
         title={selectedAgendaDate ? format(selectedAgendaDate, 'EEEE, MMM d') : 'Agenda'}
       >
         <div className="flex flex-col gap-3 pb-8">
-          {!selectedAgendaDate ||
-          getBookingsForDate(bookings, selectedAgendaDate).length === 0 ? (
+          {!selectedAgendaDate || getBookingsForDate(bookings, selectedAgendaDate).length === 0 ? (
             <div className="text-center py-10 bg-cream rounded-2xl border border-pebble/60 flex flex-col items-center">
               <span className="text-3xl mb-2">🌴</span>
               <span className="text-bark font-bold">No dogs today</span>
@@ -480,12 +479,16 @@ export function CalendarMain() {
                 const agendaDayStr = format(selectedAgendaDate, 'yyyy-MM-dd');
                 const isArriving = b.start_date === agendaDayStr;
                 const isDeparting = b.end_date === agendaDayStr;
-                
+
                 // Calculate stay day (e.g. Day 2 of 5)
                 const start = new Date(b.start_date + 'T00:00:00');
                 const end = new Date(b.end_date + 'T00:00:00');
-                const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                const currentStayDay = Math.ceil((selectedAgendaDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const totalDays =
+                  Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const currentStayDay =
+                  Math.ceil(
+                    (selectedAgendaDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+                  ) + 1;
 
                 return (
                   <div
@@ -499,13 +502,13 @@ export function CalendarMain() {
                         className="w-1.5 self-stretch rounded-full"
                         style={{ background: c.bg }}
                       />
-                      
+
                       <DogAvatar
                         name={b.dogs?.name ?? 'Unknown'}
                         src={b.dogs?.photo_url}
                         size="md"
                       />
-                      
+
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="font-extrabold text-bark text-base truncate">
@@ -524,9 +527,7 @@ export function CalendarMain() {
                         </div>
 
                         <div className="flex items-center gap-2 text-[11px] font-bold text-bark-light">
-                          <span className="uppercase tracking-wider">
-                            {b.type}
-                          </span>
+                          <span className="uppercase tracking-wider">{b.type}</span>
                           <span className="text-pebble">•</span>
                           <span className="text-bark">
                             Day {currentStayDay} of {totalDays}

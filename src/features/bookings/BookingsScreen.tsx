@@ -1,68 +1,115 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/Badge';
+import { MagnifyingGlass, Calendar, CaretRight, Sun, Moon } from '@phosphor-icons/react';
 import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { type BookingStatus } from '@/lib/bookingService';
+import { AddButton } from '@/components/ui/AddButton';
+import { type BookingStatus, type BookingRecord } from '@/lib/bookingService';
 import { useBookings } from '@/hooks/useBookings';
-import { useVirtualList } from '@/hooks/useVirtualList';
 import { CreateBookingSheet } from './CreateBookingSheet';
-import { Fab } from '@/components/layout/FAB';
+import { format } from 'date-fns';
 import {
   bookingStatusOptions,
   formatBookingRange,
   formatCurrency,
   getStatusLabel,
-  getStatusVariant,
 } from './bookingUi';
 
-const ITEM_HEIGHT = 88;
+interface GroupedBookings {
+  [key: string]: BookingRecord[];
+}
 
 export function BookingsScreen() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerHeight, setContainerHeight] = useState(400);
   const navigate = useNavigate();
-
   const { data: bookings = [], isLoading, isError, error } = useBookings();
   const [filter, setFilter] = useState<BookingStatus>('active');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  useEffect(() => {
-    const updateHeight = () => {
-      if (containerRef.current) {
-        setContainerHeight(containerRef.current.clientHeight);
+  const filteredBookings = useMemo(() => {
+    let result = bookings.filter((booking) => booking.status === filter);
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (b) =>
+          b.dog?.name.toLowerCase().includes(query) ||
+          b.dog?.owner_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [bookings, filter, searchQuery]);
+
+  const groupedBookings = useMemo(() => {
+    const groups: GroupedBookings = {};
+    
+    // Create a copy and sort internal items first
+    const sortedItems = [...filteredBookings].sort((a, b) => {
+      const dateA = new Date(a.start_date).getTime();
+      const dateB = new Date(b.start_date).getTime();
+      return filter === 'active' ? dateA - dateB : dateB - dateA;
+    });
+
+    sortedItems.forEach((booking) => {
+      const date = new Date(`${booking.start_date}T00:00:00`);
+      const monthYear = format(date, 'MMMM yyyy');
+      if (!groups[monthYear]) {
+        groups[monthYear] = [];
       }
-    };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
+      groups[monthYear].push(booking);
+    });
+    
+    return groups;
+  }, [filteredBookings, filter]);
 
-  const filteredBookings = useMemo(
-    () => bookings.filter((booking) => booking.status === filter),
-    [bookings, filter],
-  );
-
-  const { virtualItems, totalHeight, onScroll } = useVirtualList({
-    items: filteredBookings,
-    itemHeight: ITEM_HEIGHT,
-    overscan: 3,
-    containerHeight,
-  });
+  const sortedMonthKeys = useMemo(() => {
+    return Object.keys(groupedBookings).sort((a, b) => {
+      const dateA = new Date(a);
+      const dateB = new Date(b);
+      
+      if (filter === 'active') {
+        return dateA.getTime() - dateB.getTime();
+      }
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [groupedBookings, filter]);
 
   return (
     <>
-      <div className="mb-4">
-        <h1 className="page-title !mb-2">Bookings</h1>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="page-title !mb-1">Bookings</h1>
+            <p className="text-sm text-bark-light">
+              {filteredBookings.length} {getStatusLabel(filter).toLowerCase()} booking{filteredBookings.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
 
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 flex rounded-xl bg-cream border border-pebble p-1">
+        <div className="relative mb-4">
+          <MagnifyingGlass 
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-bark-light" 
+            size={18} 
+            weight="bold"
+          />
+          <input
+            type="text"
+            placeholder="Search dog or owner..."
+            className="form-input !pl-10 !py-2.5 !text-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex rounded-xl bg-cream border border-pebble p-1 shadow-sm">
             {bookingStatusOptions.map((status) => (
               <button
                 key={status}
                 type="button"
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+                className={`flex-1 py-2 px-1 rounded-lg text-xs font-bold transition-all ${
                   filter === status
                     ? 'bg-sage text-white shadow-sm'
                     : 'text-bark-light hover:text-bark'
@@ -77,79 +124,99 @@ export function BookingsScreen() {
       </div>
 
       {isLoading && !bookings.length ? (
-        <p className="text-bark-light text-center py-8">Loading bookings...</p>
+        <div className="flex flex-col items-center justify-center h-[40vh] text-sm text-bark-light">
+          Loading bookings…
+        </div>
       ) : null}
+      
       {isError ? (
-        <p className="text-terracotta text-center py-8">
+        <div className="p-6 text-center text-terracotta font-semibold">
           {error instanceof Error ? error.message : 'Failed to load bookings'}
-        </p>
+        </div>
       ) : null}
 
       {!isLoading && !isError ? (
         filteredBookings.length ? (
-          <div
-            ref={containerRef}
-            onScroll={onScroll}
-            className="h-[calc(100vh-220px)] overflow-auto -mx-4 px-4"
-          >
-            <div className="relative" style={{ height: totalHeight }}>
-              {virtualItems.map(({ item: booking, offsetTop }) => (
-                <div
-                  key={booking.id}
-                  className="absolute left-0 right-0"
-                  style={{
-                    top: offsetTop,
-                    height: ITEM_HEIGHT,
-                  }}
-                >
-                  <Card
-                    className="h-full px-4 py-3"
-                    pressable
-                    onClick={() => navigate(`/bookings/${booking.id}`)}
-                  >
-                    <div className="flex items-center gap-3 h-full">
-                      <DogAvatar
-                        name={booking.dog?.name ?? 'Dog'}
-                        src={booking.dog?.photo_url}
-                        size="lg"
-                      />
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="font-bold text-bark truncate">
-                            {booking.dog?.name ?? 'Unknown dog'}
-                          </span>
-                          <Badge variant={getStatusVariant(booking.status)}>
-                            {getStatusLabel(booking.status)}
-                          </Badge>
+          <div className="space-y-6 -mx-4 px-4">
+            {sortedMonthKeys.map((monthYear) => (
+              <div key={monthYear}>
+                <h2 className="text-xs font-extrabold uppercase tracking-[0.1em] text-bark-light/70 mb-3 px-1 flex items-center gap-2">
+                  <Calendar size={14} weight="bold" />
+                  {monthYear}
+                </h2>
+                <div className="grid gap-3">
+                  {groupedBookings[monthYear].map((booking) => (
+                    <Card
+                      key={booking.id}
+                      className="p-4"
+                      pressable
+                      onClick={() => navigate(`/bookings/${booking.id}`)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <DogAvatar
+                            name={booking.dog?.name ?? 'Dog'}
+                            src={booking.dog?.photo_url}
+                            size="lg"
+                          />
+                          <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 border-cream ${booking.type === 'daycare' ? 'bg-sky' : 'bg-sage'}`}>
+                            {booking.type === 'daycare' ? (
+                              <Sun size={12} weight="fill" className="text-white" />
+                            ) : (
+                              <Moon size={12} weight="fill" className="text-white" />
+                            )}
+                          </div>
                         </div>
 
-                        <p className="text-xs text-bark-light mt-0.5 truncate">
-                          {formatBookingRange(booking)}
-                        </p>
-                        <p className="text-sm font-semibold text-bark mt-1">
-                          {booking.days.length} day{booking.days.length === 1 ? '' : 's'} ·{' '}
-                          <span className="text-terracotta">
-                            {formatCurrency(booking.total_amount)}
-                          </span>
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <h3 className="font-extrabold text-bark truncate text-base leading-tight">
+                                {booking.dog?.name ?? 'Unknown dog'}
+                              </h3>
+                              <p className="text-xs text-bark-light font-bold uppercase tracking-wide opacity-80 mt-0.5">
+                                {booking.dog?.owner_name || 'No Owner'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-base font-extrabold text-terracotta leading-tight">
+                                {formatCurrency(booking.total_amount)}
+                              </p>
+                              <p className="text-[10px] font-bold text-bark-light uppercase bg-pebble/30 px-1.5 py-0.5 rounded mt-1 inline-block">
+                                {booking.days.length} day{booking.days.length === 1 ? '' : 's'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-pebble/40">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Calendar size={14} weight="bold" className="text-bark-light/60 flex-shrink-0" />
+                              <span className="text-xs font-bold text-bark/80 truncate">
+                                {formatBookingRange(booking)}
+                              </span>
+                            </div>
+                            <CaretRight size={14} weight="bold" className="text-pebble flex-shrink-0" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <EmptyState
-            title={`No ${getStatusLabel(filter).toLowerCase()} bookings`}
-            description="Tap the + button above to create your first booking."
-          />
+          <div className="mt-8">
+            <EmptyState
+              title={searchQuery ? "No matches found" : `No ${getStatusLabel(filter).toLowerCase()} bookings`}
+              description={searchQuery ? "Try a different dog or owner name." : "Tap the + button to create a booking."}
+            />
+          </div>
         )
       ) : null}
 
       <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
-      <Fab onClick={() => setIsCreateOpen(true)} />
+      <AddButton onClick={() => setIsCreateOpen(true)} variant="booking" isActive={isCreateOpen} />
     </>
   );
 }

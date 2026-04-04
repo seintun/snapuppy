@@ -4,7 +4,7 @@ import { Trash } from '@phosphor-icons/react';
 import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Fab } from '@/components/layout/FAB';
+import { AddButton } from '@/components/ui/AddButton';
 import { useToast } from '@/components/ui/useToast';
 import { useDogs, useDeleteDog } from '@/hooks/useDogs';
 import { AddDogSheet } from './AddDogSheet';
@@ -141,7 +141,7 @@ export function DogsScreen() {
 
       <AddDogSheet isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
 
-      <Fab onClick={() => setIsAddOpen(true)} />
+      <AddButton onClick={() => setIsAddOpen(true)} variant="dog" isActive={isAddOpen} />
 
       <ConfirmModal
         isOpen={!!deleteConfirm}

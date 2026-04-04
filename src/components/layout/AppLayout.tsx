@@ -17,7 +17,7 @@ export function AppLayout() {
 
       <main 
         id="main-content" 
-        className="flex-1 px-4 pt-[calc(16px+env(safe-area-inset-top))] pb-[100px] overscroll-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200"
+        className="flex-1 px-4 pt-[calc(16px+env(safe-area-inset-top))] pb-[80px] overscroll-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200"
       >
         <Outlet />
       </main>
