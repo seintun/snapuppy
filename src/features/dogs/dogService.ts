@@ -91,6 +91,7 @@ export async function createDog(dog: DogInsert): Promise<Dog> {
 
   // Fallback for missing breed column
   if (isMissingBreedError(error)) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { breed: _breed, ...cleanDog } = dog;
 
     const { data: fallbackData, error: fallbackError } = await supabase
@@ -120,6 +121,7 @@ export async function updateDog(id: string, updates: DogUpdate): Promise<Dog> {
 
   // Fallback for missing breed column
   if (isMissingBreedError(error)) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { breed: _breed, ...cleanUpdates } = updates;
 
     const { data: fallbackData, error: fallbackError } = await supabase

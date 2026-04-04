@@ -87,6 +87,7 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
 
   // Fallback: Strip business_name and try again
   if (isMissingBusinessNameError(error)) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { business_name: _businessName, ...cleanUpdates } = updates;
 
     const { data: fallbackData, error: fallbackError } = await supabase

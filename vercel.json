@@ -1,0 +1,12 @@
+{
+  "projectSettings": {
+    "framework": "vite"
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "cleanUrls": true
+}
