@@ -137,7 +137,7 @@ export function ProfileScreen() {
                 🌙 Boarding / night
               </label>
               <div className="flex">
-                <span className="flex items-center bg-sage-light rounded-l-lg px-2 font-bold text-sage border border-pebble border-r-0 text-sm">
+                <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
                   $
                 </span>
                 <input
@@ -161,7 +161,7 @@ export function ProfileScreen() {
                 ☀️ Daycare / day
               </label>
               <div className="flex">
-                <span className="flex items-center bg-sage-light rounded-l-lg px-2 font-bold text-sage border border-pebble border-r-0 text-sm">
+                <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
                   $
                 </span>
                 <input
@@ -182,10 +182,10 @@ export function ProfileScreen() {
             {/* Holiday surcharge */}
             <div>
               <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="holiday-surcharge">
-                🎉 Holiday surcharge
+                🎄 Holiday surcharge
               </label>
               <div className="flex">
-                <span className="flex items-center bg-blush/60 rounded-l-lg px-2 font-bold text-terracotta border border-pebble border-r-0 text-sm">
+                <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
                   +$
                 </span>
                 <input
@@ -208,11 +208,20 @@ export function ProfileScreen() {
               <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="cutoff-time">
                 🕐 Pickup cut-off
               </label>
-              <TimePicker
-                value={watch('cutoffTime')}
-                onChange={(v) => setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })}
-                error={!!errors.cutoffTime}
-              />
+              <div className="flex">
+                <span className="w-10 flex items-center justify-center bg-sky/20 rounded-l-lg font-bold text-bark border border-pebble border-r-0 text-sm shrink-0">
+                  <Clock size={16} weight="bold" className="text-bark-light" />
+                </span>
+                <div className="flex-1">
+                  <TimePicker
+                    value={watch('cutoffTime')}
+                    onChange={(v) => setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })}
+                    error={!!errors.cutoffTime}
+                    className="rounded-l-none border-l-0"
+                    hideIcon={true}
+                  />
+                </div>
+              </div>
               {errors.cutoffTime && (
                 <p className="text-[10px] text-terracotta mt-0.5">{errors.cutoffTime.message}</p>
               )}

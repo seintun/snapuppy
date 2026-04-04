@@ -5,9 +5,11 @@ interface TimePickerProps {
   value: string; // 'HH:MM' in 24h format
   onChange: (value: string) => void;
   error?: boolean;
+  className?: string; // Optional className for the trigger button
+  hideIcon?: boolean; // If true, the clock icon is hidden
 }
 
-export function TimePicker({ value, onChange, error }: TimePickerProps) {
+export function TimePicker({ value, onChange, error, className = '', hideIcon = false }: TimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -46,19 +48,26 @@ export function TimePicker({ value, onChange, error }: TimePickerProps) {
   const HOURS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
   return (
-    <div className="relative" ref={wrapperRef}>
+    <div className={`relative ${className}`} ref={wrapperRef}>
       {/* Trigger */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between text-sm py-2.5 px-3 bg-white border-1.5 rounded-xl transition-all ${
+        className={`form-input w-full flex items-center justify-between text-sm py-2.5 transition-all ${
           isOpen ? 'border-sage shadow-[0_0_0_3px_rgba(143,184,134,0.15)]' : error ? 'border-terracotta' : 'border-pebble hover:border-sage/50'
         }`}
       >
         <span className="font-semibold text-bark">
           {displayHour}:{minStr} {isPM ? 'PM' : 'AM'}
         </span>
-        <Clock size={16} weight="bold" className={isOpen ? 'text-sage' : 'text-bark-light'} />
+        {!hideIcon && (
+          <Clock 
+            size={16} 
+            weight="bold" 
+            className={isOpen ? 'text-sage' : 'text-bark-light'} 
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       {/* Popover */}
