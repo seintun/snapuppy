@@ -1,21 +1,21 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { format, addMonths, subMonths, isSameMonth, isToday, addDays } from 'date-fns';
-import { CaretLeft, CaretRight, Plus, PawPrint } from '@phosphor-icons/react';
+import { DogAvatar } from '@/components/ui/DogAvatar';
+import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useAuthContext } from '@/features/auth/useAuthContext';
+import { CreateBookingSheet } from '@/features/bookings/CreateBookingSheet';
 import { useCalendarBookings } from '@/hooks/useBookings';
+import { CaretLeft, CaretRight, PawPrint, Plus } from '@phosphor-icons/react';
+import { useQueryClient } from '@tanstack/react-query';
+import { addDays, addMonths, format, isSameMonth, isToday, subMonths } from 'date-fns';
+import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  getMonthDays,
+  assignWeekLanes,
   getBookingsForDate,
   getBookingsForWeek,
-  assignWeekLanes,
-  type CalendarBooking,
+  getMonthDays,
   type BookingLaneMap,
+  type CalendarBooking,
 } from './calendarUtils';
-import { CreateBookingSheet } from '@/features/bookings/CreateBookingSheet';
-import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
-import { DogAvatar } from '@/components/ui/DogAvatar';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_VISIBLE_LANES = 4;
@@ -46,6 +46,10 @@ function dogColor(dogId: string) {
   return DOG_PALETTE[Math.abs(h) % DOG_PALETTE.length];
 }
 
+// ─── Constants for consistent high-contrast colors ────────────────────────────
+const COLOR_TODAY = '#576574';      // High-contrast blueish-grey for "Today"
+const COLOR_BADGE_ACTIVE = '#D4845A'; // High-contrast terracotta for badges
+
 // ─── Today Info Card ──────────────────────────────────────────────────────────
 function TodayCard({
   bookings,
@@ -68,23 +72,29 @@ function TodayCard({
   return (
     <div className="mx-2 mb-2 bg-cream rounded-2xl border border-pebble/60 shadow-sm overflow-hidden">
       <div className="px-3 py-2 border-b border-pebble/30 bg-warm-beige/30 flex justify-between items-center">
-        <span className="text-[10px] font-black text-bark-light uppercase tracking-widest">
+        <span className="text-[11px] font-black text-bark uppercase tracking-widest">
           {format(today, 'EEEE, MMM do')}
         </span>
-        <span className="text-[9px] font-bold text-sage bg-white px-2 py-0.5 rounded-full border border-pebble/40">
+        <span 
+          className="text-[10px] font-black text-white px-3 py-0.5 rounded-full shadow-sm"
+          style={{ background: COLOR_TODAY }}
+        >
            Today
         </span>
       </div>
       <div className="grid grid-cols-2 divide-x divide-pebble/40">
         {/* Arriving */}
         <div className="p-2.5">
-          <div className="text-[9px] font-black uppercase tracking-widest text-sage mb-1.5 flex items-center gap-1">
-             <PawPrint size={10} weight="fill" /> Arriving
+          <div 
+            className="text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-1"
+            style={{ color: '#4B6584' }} // Deeper contrast for Arrival
+          >
+             <PawPrint size={11} weight="fill" /> Arriving
           </div>
           {arriving.length === 0 ? (
-            <div className="text-[9px] text-bark-light italic">None</div>
+            <div className="text-[10px] text-bark-light italic">None</div>
           ) : (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               {arriving.map((b) => {
                 const c = dogColor(b.dog_id);
                 return (
@@ -92,16 +102,16 @@ function TodayCard({
                     key={b.id}
                     type="button"
                     onClick={() => onBookingClick(b.id)}
-                    className="flex items-center gap-1.5 w-full text-left"
+                    className="flex items-center gap-2 w-full text-left group"
                   >
                     <span
-                      className="text-[10px] font-black rounded-full px-2 py-0.5 truncate max-w-[80px]"
+                      className="text-[10px] font-black rounded-full px-2.5 py-1 truncate max-w-[90px] shadow-sm transform transition-transform group-hover:scale-105"
                       style={{ background: c.bg, color: c.text }}
                     >
                       {b.dogs?.name}
                     </span>
-                    <span className="text-[9px] text-bark-light shrink-0">
-                      {b.start_date === todayStr ? 'today' : 'tmrw'}
+                    <span className="text-[9px] text-bark-light font-bold shrink-0">
+                      {b.start_date === todayStr ? 'today' : 'tomorrow'}
                     </span>
                   </button>
                 );
@@ -112,13 +122,13 @@ function TodayCard({
 
         {/* Departing */}
         <div className="p-2.5">
-          <div className="text-[9px] font-black uppercase tracking-widest text-terracotta mb-1.5 flex items-center gap-1">
-             <span className="text-[10px]">🚗</span> Departing
+          <div className="text-[10px] font-black uppercase tracking-widest text-terracotta mb-2 flex items-center gap-1">
+             <span className="text-[11px]">👋</span> Departing
           </div>
           {departing.length === 0 ? (
-            <div className="text-[9px] text-bark-light italic">None</div>
+            <div className="text-[10px] text-bark-light italic">None</div>
           ) : (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               {departing.map((b) => {
                 const c = dogColor(b.dog_id);
                 return (
@@ -126,16 +136,16 @@ function TodayCard({
                     key={b.id}
                     type="button"
                     onClick={() => onBookingClick(b.id)}
-                    className="flex items-center gap-1.5 w-full text-left"
+                    className="flex items-center gap-2 w-full text-left group"
                   >
                     <span
-                      className="text-[10px] font-black rounded-full px-2 py-0.5 truncate max-w-[80px]"
+                      className="text-[10px] font-black rounded-full px-2.5 py-1 truncate max-w-[90px] shadow-sm transform transition-transform group-hover:scale-105"
                       style={{ background: c.bg, color: c.text }}
                     >
                       {b.dogs?.name}
                     </span>
-                    <span className="text-[9px] text-bark-light shrink-0">
-                      {b.end_date === todayStr ? 'today' : 'tmrw'}
+                    <span className="text-[9px] text-bark-light font-bold shrink-0">
+                      {b.end_date === todayStr ? 'today' : 'tomorrow'}
                     </span>
                   </button>
                 );
@@ -146,6 +156,13 @@ function TodayCard({
       </div>
     </div>
   );
+}
+
+function hiddenCountForDay(bookings: CalendarBooking[], day: Date, laneMap: BookingLaneMap) {
+  const dayBookings = getBookingsForDate(bookings, day);
+  return dayBookings.filter(
+    (b) => (laneMap[b.id] ?? MAX_VISIBLE_LANES) >= MAX_VISIBLE_LANES,
+  ).length;
 }
 
 // ─── Week Row (Google Calendar-style spanning bars) ───────────────────────────
@@ -186,40 +203,41 @@ function WeekRow({
           const inMonth = isSameMonth(day, currentMonth);
           const todayCell = isToday(day);
           const dayAllBookings = getBookingsForDate(bookings, day);
-          const hiddenCount = dayAllBookings.filter(
-            (b) => (laneMap[b.id] ?? MAX_VISIBLE_LANES) >= MAX_VISIBLE_LANES,
-          ).length;
+          const hiddenCount = hiddenCountForDay(bookings, day, laneMap);
 
           return (
             <div
               key={i}
               onClick={() => inMonth && onDateTap(day)}
-              className={`border-r border-pebble/20 last:border-r-0 pt-1 pb-1 flex flex-col items-center select-none cursor-pointer transition-all duration-150 relative group
+              className={`border-r border-pebble/20 last:border-r-0 pt-1.5 pb-2 flex flex-col items-center select-none cursor-pointer transition-all duration-150 relative group
                 ${inMonth 
                   ? (todayCell 
-                    ? 'bg-sage-light/10 hover:bg-sage/10 hover:shadow-[inset_0_0_0_1px_rgba(143,184,134,0.3)]' 
+                    ? 'bg-pebble/5 hover:bg-pebble/10 hover:shadow-[inset_0_0_0_1.5px_rgba(87,101,116,0.2)]' 
                     : 'hover:bg-warm-beige hover:shadow-[inset_0_0_0_1px_rgba(232,224,216,0.6)]') 
                   : 'opacity-25 pointer-events-none'}
                 ${i === 0 ? 'border-l border-pebble/20' : ''}`}
             >
               <div
-                className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-black leading-none mb-1 transition-transform group-hover:scale-110
-                  ${todayCell ? 'bg-sage text-white shadow-md ring-2 ring-sage/20' : inMonth ? 'text-bark' : 'text-bark-light'}`}
+                className={`w-7 h-7 flex items-center justify-center rounded-full text-[13px] font-black leading-none mb-1 transition-transform group-hover:scale-110 shadow-sm
+                  ${todayCell ? 'text-white' : inMonth ? 'text-bark' : 'text-bark-light'}`}
+                style={todayCell ? { background: COLOR_TODAY } : {}}
               >
                 {format(day, 'd')}
               </div>
               
               {/* Dog count indicator */}
-              <div className="flex items-center justify-center min-h-[14px] transition-transform group-hover:scale-105">
+              <div className="flex items-center justify-center min-h-[18px] transition-transform group-hover:scale-105">
                 {dayAllBookings.length > 0 && (
-                  <div className={`px-1.5 py-0.5 rounded-full text-[8px] font-black flex items-center gap-0.5 shadow-sm
-                    ${todayCell ? 'bg-white text-sage' : 'bg-sage-light text-bark'}`}>
-                    <span>🐾</span>
-                    <span>{dayAllBookings.length}</span>
+                  <div 
+                    className="px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 shadow-md border border-white/40"
+                    style={{ background: todayCell ? COLOR_BADGE_ACTIVE : '#FDFBF7', color: todayCell ? '#fff' : COLOR_BADGE_ACTIVE }}
+                  >
+                    <PawPrint size={11} weight="fill" />
+                    <span className="drop-shadow-sm">{dayAllBookings.length}</span>
                   </div>
                 )}
                 {hiddenCount > 0 && (
-                   <span className="text-[7px] font-black text-bark-light/60 ml-0.5">+{hiddenCount}</span>
+                   <span className="text-[9px] font-black text-bark-light/80 ml-1.5">+{hiddenCount}</span>
                 )}
               </div>
             </div>
@@ -459,36 +477,72 @@ export function CalendarMain() {
             <div className="flex flex-col gap-2.5">
               {getBookingsForDate(bookings, selectedAgendaDate).map((b) => {
                 const c = dogColor(b.dog_id);
+                const agendaDayStr = format(selectedAgendaDate, 'yyyy-MM-dd');
+                const isArriving = b.start_date === agendaDayStr;
+                const isDeparting = b.end_date === agendaDayStr;
+                
+                // Calculate stay day (e.g. Day 2 of 5)
+                const start = new Date(b.start_date + 'T00:00:00');
+                const end = new Date(b.end_date + 'T00:00:00');
+                const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const currentStayDay = Math.ceil((selectedAgendaDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
                 return (
                   <div
                     key={b.id}
                     onClick={() => handleBookingClick(b.id)}
-                    className="bg-cream border border-pebble/40 rounded-2xl p-3 flex items-center justify-between shadow-[0_2px_8px_rgba(74,55,40,0.04)] cursor-pointer hover:border-sage/40 transition-colors"
+                    className="bg-cream border border-pebble/40 rounded-2xl p-4 flex items-center justify-between shadow-sm cursor-pointer hover:border-sage/40 transition-all active:scale-[0.98]"
                   >
-                    <div className="flex items-center gap-3">
-                      {/* Color dot matching calendar bar */}
+                    <div className="flex items-center gap-4">
+                      {/* Vertical status bar */}
                       <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        className="w-1.5 self-stretch rounded-full"
                         style={{ background: c.bg }}
                       />
+                      
                       <DogAvatar
                         name={b.dogs?.name ?? 'Unknown'}
                         src={b.dogs?.photo_url}
                         size="md"
                       />
-                      <div>
-                        <div className="font-bold text-bark text-sm leading-tight">
-                          {b.dogs?.name}
+                      
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-extrabold text-bark text-base truncate">
+                            {b.dogs?.name}
+                          </span>
+                          {isArriving && (
+                            <span className="text-[9px] font-black bg-sage/10 text-sage px-1.5 py-0.5 rounded-md border border-sage/20 uppercase tracking-tight">
+                              🐾 Arriving
+                            </span>
+                          )}
+                          {isDeparting && (
+                            <span className="text-[9px] font-black bg-terracotta/10 text-terracotta px-1.5 py-0.5 rounded-md border border-terracotta/20 uppercase tracking-tight">
+                              👋 Departing
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[10px] text-bark-light font-bold uppercase tracking-wider mt-0.5">
-                          {b.type}
+
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-bark-light">
+                          <span className="uppercase tracking-wider">
+                            {b.type}
+                          </span>
+                          <span className="text-pebble">•</span>
+                          <span className="text-bark">
+                            Day {currentStayDay} of {totalDays}
+                          </span>
                           {b.is_holiday && (
-                            <span className="text-terracotta ml-1">· HOLIDAY</span>
+                            <>
+                              <span className="text-pebble">•</span>
+                              <span className="text-terracotta uppercase">🎄 Holiday</span>
+                            </>
                           )}
                         </div>
                       </div>
                     </div>
-                    <CaretRight size={16} weight="bold" className="text-pebble" />
+                    <div className="flex flex-col items-end gap-1">
+                      <CaretRight size={18} weight="bold" className="text-pebble/60" />
+                    </div>
                   </div>
                 );
               })}

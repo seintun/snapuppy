@@ -546,7 +546,7 @@ export function CreateBookingSheet({
         >
           <div>
             <div className={`font-bold text-sm ${isHoliday ? 'text-terracotta' : 'text-bark'}`}>
-              🎉 Holiday booking
+              🎄 Holiday booking
             </div>
             <div className="text-[11px] text-bark-light mt-0.5">Applies holiday surcharge</div>
           </div>
