@@ -114,7 +114,7 @@ export function LoginScreen() {
       window.localStorage.setItem(MAGIC_LINK_COOLDOWN_STORAGE_KEY, String(nextTime));
     } catch (error) {
       const raw = error instanceof Error ? error.message : '';
-      const isRateLimit = /rate\s*limit|429/i.test(raw);
+      const isRateLimit = /rate\s*limit|429|over_email_send_rate_limit/i.test(raw);
 
       if (isRateLimit) {
         const nextTime = Date.now() + MAGIC_LINK_COOLDOWN_MS;
