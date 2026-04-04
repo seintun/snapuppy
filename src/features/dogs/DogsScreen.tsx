@@ -53,10 +53,10 @@ export function DogsScreen() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
-      <div className="flex items-end justify-between mb-6 px-1 pt-2 shrink-0">
+      <div className="flex items-end justify-between px-1 pt-2 mb-6 shrink-0">
         <div>
-          <h1 className="text-2xl font-black text-bark tracking-tight leading-none">Dogs</h1>
-          <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em] mt-1.5">
+          <h1 className="text-3xl font-black text-bark tracking-tight leading-none">Dogs</h1>
+          <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em] mt-1">
             {dogs.length} Total Client{dogs.length !== 1 ? 's' : ''}
           </p>
         </div>

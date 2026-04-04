@@ -4,11 +4,11 @@ import { z } from 'zod';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Accepts only https:// or http:// URLs — blocks javascript:/data: exploits */
-const safeUrl = z
-  .string()
-  .url('Must be a valid URL')
-  .refine((v) => /^https?:\/\//i.test(v), { message: 'URL must start with https://' });
+function isFileListLike(value: unknown): value is FileList {
+  if (!value || typeof value !== 'object') return false;
+  const maybe = value as { length?: unknown; item?: unknown };
+  return typeof maybe.length === 'number' && typeof maybe.item === 'function';
+}
 
 /** yyyy-MM-dd with a real calendar date in [2020, 2100] */
 const dateStr = z
@@ -51,11 +51,7 @@ export type CreateBookingFormData = z.input<typeof CreateBookingSchema>;
  * Validates adding / editing a dog profile.
  */
 export const DogSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Name is required')
-    .max(50, 'Name must be 50 characters or fewer'),
+  name: z.string().trim().min(1, 'Name is required').max(50, 'Name must be 50 characters or fewer'),
   breed: z
     .string()
     .trim()
@@ -79,7 +75,16 @@ export const DogSchema = z.object({
     .max(500, 'Notes must be 500 characters or fewer')
     .optional()
     .or(z.literal('')),
-  photoUrl: safeUrl.optional().or(z.literal('')),
+  photoFile: z
+    .custom<FileList | undefined>((value) => value === undefined || isFileListLike(value), {
+      message: 'Invalid photo selection',
+    })
+    .refine((files) => {
+      if (!files || files.length === 0) return true;
+      const firstFile = files.item(0);
+      return !!firstFile && firstFile.type.startsWith('image/');
+    }, 'Photo must be an image file')
+    .optional(),
 });
 
 export type DogFormData = z.infer<typeof DogSchema>;
@@ -99,10 +104,7 @@ const cutoffTimeStr = z
 
 /** Non-negative monetary rate capped at $9,999.99 */
 const rateField = (label: string) =>
-  z
-    .number()
-    .min(0, `${label} must be $0 or more`)
-    .max(9999.99, `${label} cannot exceed $9,999.99`);
+  z.number().min(0, `${label} must be $0 or more`).max(9999.99, `${label} cannot exceed $9,999.99`);
 
 /**
  * Validates sitter profile settings.

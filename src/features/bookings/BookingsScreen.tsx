@@ -82,8 +82,8 @@ export function BookingsScreen() {
       {/* Ultra-Density Header */}
       <div className="sticky top-0 z-20 bg-warm-beige/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-pebble/10">
         <div className="flex flex-col gap-4 mb-4">
-          <div className="px-1">
-            <h1 className="text-2xl font-black text-bark tracking-tight leading-none mb-1.5">Bookings</h1>
+          <div className="px-1 pt-2">
+            <h1 className="text-3xl font-black text-bark tracking-tight leading-none mb-1">Bookings</h1>
             <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em]">
               {filteredBookings.length} {getStatusLabel(filter)}
             </p>
