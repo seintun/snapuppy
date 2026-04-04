@@ -44,3 +44,19 @@ supabase/.temp/
 # Local git worktrees
 .worktrees/
 worktrees/
+
+# Agentic & AI Tools
+.claude/
+.claude-flow/
+.kilo/
+.swarm/
+.gemini/
+.omx/
+.ruflo/
+.ruflo.json
+ruflo.json
+.memory/
+.brain/
+
+# Misc
+gitchanges/

@@ -1,6 +1,7 @@
 -- Create dog-photos bucket
 insert into storage.buckets (id, name, public)
-values ('dog-photos', 'dog-photos', true);
+values ('dog-photos', 'dog-photos', true)
+on conflict (id) do nothing;
 
 -- RLS: authenticated users can upload to their own folder
 create policy "dog-photos: upload own" on storage.objects

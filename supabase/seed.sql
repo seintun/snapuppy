@@ -1,21 +1,25 @@
--- Dev seed: test sitter profile with sample rates
--- Run after migrations. Requires a user to exist in auth.users with this id.
--- Replace the UUID below with your local dev user id from the Supabase dashboard.
+-- Dev seed: test sitter profile with sample rates.
+-- Safe no-op when this auth user does not exist.
 
 insert into public.profiles (
   id,
   display_name,
   email,
+  business_name,
   nightly_rate,
   daycare_rate,
   holiday_surcharge,
   cutoff_time
-) values (
-  '00000000-0000-0000-0000-000000000001',
+)
+select
+  u.id,
   'Test Sitter',
   'test@snapuppy.dev',
+  'Happy Paws Dev',
   55.00,
   35.00,
   15.00,
   '11:00'
-) on conflict (id) do nothing;
+from auth.users as u
+where u.id = '00000000-0000-0000-0000-000000000001'
+on conflict (id) do nothing;

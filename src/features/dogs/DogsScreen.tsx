@@ -8,22 +8,70 @@ import { useToast } from '@/components/ui/useToast';
 import { useDogs, useDeleteDog } from '@/hooks/useDogs';
 import { AddDogSheet } from './AddDogSheet';
 
+function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-bark/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-cream rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <h3 className="font-extrabold text-bark text-lg mb-2">{title}</h3>
+        <p className="text-bark-light text-sm mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 rounded-xl font-bold text-bark bg-pebble/50 hover:bg-pebble transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-3 rounded-xl font-bold text-white bg-terracotta hover:bg-terracotta/90 transition-colors"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DogsScreen() {
   const { data: dogs = [], isLoading, isError, error } = useDogs();
   const { mutateAsync: deleteDogMutation } = useDeleteDog();
   const { addToast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
-  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm(`Are you sure you want to remove ${name}?`)) return;
+    setDeleteConfirm({ id, name });
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
     try {
-      await deleteDogMutation(id);
-      addToast('Dog removed 🐾', 'info');
+      await deleteDogMutation(deleteConfirm.id);
+      addToast('Dog removed', 'success');
+      setDeleteConfirm(null);
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed to remove dog', 'error');
+      setDeleteConfirm(null);
     }
   };
 
@@ -45,31 +93,26 @@ export function DogsScreen() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="page-title !m-0">Dogs</h1>
-          <p className="m-0 mt-1 text-bark-light text-sm">
-            Manage your regular clients and their details.
+          <h1 className="page-title !mb-1">Dogs</h1>
+          <p className="text-sm text-bark-light">
+            {dogs.length} client{dogs.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-2 bg-sage text-white font-bold px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-transform"
+          className="w-11 h-11 rounded-xl bg-sage flex items-center justify-center text-white shadow-md hover:scale-105 active:scale-95 transition-transform"
+          aria-label="Add dog"
         >
-          <Plus size={20} weight="bold" />
-          Add Dog
+          <Plus size={22} weight="bold" />
         </button>
       </div>
 
       {dogs.length === 0 ? (
-        <EmptyState
-          title="No dogs yet"
-          description="Add your first furry friend to start tracking their stays."
-          actionLabel="Add Dog"
-          onAction={() => setIsAddOpen(true)}
-        />
+        <EmptyState title="No dogs yet" description="Add your first furry client to get started." />
       ) : (
-        <div className="grid gap-3.5">
+        <div className="grid gap-3 -mx-4 px-4">
           {dogs.map((dog) => (
             <Link key={dog.id} to={`/dogs/${dog.id}`} className="block">
               <Card className="p-4" pressable>
@@ -79,11 +122,11 @@ export function DogsScreen() {
                     <div className="flex justify-between items-start gap-2">
                       <h3 className="font-extrabold text-bark truncate text-base">{dog.name}</h3>
                       <button
-                        onClick={(e) => void handleDelete(e, dog.id, dog.name)}
-                        className="p-1.5 text-bark-light hover:text-terracotta bg-cream rounded-lg border border-pebble active:scale-90 transition-all"
+                        onClick={(e) => handleDeleteClick(e, dog.id, dog.name)}
+                        className="p-2 text-bark-light hover:text-terracotta rounded-lg hover:bg-blush transition-all"
                         title="Delete dog"
                       >
-                        <Trash size={18} />
+                        <Trash size={16} />
                       </button>
                     </div>
                     <div className="flex flex-col gap-0.5 mt-0.5">
@@ -91,9 +134,7 @@ export function DogsScreen() {
                         {dog.breed || 'Unknown breed'}
                       </p>
                       {dog.owner_name && (
-                        <p className="text-sm text-bark truncate">
-                          Owner: <span className="font-semibold">{dog.owner_name}</span>
-                        </p>
+                        <p className="text-sm text-bark truncate">{dog.owner_name}</p>
                       )}
                     </div>
                   </div>
@@ -105,6 +146,15 @@ export function DogsScreen() {
       )}
 
       <AddDogSheet isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} />
+
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        title="Remove Dog"
+        message={`Are you sure you want to remove ${deleteConfirm?.name}? This action cannot be undone.`}
+        confirmLabel="Remove"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </>
   );
 }

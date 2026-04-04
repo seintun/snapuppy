@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { CaretDown, Check, CalendarBlank } from '@phosphor-icons/react';
+import { format, addMonths, subMonths, isSameDay, isToday } from 'date-fns';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
 import { buildBookingPricing } from '@/lib/bookingService';
 import { useBookingOptions, useCreateBooking } from '@/hooks/useBookings';
 import { CreateBookingSchema, type CreateBookingFormData } from '@/lib/schemas';
+import { DogAvatar } from '@/components/ui/DogAvatar';
 
 export interface CreateBookingSheetProps {
   isOpen: boolean;
@@ -16,6 +19,224 @@ export interface CreateBookingSheetProps {
 }
 
 const today = () => new Date().toISOString().split('T')[0];
+
+function DogDropdown({
+  dogs,
+  value,
+  onChange,
+  error,
+}: {
+  dogs: Array<{ id: string; name: string; owner_name: string | null; photo_url: string | null }>;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedDog = dogs.find((d) => d.id === value);
+
+  return (
+    <div className="form-field">
+      <label className="form-label" id="dog-label">
+        Dog *
+      </label>
+      <div className="relative">
+        <button
+          type="button"
+          aria-labelledby="dog-label"
+          className={`form-input w-full flex items-center gap-3 ${error ? 'border-terracotta' : ''}`}
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {selectedDog ? (
+            <>
+              <DogAvatar name={selectedDog.name} src={selectedDog.photo_url} size="sm" />
+              <span className="flex-1 text-left">{selectedDog.name}</span>
+              {selectedDog.owner_name && (
+                <span className="text-xs text-bark-light truncate">{selectedDog.owner_name}</span>
+              )}
+            </>
+          ) : (
+            <span className="flex-1 text-left text-bark-light">Select a dog…</span>
+          )}
+          <CaretDown
+            size={18}
+            className={`text-bark-light transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-pebble rounded-xl shadow-lg z-10 max-h-60 overflow-auto">
+            {dogs.length === 0 ? (
+              <div className="p-3 text-sm text-bark-light text-center">
+                No dogs yet — add one in the Dogs tab first.
+              </div>
+            ) : (
+              dogs.map((dog) => (
+                <button
+                  key={dog.id}
+                  type="button"
+                  className={`w-full flex items-center gap-3 p-3 hover:bg-cream transition-colors ${
+                    dog.id === value ? 'bg-sage-light' : ''
+                  }`}
+                  onClick={() => {
+                    onChange(dog.id);
+                    setIsOpen(false);
+                  }}
+                >
+                  <DogAvatar name={dog.name} src={dog.photo_url} size="sm" />
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold text-bark">{dog.name}</div>
+                    {dog.owner_name && (
+                      <div className="text-xs text-bark-light">{dog.owner_name}</div>
+                    )}
+                  </div>
+                  {dog.id === value && <Check size={18} className="text-sage" />}
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+      {error && <p className="text-xs text-terracotta mt-1">{error}</p>}
+    </div>
+  );
+}
+
+function DatePicker({
+  label,
+  value,
+  onChange,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [viewMonth, setViewMonth] = useState(value ? new Date(value) : new Date());
+
+  const selectedDate = value ? new Date(value) : null;
+
+  const daysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days: (Date | null)[] = [];
+
+    for (let i = 0; i < firstDay.getDay(); i++) {
+      days.push(null);
+    }
+
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push(new Date(year, month, i));
+    }
+
+    return days;
+  };
+
+  const handleSelect = (date: Date) => {
+    onChange(format(date, 'yyyy-MM-dd'));
+    setIsOpen(false);
+  };
+
+  const isSelected = (date: Date) => selectedDate && isSameDay(date, selectedDate);
+  const isTodayDate = (date: Date) => isToday(date);
+
+  return (
+    <div className="form-field">
+      <label className="form-label">{label}</label>
+      <div className="relative">
+        <button
+          type="button"
+          className={`form-input w-full flex items-center gap-3 py-3 ${error ? 'border-terracotta' : ''}`}
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <CalendarBlank size={20} className="text-sage" />
+          <span
+            className={`flex-1 text-left ${value ? 'text-bark font-medium' : 'text-bark-light'}`}
+          >
+            {value ? format(new Date(value), 'MMM d, yyyy') : 'Select'}
+          </span>
+          <CaretDown
+            size={18}
+            className={`text-bark-light transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-cream border border-pebble rounded-2xl shadow-xl z-20 p-4">
+            {/* Month navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                type="button"
+                onClick={() => setViewMonth(subMonths(viewMonth, 1))}
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-sage-light/50 text-sage hover:bg-sage-light transition-colors"
+              >
+                <CaretDown size={18} className="rotate-90" />
+              </button>
+              <span className="font-bold text-bark text-sm">{format(viewMonth, 'MMMM yyyy')}</span>
+              <button
+                type="button"
+                onClick={() => setViewMonth(addMonths(viewMonth, 1))}
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-sage-light/50 text-sage hover:bg-sage-light transition-colors"
+              >
+                <CaretDown size={18} className="-rotate-90" />
+              </button>
+            </div>
+
+            {/* Day labels */}
+            <div className="grid grid-cols-7 mb-2">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                <div key={i} className="text-center text-[11px] font-bold text-bark-light">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar days */}
+            <div className="grid grid-cols-7 gap-1">
+              {daysInMonth(viewMonth).map((date, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={!date}
+                  onClick={() => date && handleSelect(date)}
+                  className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
+                    !date
+                      ? 'invisible'
+                      : isSelected(date)
+                        ? 'bg-sage text-white shadow-md'
+                        : isTodayDate(date)
+                          ? 'bg-terracotta text-white'
+                          : 'text-bark hover:bg-sage-light/50'
+                  }`}
+                >
+                  {date?.getDate()}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick today button */}
+            <button
+              type="button"
+              onClick={() => {
+                const todayStr = format(new Date(), 'yyyy-MM-dd');
+                onChange(todayStr);
+                setIsOpen(false);
+              }}
+              className="w-full mt-3 py-2 text-xs font-bold text-sage bg-sage-light/30 rounded-lg hover:bg-sage-light/50 transition-colors"
+            >
+              Today
+            </button>
+          </div>
+        )}
+      </div>
+      {error && <p className="text-xs text-terracotta mt-1">{error}</p>}
+    </div>
+  );
+}
 
 export function CreateBookingSheet({
   isOpen,
@@ -109,67 +330,36 @@ export function CreateBookingSheet({
   const ratesSet = options.profile && (options.profile.nightly_rate ?? 0) > 0;
 
   return (
-    <SlideUpSheet isOpen={isOpen} onClose={onClose} title="New Booking 🐾">
-      <form onSubmit={(e) => void handleSubmit(onFormSubmit)(e)} className="flex flex-col gap-3.5">
+    <SlideUpSheet isOpen={isOpen} onClose={onClose} title="New Booking">
+      <form onSubmit={(e) => void handleSubmit(onFormSubmit)(e)} className="flex flex-col gap-4">
         {/* Dog selector */}
-        <div className="form-field">
-          <label className="form-label" htmlFor="booking-dog">
-            Dog *
-          </label>
-          <select
-            id="booking-dog"
-            className={`form-input w-full ${errors.dogId ? 'border-terracotta' : ''}`}
-            {...register('dogId')}
-            required
-          >
-            <option value="">Select a dog…</option>
-            {options.dogs.map((dog) => (
-              <option key={dog.id} value={dog.id}>
-                {dog.name}
-                {dog.owner_name ? ` (${dog.owner_name})` : ''}
-              </option>
-            ))}
-          </select>
-          {errors.dogId && <p className="text-xs text-terracotta mt-1">{errors.dogId.message}</p>}
-          {options.dogs.length === 0 && (
-            <p className="text-xs text-bark-light mt-1">
-              No dogs yet — add one in the Dogs tab first.
-            </p>
-          )}
-        </div>
+        <DogDropdown
+          dogs={options.dogs}
+          value={selectedDogId}
+          onChange={(v) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (window as any).__rHF?.(v) || (() => {});
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const e = { target: { value: v } } as any;
+            register('dogId').onChange(e);
+          }}
+          error={errors.dogId?.message}
+        />
 
         {/* Dates */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="form-field">
-            <label className="form-label" htmlFor="booking-start">
-              Check-in
-            </label>
-            <input
-              id="booking-start"
-              type="date"
-              className={`form-input w-full ${errors.startDate ? 'border-terracotta' : ''}`}
-              {...register('startDate')}
-              required
-            />
-            {errors.startDate && (
-              <p className="text-xs text-terracotta mt-1">{errors.startDate.message}</p>
-            )}
-          </div>
-          <div className="form-field">
-            <label className="form-label" htmlFor="booking-end">
-              Check-out
-            </label>
-            <input
-              id="booking-end"
-              type="date"
-              className={`form-input w-full ${errors.endDate ? 'border-terracotta' : ''}`}
-              {...register('endDate')}
-              required
-            />
-            {errors.endDate && (
-              <p className="text-xs text-terracotta mt-1">{errors.endDate.message}</p>
-            )}
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          <DatePicker
+            label="Check-in"
+            value={startDate}
+            onChange={(v) => register('startDate').onChange({ target: { value: v } })}
+            error={errors.startDate?.message}
+          />
+          <DatePicker
+            label="Check-out"
+            value={endDate}
+            onChange={(v) => register('endDate').onChange({ target: { value: v } })}
+            error={errors.endDate?.message}
+          />
         </div>
 
         {/* Holiday toggle */}

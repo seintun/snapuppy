@@ -136,16 +136,43 @@ export async function getBookingFormOptions(sitterId: string): Promise<BookingFo
 
   const [{ data: dogs, error: dogsError }, { data: profile, error: profileError }] =
     await Promise.all([
-      supabase.from('dogs').select('*').eq('sitter_id', sitterId).order('name'),
-      supabase.from('profiles').select('*').eq('id', sitterId).maybeSingle(),
+      supabase.from('dogs')
+        .select(`
+          id,
+          name,
+          owner_name,
+          owner_phone,
+          photo_url,
+          notes,
+          sitter_id,
+          created_at,
+          updated_at
+        `)
+        .eq('sitter_id', sitterId)
+        .order('name'),
+      supabase.from('profiles')
+        .select(`
+          id,
+          email,
+          display_name,
+          nightly_rate,
+          daycare_rate,
+          holiday_surcharge,
+          cutoff_time,
+          is_guest,
+          created_at,
+          updated_at
+        `)
+        .eq('id', sitterId)
+        .maybeSingle(),
     ]);
 
   if (dogsError) throw dogsError;
   if (profileError) throw profileError;
 
   return {
-    dogs: dogs ?? [],
-    profile: profile ?? null,
+    dogs: (dogs ?? []).map(dog => ({ ...dog, breed: null } as DogRow)),
+    profile: profile ? ({ ...profile, business_name: null } as ProfileRow) : null,
   };
 }
 
@@ -397,16 +424,26 @@ function toRateSettings(profile: ProfileRow): ProfileRateSettings {
 
 async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow> {
   const supabase = await getSupabase();
-  const { data, error } = await supabase
+  const { data: dog, error } = await supabase
     .from('dogs')
-    .select('*')
+    .select(`
+      id,
+      name,
+      owner_name,
+      owner_phone,
+      photo_url,
+      notes,
+      sitter_id,
+      created_at,
+      updated_at
+    `)
     .eq('id', dogId)
     .eq('sitter_id', sitterId)
     .single();
 
   if (error) throw error;
 
-  return data;
+  return { ...dog, breed: null } as DogRow;
 }
 
 function toCurrencyAmount(value: number): number {
