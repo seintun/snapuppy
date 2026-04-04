@@ -182,7 +182,16 @@ export function CalendarMain() {
   const agendaBookings = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    return getBookingsForWeek(bookings, dateStr, dateStr);
+    const unsorted = getBookingsForWeek(bookings, dateStr, dateStr);
+    
+    return [...unsorted].sort((a, b) => {
+      const aMovement = a.start_date === dateStr || a.end_date === dateStr;
+      const bMovement = b.start_date === dateStr || b.end_date === dateStr;
+      
+      if (aMovement && !bMovement) return -1;
+      if (!aMovement && bMovement) return 1;
+      return (a.dogs?.name ?? '').localeCompare(b.dogs?.name ?? '');
+    });
   }, [bookings, selectedDate]);
 
   return (
@@ -265,40 +274,65 @@ export function CalendarMain() {
         onClose={() => setSelectedDate(null)}
         title={selectedDate ? format(selectedDate, 'MMM do, yyyy') : ''}
       >
-        <div className="flex flex-col gap-4 pb-8 min-h-[300px]">
+        <div className="flex flex-col gap-6 pb-12 min-h-[300px]">
           {agendaBookings.length === 0 ? (
-            <div className="text-center py-16 opacity-40">
+            <div className="text-center py-24 opacity-40">
               <span className="text-4xl mb-3 block">💤</span>
-              <p className="text-xs font-black text-bark-light uppercase tracking-widest">No pups today</p>
+              <p className="text-xs font-black text-bark-light uppercase tracking-[0.2em]">No pups today</p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {agendaBookings.map((b) => (
-                <div
-                  key={b.id}
-                  onClick={() => { handleBookingClick(b.id); setSelectedDate(null); }}
-                  className="glass-card p-4 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer border border-pebble/10"
-                >
-                  <div className="flex items-center gap-4">
-                    <DogAvatar name={b.dogs?.name ?? ''} src={b.dogs?.photo_url} size="md" />
-                    <div>
-                      <h4 className="font-black text-bark text-base leading-none">{b.dogs?.name}</h4>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className="text-[9px] font-black bg-pebble/10 text-bark-light px-2 py-0.5 rounded uppercase tracking-tighter shadow-sm border border-pebble/5">{b.type}</span>
-                        {selectedDate && b.start_date === format(selectedDate, 'yyyy-MM-dd') && (
-                          <span className="text-[8px] font-black bg-sage/10 text-sage px-1.5 py-0.5 rounded uppercase border border-sage/10">Arrival</span>
-                        )}
-                        {selectedDate && b.end_date === format(selectedDate, 'yyyy-MM-dd') && (
-                          <span className="text-[8px] font-black bg-terracotta/10 text-terracotta px-1.5 py-0.5 rounded uppercase border border-terracotta/10">Departure</span>
-                        )}
-                      </div>
-                    </div>
+          ) : (() => {
+            const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+            const arriving = agendaBookings.filter(b => b.start_date === dateStr);
+            const departing = agendaBookings.filter(b => b.end_date === dateStr);
+            const staying = agendaBookings.filter(b => b.start_date !== dateStr && b.end_date !== dateStr);
+
+            const renderSection = (title: string, items: typeof agendaBookings, colorClass: string) => {
+              if (items.length === 0) return null;
+              return (
+                <div key={title} className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 px-1">
+                    <div className={`w-1 h-3 rounded-full ${colorClass}`} />
+                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-bark/40">{title}</h5>
+                    <div className="h-px flex-1 bg-pebble/10 ml-1" />
+                    <span className="text-[9px] font-black text-bark/30 bg-pebble/5 px-2 py-0.5 rounded-full">{items.length}</span>
                   </div>
-                  <CaretRight size={20} weight="bold" className="text-pebble/40" />
+                  <div className="flex flex-col gap-1.5">
+                    {items.map((b) => (
+                      <div
+                        key={b.id}
+                        onClick={() => { handleBookingClick(b.id); setSelectedDate(null); }}
+                        className="glass-card p-2.5 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer border border-pebble/10"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <DogAvatar name={b.dogs?.name ?? ''} src={b.dogs?.photo_url} size="sm" />
+                          <div className="flex-1 min-w-0 flex items-center gap-3">
+                            <div className="min-w-0 shrink-0">
+                              <h4 className="font-black text-bark text-sm leading-none truncate">{b.dogs?.name}</h4>
+                              <p className="text-[9px] font-bold text-bark/40 mt-0.5 uppercase tracking-tight">
+                                {format(new Date(b.start_date + 'T00:00:00'), 'MMM d')} — {format(new Date(b.end_date + 'T00:00:00'), 'MMM d')}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap flex-1 justify-end mr-1">
+                              <span className="text-[8px] font-black bg-pebble/10 text-bark-light px-1.5 py-0.5 rounded uppercase tracking-tighter border border-pebble/5">{b.type}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <CaretRight size={14} weight="bold" className="text-pebble/30 shrink-0" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            };
+
+            return (
+              <>
+                {renderSection('Arriving', arriving, 'bg-sage')}
+                {renderSection('Departing', departing, 'bg-terracotta')}
+                {renderSection('Staying', staying, 'bg-sky')}
+              </>
+            );
+          })()}
         </div>
       </SlideUpSheet>
 
