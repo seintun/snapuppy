@@ -5,11 +5,13 @@ import { ArrowLeft, Warning } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function BookingDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: booking, isLoading, isError, error: queryError } = useBooking(id);
   const { mutateAsync: updateBookingStatusMutation } = useUpdateBookingStatus();
@@ -22,6 +24,8 @@ export function BookingDetailScreen() {
     setSaving(true);
     try {
       await updateBookingStatusMutation({ id: booking.id, status: 'cancelled' });
+      await queryClient.invalidateQueries({ queryKey: ['calendar-bookings'] });
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       addToast('Booking cancelled', 'info');
       navigate('/bookings');
     } catch (err) {
@@ -93,7 +97,9 @@ export function BookingDetailScreen() {
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
-            <span className={`${statusColors[booking.status] ?? 'bg-pebble'} text-white rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider drop-shadow-sm`}>
+            <span
+              className={`${statusColors[booking.status] ?? 'bg-pebble'} text-white rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider drop-shadow-sm`}
+            >
               {booking.status}
             </span>
             {booking.is_holiday && (
@@ -108,28 +114,33 @@ export function BookingDetailScreen() {
       <div className="px-4 pt-4 flex flex-col gap-3">
         {/* Reservation Summary */}
         <div className="bg-cream rounded-[14px] shadow-[0_2px_8px_rgba(74,55,40,0.08)] overflow-hidden">
-          
           <div className="p-4 bg-[linear-gradient(to_bottom,var(--color-sage-light)_0%,transparent_150%)]">
             <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider mb-3">
               Invoice Breakdown
             </div>
             <div className="flex flex-col gap-3">
               {Object.values(
-                booking.days.reduce((acc, day) => {
-                  const key = `${day.rate_type}-${day.is_holiday}-${day.amount}`;
-                  if (!acc[key]) {
-                    acc[key] = {
-                      count: 0,
-                      amount: day.amount,
-                      type: day.rate_type,
-                      holiday: day.is_holiday,
-                      total: 0
-                    };
-                  }
-                  acc[key].count++;
-                  acc[key].total += day.amount;
-                  return acc;
-                }, {} as Record<string, { count: number; amount: number; type: string; holiday: boolean; total: number }>)
+                booking.days.reduce(
+                  (acc, day) => {
+                    const key = `${day.rate_type}-${day.is_holiday}-${day.amount}`;
+                    if (!acc[key]) {
+                      acc[key] = {
+                        count: 0,
+                        amount: day.amount,
+                        type: day.rate_type,
+                        holiday: day.is_holiday,
+                        total: 0,
+                      };
+                    }
+                    acc[key].count++;
+                    acc[key].total += day.amount;
+                    return acc;
+                  },
+                  {} as Record<
+                    string,
+                    { count: number; amount: number; type: string; holiday: boolean; total: number }
+                  >,
+                ),
               ).map((item, i) => (
                 <div key={i} className="flex justify-between items-center text-[13px] text-bark">
                   <div className="flex items-center flex-wrap gap-x-2">
@@ -140,12 +151,15 @@ export function BookingDetailScreen() {
                       </span>
                     )}
                     <span className="text-bark-light font-medium ml-1">
-                      × {item.count} {item.type === 'boarding' ? (item.count === 1 ? 'night' : 'nights') : 'day'}
+                      × {item.count}{' '}
+                      {item.type === 'boarding' ? (item.count === 1 ? 'night' : 'nights') : 'day'}
                     </span>
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-[14px]">${item.total.toFixed(2)}</div>
-                    <div className="text-[10px] text-bark-light font-medium mt-0.5">${item.amount.toFixed(2)}/each</div>
+                    <div className="text-[10px] text-bark-light font-medium mt-0.5">
+                      ${item.amount.toFixed(2)}/each
+                    </div>
                   </div>
                 </div>
               ))}

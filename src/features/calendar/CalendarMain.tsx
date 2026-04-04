@@ -18,23 +18,23 @@ import {
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_VISIBLE_LANES = 4;
-const LANE_H = 16; 
+const LANE_H = 16;
 const LANE_GAP = 1;
 
 // ─── Per-dog color palette (Vibrant & Distinct) ──────────────────────────
 const DOG_PALETTE = [
   { bg: 'rgba(143, 184, 134, 0.95)', text: '#fff' }, // Sage
-  { bg: 'rgba(212, 132, 90, 0.95)', text: '#fff' },  // Terracotta
+  { bg: 'rgba(212, 132, 90, 0.95)', text: '#fff' }, // Terracotta
   { bg: 'rgba(126, 200, 227, 0.95)', text: '#fff' }, // Sky
-  { bg: 'rgba(235, 185, 96, 0.95)', text: '#fff' },  // Golden Oak
+  { bg: 'rgba(235, 185, 96, 0.95)', text: '#fff' }, // Golden Oak
   { bg: 'rgba(182, 143, 196, 0.95)', text: '#fff' }, // Berry
   { bg: 'rgba(110, 139, 116, 0.95)', text: '#fff' }, // Bark Green
   { bg: 'rgba(219, 126, 126, 0.95)', text: '#fff' }, // Rosewood
   { bg: 'rgba(100, 149, 237, 0.95)', text: '#fff' }, // Cornflower
-  { bg: 'rgba(160, 120, 90, 0.95)', text: '#fff' },  // Cedar
+  { bg: 'rgba(160, 120, 90, 0.95)', text: '#fff' }, // Cedar
   { bg: 'rgba(147, 197, 114, 0.95)', text: '#fff' }, // Lime Glow
   { bg: 'rgba(240, 142, 128, 0.95)', text: '#fff' }, // Peach
-  { bg: 'rgba(95, 158, 160, 0.95)', text: '#fff' },  // Cadet Blue
+  { bg: 'rgba(95, 158, 160, 0.95)', text: '#fff' }, // Cadet Blue
 ];
 
 function dogColor(dogId: string) {
@@ -82,7 +82,7 @@ function WeekRow({
           const today = isToday(day);
           const selected = selectedDate && isSameDay(day, selectedDate);
           const dateStr = format(day, 'yyyy-MM-dd');
-          
+
           const dayBookings = getBookingsForWeek(bookings, dateStr, dateStr);
           const isArriving = dayBookings.some((b) => b.start_date === dateStr);
           const isDeparting = dayBookings.some((b) => b.end_date === dateStr);
@@ -100,11 +100,21 @@ function WeekRow({
               >
                 {format(day, 'd')}
               </div>
-              
+
               <div className="flex flex-col items-center pointer-events-none h-2 mt-0.5">
                 <div className="flex gap-0.5 h-1 items-center mt-0.5">
-                  {isArriving && <div className="w-1 h-1 rounded-full bg-sage shadow-sm border border-white" aria-label="Arrival" />}
-                  {isDeparting && <div className="w-1 h-1 rounded-full bg-terracotta shadow-sm border border-white" aria-label="Departure" />}
+                  {isArriving && (
+                    <div
+                      className="w-1 h-1 rounded-full bg-sage shadow-sm border border-white"
+                      aria-label="Arrival"
+                    />
+                  )}
+                  {isDeparting && (
+                    <div
+                      className="w-1 h-1 rounded-full bg-terracotta shadow-sm border border-white"
+                      aria-label="Departure"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -114,7 +124,7 @@ function WeekRow({
 
       {/* Booking Bars: Separated below header */}
       <div className="relative px-0.5 ml-px flex-1 flex flex-col overflow-hidden">
-        <div 
+        <div
           className="grid flex-1 items-start"
           style={{
             display: 'grid',
@@ -138,7 +148,10 @@ function WeekRow({
             return (
               <button
                 key={b.id}
-                onClick={(e) => { e.stopPropagation(); onBookingClick(b.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBookingClick(b.id);
+                }}
                 className="flex items-center px-1 overflow-hidden whitespace-nowrap cursor-pointer transition-all hover:brightness-95 active:scale-[0.98] shadow-sm"
                 style={{
                   gridColumn: `${colStart} / ${colEnd}`,
@@ -153,7 +166,7 @@ function WeekRow({
                 }}
               >
                 <span className="truncate drop-shadow-sm uppercase tracking-tighter">
-                  {(isStartInWeek || (week[0].getDay() === 0 && !isStartInWeek)) ? b.dogs?.name : ''}
+                  {isStartInWeek || (week[0].getDay() === 0 && !isStartInWeek) ? b.dogs?.name : ''}
                 </span>
               </button>
             );
@@ -183,11 +196,11 @@ export function CalendarMain() {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const unsorted = getBookingsForWeek(bookings, dateStr, dateStr);
-    
+
     return [...unsorted].sort((a, b) => {
       const aMovement = a.start_date === dateStr || a.end_date === dateStr;
       const bMovement = b.start_date === dateStr || b.end_date === dateStr;
-      
+
       if (aMovement && !bMovement) return -1;
       if (!aMovement && bMovement) return 1;
       return (a.dogs?.name ?? '').localeCompare(b.dogs?.name ?? '');
@@ -195,7 +208,7 @@ export function CalendarMain() {
   }, [bookings, selectedDate]);
 
   return (
-    <div className="flex flex-col h-full bg-transparent -mx-4 overflow-hidden relative pb-10">
+    <div className="flex flex-col flex-1 min-h-0 bg-transparent -mx-4 overflow-hidden relative pb-10">
       {/* Month Navigation */}
       <div className="mx-4 mt-1 px-4 py-1.5 glass-card rounded-[24px] flush-shadow mb-1 border-b border-white/20">
         <div className="flex items-center justify-between">
@@ -205,10 +218,17 @@ export function CalendarMain() {
           >
             <CaretLeft size={16} weight="bold" />
           </button>
-          
-          <div className="text-center group cursor-pointer" onClick={() => setCurrentMonth(new Date())}>
-            <h2 className="font-black text-base text-bark uppercase tracking-[0.2em] group-hover:text-sage transition-colors leading-none">{format(currentMonth, 'MMMM')}</h2>
-            <p className="text-[8px] font-bold text-bark-light tracking-[0.3em] mt-0.5 opacity-60 text-center">{format(currentMonth, 'yyyy')}</p>
+
+          <div
+            className="text-center group cursor-pointer"
+            onClick={() => setCurrentMonth(new Date())}
+          >
+            <h2 className="font-black text-base text-bark uppercase tracking-[0.2em] group-hover:text-sage transition-colors leading-none">
+              {format(currentMonth, 'MMMM')}
+            </h2>
+            <p className="text-[8px] font-bold text-bark-light tracking-[0.3em] mt-0.5 opacity-60 text-center">
+              {format(currentMonth, 'yyyy')}
+            </p>
           </div>
 
           <button
@@ -223,14 +243,17 @@ export function CalendarMain() {
       {/* Day Labels */}
       <div className="grid grid-cols-7 px-4 mb-0.5">
         {DAY_LABELS.map((d, i) => (
-          <div key={i} className="text-center text-[7px] font-black text-bark-light opacity-50 uppercase tracking-[0.1em]">
+          <div
+            key={i}
+            className="text-center text-[7px] font-black text-bark-light opacity-50 uppercase tracking-[0.1em]"
+          >
             {d}
           </div>
         ))}
       </div>
 
       {/* Grid: Flex to fit viewport exactly */}
-      <div 
+      <div
         className="mx-3 glass-card rounded-[24px] flush-shadow overflow-hidden mb-1 border border-white/20 flex-1 flex flex-col"
         style={{
           display: 'grid',
@@ -238,7 +261,9 @@ export function CalendarMain() {
         }}
       >
         {isLoading && !bookings.length ? (
-          <div className="flex items-center justify-center text-bark-light font-black uppercase tracking-widest opacity-40 text-[9px]">Syncing...</div>
+          <div className="flex items-center justify-center text-bark-light font-black uppercase tracking-widest opacity-40 text-[9px]">
+            Syncing...
+          </div>
         ) : (
           weeks.map((week, wi) => (
             <WeekRow
@@ -278,68 +303,96 @@ export function CalendarMain() {
           {agendaBookings.length === 0 ? (
             <div className="text-center py-24 opacity-40">
               <span className="text-4xl mb-3 block">💤</span>
-              <p className="text-xs font-black text-bark-light uppercase tracking-[0.2em]">No pups today</p>
+              <p className="text-xs font-black text-bark-light uppercase tracking-[0.2em]">
+                No pups today
+              </p>
             </div>
-          ) : (() => {
-            const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-            const arriving = agendaBookings.filter(b => b.start_date === dateStr);
-            const departing = agendaBookings.filter(b => b.end_date === dateStr);
-            const staying = agendaBookings.filter(b => b.start_date !== dateStr && b.end_date !== dateStr);
+          ) : (
+            (() => {
+              const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+              const arriving = agendaBookings.filter((b) => b.start_date === dateStr);
+              const departing = agendaBookings.filter((b) => b.end_date === dateStr);
+              const staying = agendaBookings.filter(
+                (b) => b.start_date !== dateStr && b.end_date !== dateStr,
+              );
 
-            const renderSection = (title: string, items: typeof agendaBookings, colorClass: string) => {
-              if (items.length === 0) return null;
-              return (
-                <div key={title} className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2 px-1">
-                    <div className={`w-1 h-3 rounded-full ${colorClass}`} />
-                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-bark/40">{title}</h5>
-                    <div className="h-px flex-1 bg-pebble/10 ml-1" />
-                    <span className="text-[9px] font-black text-bark/30 bg-pebble/5 px-2 py-0.5 rounded-full">{items.length}</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    {items.map((b) => (
-                      <div
-                        key={b.id}
-                        onClick={() => { handleBookingClick(b.id); setSelectedDate(null); }}
-                        className="glass-card p-2.5 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer border border-pebble/10"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <DogAvatar name={b.dogs?.name ?? ''} src={b.dogs?.photo_url} size="sm" />
-                          <div className="flex-1 min-w-0 flex items-center gap-3">
-                            <div className="min-w-0 shrink-0">
-                              <h4 className="font-black text-bark text-sm leading-none truncate">{b.dogs?.name}</h4>
-                              <p className="text-[9px] font-bold text-bark/40 mt-0.5 uppercase tracking-tight">
-                                {format(new Date(b.start_date + 'T00:00:00'), 'MMM d')} — {format(new Date(b.end_date + 'T00:00:00'), 'MMM d')}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap flex-1 justify-end mr-1">
-                              <span className="text-[8px] font-black bg-pebble/10 text-bark-light px-1.5 py-0.5 rounded uppercase tracking-tighter border border-pebble/5">{b.type}</span>
+              const renderSection = (
+                title: string,
+                items: typeof agendaBookings,
+                colorClass: string,
+              ) => {
+                if (items.length === 0) return null;
+                return (
+                  <div key={title} className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 px-1">
+                      <div className={`w-1 h-3 rounded-full ${colorClass}`} />
+                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-bark/40">
+                        {title}
+                      </h5>
+                      <div className="h-px flex-1 bg-pebble/10 ml-1" />
+                      <span className="text-[9px] font-black text-bark/30 bg-pebble/5 px-2 py-0.5 rounded-full">
+                        {items.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      {items.map((b) => (
+                        <div
+                          key={b.id}
+                          onClick={() => {
+                            handleBookingClick(b.id);
+                            setSelectedDate(null);
+                          }}
+                          className="glass-card p-2.5 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer border border-pebble/10"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <DogAvatar
+                              name={b.dogs?.name ?? ''}
+                              src={b.dogs?.photo_url}
+                              size="sm"
+                            />
+                            <div className="flex-1 min-w-0 flex items-center gap-3">
+                              <div className="min-w-0 shrink-0">
+                                <h4 className="font-black text-bark text-sm leading-none truncate">
+                                  {b.dogs?.name}
+                                </h4>
+                                <p className="text-[9px] font-bold text-bark/40 mt-0.5 uppercase tracking-tight">
+                                  {format(new Date(b.start_date + 'T00:00:00'), 'MMM d')} —{' '}
+                                  {format(new Date(b.end_date + 'T00:00:00'), 'MMM d')}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-wrap flex-1 justify-end mr-1">
+                                <span className="text-[8px] font-black bg-pebble/10 text-bark-light px-1.5 py-0.5 rounded uppercase tracking-tighter border border-pebble/5">
+                                  {b.type}
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          <CaretRight size={14} weight="bold" className="text-pebble/30 shrink-0" />
                         </div>
-                        <CaretRight size={14} weight="bold" className="text-pebble/30 shrink-0" />
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            };
+                );
+              };
 
-            return (
-              <>
-                {renderSection('Arriving', arriving, 'bg-sage')}
-                {renderSection('Departing', departing, 'bg-terracotta')}
-                {renderSection('Staying', staying, 'bg-sky')}
-              </>
-            );
-          })()}
+              return (
+                <>
+                  {renderSection('Arriving', arriving, 'bg-sage')}
+                  {renderSection('Departing', departing, 'bg-terracotta')}
+                  {renderSection('Staying', staying, 'bg-sky')}
+                </>
+              );
+            })()
+          )}
         </div>
       </SlideUpSheet>
 
       <CreateBookingSheet
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
-        prefilledDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
+        prefilledDate={
+          selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
+        }
         onSuccess={() => {
           setIsSheetOpen(false);
           void queryClient.invalidateQueries({ queryKey: ['bookings'] });

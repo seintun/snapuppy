@@ -136,8 +136,10 @@ export async function getBookingFormOptions(sitterId: string): Promise<BookingFo
 
   const [{ data: dogs, error: dogsError }, { data: profile, error: profileError }] =
     await Promise.all([
-      supabase.from('dogs')
-        .select(`
+      supabase
+        .from('dogs')
+        .select(
+          `
           id,
           name,
           owner_name,
@@ -147,11 +149,14 @@ export async function getBookingFormOptions(sitterId: string): Promise<BookingFo
           sitter_id,
           created_at,
           updated_at
-        `)
+        `,
+        )
         .eq('sitter_id', sitterId)
         .order('name'),
-      supabase.from('profiles')
-        .select(`
+      supabase
+        .from('profiles')
+        .select(
+          `
           id,
           email,
           display_name,
@@ -162,7 +167,8 @@ export async function getBookingFormOptions(sitterId: string): Promise<BookingFo
           is_guest,
           created_at,
           updated_at
-        `)
+        `,
+        )
         .eq('id', sitterId)
         .maybeSingle(),
     ]);
@@ -171,7 +177,7 @@ export async function getBookingFormOptions(sitterId: string): Promise<BookingFo
   if (profileError) throw profileError;
 
   return {
-    dogs: (dogs ?? []).map(dog => ({ ...dog, breed: null } as DogRow)),
+    dogs: (dogs ?? []).map((dog) => ({ ...dog, breed: null }) as DogRow),
     profile: profile ? ({ ...profile, business_name: null } as ProfileRow) : null,
   };
 }
@@ -188,6 +194,7 @@ export async function getBookings(sitterId: string): Promise<BookingRecord[]> {
       `,
     )
     .eq('sitter_id', sitterId)
+    .neq('status', 'cancelled')
     .order('start_date', { ascending: false });
 
   if (error) throw error;
@@ -426,7 +433,8 @@ async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow>
   const supabase = await getSupabase();
   const { data: dog, error } = await supabase
     .from('dogs')
-    .select(`
+    .select(
+      `
       id,
       name,
       owner_name,
@@ -436,7 +444,8 @@ async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow>
       sitter_id,
       created_at,
       updated_at
-    `)
+    `,
+    )
     .eq('id', dogId)
     .eq('sitter_id', sitterId)
     .single();
