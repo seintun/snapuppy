@@ -25,11 +25,18 @@ const LANE_GAP = 2; // px gap between lanes
 // ─── Per-dog color palette (hashed from dog_id for consistency) ────────────────
 // 5 distinct, on-brand colors with solid bg + white/dark text
 const DOG_PALETTE = [
-  { bg: '#8FB886', text: '#fff' },          // sage
-  { bg: '#D4845A', text: '#fff' },          // terracotta
-  { bg: '#5BA4C8', text: '#fff' },          // deeper sky
-  { bg: '#9B7EC8', text: '#fff' },          // soft purple
-  { bg: '#C8946A', text: '#fff' },          // warm amber
+  { bg: '#8FB886', text: '#fff' }, // sage
+  { bg: '#D4845A', text: '#fff' }, // terracotta
+  { bg: '#5BA4C8', text: '#fff' }, // sky
+  { bg: '#9B7EC8', text: '#fff' }, // purple
+  { bg: '#C8946A', text: '#fff' }, // amber
+  { bg: '#6A9B94', text: '#fff' }, // teal
+  { bg: '#D46A6A', text: '#fff' }, // rose
+  { bg: '#A4C85B', text: '#fff' }, // lime
+  { bg: '#6A72C8', text: '#fff' }, // indigo
+  { bg: '#C8B85B', text: '#fff' }, // mustard
+  { bg: '#8B7355', text: '#fff' }, // bark
+  { bg: '#728C69', text: '#fff' }, // forest
 ];
 
 function dogColor(dogId: string) {
