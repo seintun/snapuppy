@@ -1,7 +1,4 @@
 {
-  "projectSettings": {
-    "framework": "vite"
-  },
   "rewrites": [
     {
       "source": "/(.*)",
