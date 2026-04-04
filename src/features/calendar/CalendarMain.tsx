@@ -100,10 +100,12 @@ function WeekRow({
                 {format(day, 'd')}
               </div>
               
-              <div className="flex flex-col items-center gap-0.5 mt-0.5 pointer-events-none">
+              <div className="flex flex-col items-center mt-0.5 pointer-events-none">
                 {totalDogs > 0 && inMonth && (
-                  <span className="text-[10px] font-black text-sage flex items-center gap-0.5 px-1.5 py-0.5 bg-white/70 rounded-full border border-white shadow-sm backdrop-blur-[2px] transform scale-110 leading-none mb-1">
-                    🐾<span className="opacity-60 scale-75">x</span>{totalDogs}
+                  <span className="text-[10px] font-black text-sage flex items-center gap-1 px-2 py-0.5 bg-white/90 rounded-full border border-pebble/10 shadow-sm backdrop-blur-[4px] leading-none mb-1 ring-1 ring-white">
+                    <span className="text-[8px]">🐾</span>
+                    <span className="opacity-40 text-[7px] font-bold">x</span>
+                    {totalDogs}
                   </span>
                 )}
                 <div className="flex gap-1 h-2 items-center">
