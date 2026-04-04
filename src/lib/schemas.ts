@@ -88,10 +88,10 @@ export type DogFormData = z.infer<typeof DogSchema>;
 // Profile schema
 // ---------------------------------------------------------------------------
 
-/** HH:MM with real hour (0–23) and minute (0–59) */
+/** HH:MM (or HH:MM:ss) with real hour (0–23) and minute (0–59) */
 const cutoffTimeStr = z
   .string()
-  .regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)')
+  .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time format (HH:MM)')
   .refine((v) => {
     const [h, m] = v.split(':').map(Number);
     return h >= 0 && h <= 23 && m >= 0 && m <= 59;

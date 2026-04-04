@@ -5,9 +5,11 @@ import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
+import { SignOut, Buildings, CurrencyDollar, Sun, Clock } from '@phosphor-icons/react';
+import { TimePicker } from '@/components/ui/TimePicker';
 
 export function ProfileScreen() {
-  const { signOut } = useAuthContext();
+  const { signOut, user } = useAuthContext();
   const { addToast } = useToast();
 
   const { data: profile, isLoading } = useProfile();
@@ -17,6 +19,8 @@ export function ProfileScreen() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(ProfileSchema),
@@ -29,7 +33,6 @@ export function ProfileScreen() {
     },
   });
 
-  // Sync form with profile data when it loads
   useEffect(() => {
     if (profile) {
       reset({
@@ -46,7 +49,7 @@ export function ProfileScreen() {
     async (data: ProfileFormData) => {
       try {
         await updateProfileMutation({
-          business_name: data.businessName,
+          business_name: data.businessName || null,
           nightly_rate: data.nightlyRate,
           daycare_rate: data.daycareRate,
           holiday_surcharge: data.holidaySurcharge,
@@ -69,49 +72,72 @@ export function ProfileScreen() {
   }
 
   return (
-    <div className="pb-10">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="page-title !m-0">Profile</h1>
+    <div className="flex flex-col gap-3 pb-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-xl font-extrabold text-bark tracking-tight">Profile</h1>
         <button
+          type="button"
           onClick={() => void signOut()}
-          className="text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
+          className="flex items-center gap-1.5 text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
         >
+          <SignOut size={14} weight="bold" />
           Sign Out
         </button>
       </div>
 
-      <form onSubmit={(e) => void handleSubmit(onSave)(e)} className="flex flex-col gap-6">
-        {/* Business Settings */}
-        <div className="surface-card">
-          <h2 className="profile-section-title !mt-0">Business Info</h2>
-          <div className="form-field mt-3">
-            <label className="form-label" htmlFor="business-name">
-              Business Name
-            </label>
+      {/* Email chip */}
+      {user?.email && (
+        <div className="flex items-center gap-2 bg-sage-light/40 rounded-xl px-3 py-2">
+          <span className="w-6 h-6 rounded-full bg-sage text-white flex items-center justify-center text-xs font-black shrink-0">
+            {user.email[0].toUpperCase()}
+          </span>
+          <span className="text-xs text-bark font-semibold truncate">{user.email}</span>
+        </div>
+      )}
+
+      <form onSubmit={(e) => void handleSubmit(onSave)(e)} className="flex flex-col gap-3">
+
+        {/* ── Business Info ── */}
+        <div className="surface-card !p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Buildings size={14} weight="bold" className="text-sage" />
+            <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
+              Business
+            </span>
+          </div>
+          <div>
             <input
               id="business-name"
               type="text"
               maxLength={100}
-              className={`form-input ${errors.businessName ? 'border-terracotta' : ''}`}
-              placeholder="e.g. Happy Paws"
+              className={`form-input w-full text-sm py-2.5 ${errors.businessName ? 'border-terracotta' : ''}`}
+              placeholder="Your business name (optional)"
               {...register('businessName')}
             />
             {errors.businessName && (
-              <p className="text-xs text-terracotta mt-1">{errors.businessName.message}</p>
+              <p className="text-[11px] text-terracotta mt-1">{errors.businessName.message}</p>
             )}
           </div>
         </div>
 
-        {/* Standard Rates */}
-        <div className="surface-card">
-          <h2 className="profile-section-title !mt-0">Standard Rates</h2>
-          <div className="grid grid-cols-1 gap-4 mt-3">
-            <div className="form-field">
-              <label className="form-label" htmlFor="nightly-rate">
-                Nightly Rate (Boarding)
+        {/* ── Rates — 2 × 2 compact grid ── */}
+        <div className="surface-card !p-3">
+          <div className="flex items-center gap-1.5 mb-2.5">
+            <CurrencyDollar size={14} weight="bold" className="text-sage" />
+            <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
+              Rates
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Nightly */}
+            <div>
+              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="nightly-rate">
+                🌙 Boarding / night
               </label>
               <div className="flex">
-                <span className="flex items-center bg-sage-light rounded-l-lg px-3 font-bold text-bark-light border border-pebble border-r-0 text-sm">
+                <span className="flex items-center bg-sage-light rounded-l-lg px-2 font-bold text-sage border border-pebble border-r-0 text-sm">
                   $
                 </span>
                 <input
@@ -120,23 +146,22 @@ export function ProfileScreen() {
                   step="0.01"
                   min="0"
                   max="9999.99"
-                  className={`form-input rounded-l-none flex-1 ${
-                    errors.nightlyRate ? 'border-terracotta' : ''
-                  }`}
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.nightlyRate ? 'border-terracotta' : ''}`}
                   {...register('nightlyRate', { valueAsNumber: true })}
                 />
               </div>
               {errors.nightlyRate && (
-                <p className="text-xs text-terracotta mt-1">{errors.nightlyRate.message}</p>
+                <p className="text-[10px] text-terracotta mt-0.5">{errors.nightlyRate.message}</p>
               )}
             </div>
 
-            <div className="form-field">
-              <label className="form-label" htmlFor="daycare-rate">
-                Daycare Rate
+            {/* Daycare */}
+            <div>
+              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="daycare-rate">
+                ☀️ Daycare / day
               </label>
               <div className="flex">
-                <span className="flex items-center bg-sage-light rounded-l-lg px-3 font-bold text-bark-light border border-pebble border-r-0 text-sm">
+                <span className="flex items-center bg-sage-light rounded-l-lg px-2 font-bold text-sage border border-pebble border-r-0 text-sm">
                   $
                 </span>
                 <input
@@ -145,30 +170,23 @@ export function ProfileScreen() {
                   step="0.01"
                   min="0"
                   max="9999.99"
-                  className={`form-input rounded-l-none flex-1 ${
-                    errors.daycareRate ? 'border-terracotta' : ''
-                  }`}
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.daycareRate ? 'border-terracotta' : ''}`}
                   {...register('daycareRate', { valueAsNumber: true })}
                 />
               </div>
               {errors.daycareRate && (
-                <p className="text-xs text-terracotta mt-1">{errors.daycareRate.message}</p>
+                <p className="text-[10px] text-terracotta mt-0.5">{errors.daycareRate.message}</p>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Special Rules */}
-        <div className="surface-card">
-          <h2 className="profile-section-title !mt-0">Surcharges & Rules</h2>
-          <div className="grid grid-cols-1 gap-4 mt-3">
-            <div className="form-field">
-              <label className="form-label" htmlFor="holiday-surcharge">
-                Holiday Surcharge (Per Night)
+            {/* Holiday surcharge */}
+            <div>
+              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="holiday-surcharge">
+                🎉 Holiday surcharge
               </label>
               <div className="flex">
-                <span className="flex items-center bg-sage-light rounded-l-lg px-3 font-bold text-bark-light border border-pebble border-r-0 text-sm">
-                  + $
+                <span className="flex items-center bg-blush/60 rounded-l-lg px-2 font-bold text-terracotta border border-pebble border-r-0 text-sm">
+                  +$
                 </span>
                 <input
                   id="holiday-surcharge"
@@ -176,43 +194,44 @@ export function ProfileScreen() {
                   step="0.01"
                   min="0"
                   max="9999.99"
-                  className={`form-input rounded-l-none flex-1 ${
-                    errors.holidaySurcharge ? 'border-terracotta' : ''
-                  }`}
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidaySurcharge ? 'border-terracotta' : ''}`}
                   {...register('holidaySurcharge', { valueAsNumber: true })}
                 />
               </div>
               {errors.holidaySurcharge && (
-                <p className="text-xs text-terracotta mt-1">{errors.holidaySurcharge.message}</p>
+                <p className="text-[10px] text-terracotta mt-0.5">{errors.holidaySurcharge.message}</p>
               )}
             </div>
 
-            <div className="form-field">
-              <label className="form-label" htmlFor="cutoff-time">
-                Pickup Cut-off Time
+            {/* Cutoff time */}
+            <div>
+              <label className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1" htmlFor="cutoff-time">
+                🕐 Pickup cut-off
               </label>
-              <input
-                id="cutoff-time"
-                type="time"
-                className={`form-input ${errors.cutoffTime ? 'border-terracotta' : ''}`}
-                {...register('cutoffTime')}
+              <TimePicker
+                value={watch('cutoffTime')}
+                onChange={(v) => setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })}
+                error={!!errors.cutoffTime}
               />
-              <p className="text-[11px] text-bark-light leading-snug">
-                Pickups after this time will incur an additional daycare charge on the final day.
-              </p>
               {errors.cutoffTime && (
-                <p className="text-xs text-terracotta mt-1">{errors.cutoffTime.message}</p>
+                <p className="text-[10px] text-terracotta mt-0.5">{errors.cutoffTime.message}</p>
               )}
             </div>
           </div>
+
+          {/* Cutoff hint */}
+          <p className="text-[10px] text-bark-light mt-2 leading-snug">
+            Pickups after cut-off time add a daycare charge on the final day.
+          </p>
         </div>
 
+        {/* Save button */}
         <button
           type="submit"
-          className="btn-sage mt-2 sticky bottom-[calc(84px+env(safe-area-inset-bottom))] shadow-lg shadow-sage/30 z-10"
+          className="btn-sage sticky bottom-[calc(80px+env(safe-area-inset-bottom))] shadow-lg shadow-sage/20 z-10"
           disabled={saving || !isDirty}
         >
-          {saving ? 'Saving Changes…' : 'Save Profile Changes 🐾'}
+          {saving ? 'Saving…' : 'Save Changes 🐾'}
         </button>
       </form>
     </div>
