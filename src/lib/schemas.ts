@@ -66,7 +66,8 @@ export const DogSchema = z.object({
     .or(z.literal('')),
   ownerPhone: z
     .string()
-    .regex(/^\(\d{3}\) \d{3}-\d{4}$/, 'Must be (XXX) XXX-XXXX')
+    .transform((v) => v.replace(/\D/g, ''))
+    .refine((v) => v === '' || v.length === 10, 'Phone must be 10 digits')
     .optional()
     .or(z.literal('')),
   notes: z

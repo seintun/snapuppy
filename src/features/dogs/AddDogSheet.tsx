@@ -269,18 +269,22 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
               placeholder="Mobile number"
               {...register('ownerPhone', {
                 onChange: (e) => {
-                  let val = (e.target as HTMLInputElement).value.replace(/\D/g, '');
+                  const input = e.target as HTMLInputElement;
+                  let val = input.value.replace(/\D/g, '');
                   if (val.length > 10) val = val.slice(0, 10);
-                  let formatted = val;
-                  if (val.length >= 7) {
-                    formatted = `(${val.slice(0, 3)}) ${val.slice(3, 6)}-${val.slice(6)}`;
-                  } else if (val.length >= 4) {
-                    formatted = `(${val.slice(0, 3)}) ${val.slice(3)}`;
-                  } else if (val.length > 0) {
-                    formatted = `(${val}`;
+                  
+                  let formatted = '';
+                  if (val.length > 0) {
+                    if (val.length <= 3) {
+                      formatted = `(${val}`;
+                    } else if (val.length <= 6) {
+                      formatted = `(${val.slice(0, 3)}) ${val.slice(3)}`;
+                    } else {
+                      formatted = `(${val.slice(0, 3)}) ${val.slice(3, 6)}-${val.slice(6)}`;
+                    }
                   }
-                  (e.target as HTMLInputElement).value = formatted;
-                  return e;
+                  
+                  input.value = formatted;
                 },
               })}
             />
