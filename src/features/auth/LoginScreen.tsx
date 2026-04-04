@@ -92,7 +92,7 @@ function PasscodeInput({
         <p className="text-lg font-bold text-bark">{email}</p>
       </div>
 
-      <div className="flex justify-center gap-3">
+      <div className="flex justify-center gap-2">
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <input
             key={i}
@@ -108,14 +108,14 @@ function PasscodeInput({
               if (digit) handleDigitInput(i, digit);
             }}
             onKeyDown={(e) => handleKeyDown(i, e)}
-            className="w-14 h-16 text-2xl font-bold text-center bg-cream border-2 border-pebble rounded-2xl focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all"
+            className="w-11 h-12 text-lg font-bold text-center bg-cream border-2 border-pebble rounded-xl focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all"
           />
         ))}
       </div>
 
       <button
         type="button"
-        className="btn-sage py-4 text-base mt-2"
+        className="btn-sage py-3 text-sm mt-2"
         onClick={() => onSubmit(value)}
         disabled={value.length !== 6 || isVerifying}
       >
@@ -124,7 +124,7 @@ function PasscodeInput({
 
       <button
         type="button"
-        className="text-sm text-bark-light hover:text-sage text-center font-semibold py-2"
+        className="text-xs text-bark-light hover:text-sage text-center font-semibold"
         onClick={onChangeEmail}
       >
         ← Change email
