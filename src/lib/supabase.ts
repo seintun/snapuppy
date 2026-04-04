@@ -24,13 +24,34 @@ const supabaseAnonKey = requiredEnv('VITE_SUPABASE_ANON_KEY');
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-export const signInWithMagicLink = (email: string) =>
+export const sendPasscode = (email: string) =>
   supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
       shouldCreateUser: true,
     },
+  });
+
+export const verifyPasscode = (email: string, code: string) =>
+  supabase.auth.verifyOtp({
+    email,
+    token: code,
+    type: 'email',
+  });
+
+export const signUpWithPassword = (email: string, password: string) =>
+  supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+export const signInWithPassword = (email: string, password: string) =>
+  supabase.auth.signInWithPassword({
+    email,
+    password,
   });
 
 export const signOut = () => supabase.auth.signOut();
@@ -59,18 +80,3 @@ export async function signInAnonymously(): Promise<void> {
   const { error } = await supabase.auth.signInAnonymously();
   if (error) throw error;
 }
-
-export const signUpWithPassword = (email: string, password: string) =>
-  supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
-
-export const signInWithPassword = (email: string, password: string) =>
-  supabase.auth.signInWithPassword({
-    email,
-    password,
-  });

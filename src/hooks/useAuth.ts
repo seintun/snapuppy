@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import {
   onAuthStateChange,
-  signInWithMagicLink,
+  sendPasscode,
+  verifyPasscode,
   signOut as supabaseSignOut,
   supabase,
   signInAnonymously as supabaseSignInAnonymously,
@@ -19,7 +20,8 @@ export interface AuthState {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string) => Promise<void>;
+  sendPasscode: (email: string) => Promise<void>;
+  verifyPasscode: (email: string, code: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signInAnonymously: () => Promise<void>;
@@ -114,9 +116,15 @@ export function useAuth(): AuthState {
     };
   }, []);
 
-  const signIn = useCallback(async (email: string) => {
-    const { error } = await signInWithMagicLink(email);
+  const sendPasscodeFn = useCallback(async (email: string) => {
+    const { error } = await sendPasscode(email);
     if (error) throw error;
+  }, []);
+
+  const verifyPasscodeFn = useCallback(async (email: string, code: string) => {
+    const { error, data } = await verifyPasscode(email, code);
+    if (error) throw error;
+    if (!data.session) throw new Error('Verification failed');
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
@@ -143,7 +151,8 @@ export function useAuth(): AuthState {
     user,
     profile,
     loading,
-    signIn,
+    sendPasscode: sendPasscodeFn,
+    verifyPasscode: verifyPasscodeFn,
     signUp,
     signInWithPassword,
     signInAnonymously,
