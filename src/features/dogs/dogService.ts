@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { compressImageWithAutoFormat, isValidImageFile, isImageTooLarge } from '@/lib/image-utils';
 import type { Database } from '@/types/database';
 
 type Dog = Database['public']['Tables']['dogs']['Row'];
@@ -147,14 +148,23 @@ export async function deleteDog(id: string, sitterId?: string): Promise<void> {
 }
 
 export async function uploadDogPhoto(sitterId: string, dogId: string, file: File): Promise<string> {
-  // Sanitize filename: Replace non-alphanumeric chars (except . and -) with underscores
-  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  if (!isValidImageFile(file)) {
+    throw new Error('Invalid image file. Please upload a JPEG, PNG, or WebP image.');
+  }
+
+  if (isImageTooLarge(file, 10)) {
+    throw new Error('Image file is too large. Maximum size is 10MB.');
+  }
+
+  const { file: compressedFile } = await compressImageWithAutoFormat(file);
+
+  const cleanName = compressedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   const preferredPath = `${sitterId}/${dogId}/${cleanName}`;
   const legacyPath = `${dogId}/${cleanName}`;
 
   const { error: preferredError } = await supabase.storage
     .from('dog-photos')
-    .upload(preferredPath, file, { upsert: true });
+    .upload(preferredPath, compressedFile, { upsert: true });
 
   if (!preferredError) {
     const { data } = supabase.storage.from('dog-photos').getPublicUrl(preferredPath);
@@ -175,7 +185,7 @@ export async function uploadDogPhoto(sitterId: string, dogId: string, file: File
 
   const { error: legacyError } = await supabase.storage
     .from('dog-photos')
-    .upload(legacyPath, file, { upsert: true });
+    .upload(legacyPath, compressedFile, { upsert: true });
 
   if (legacyError) throw legacyError;
 
