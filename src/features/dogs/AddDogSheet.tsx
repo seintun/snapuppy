@@ -28,7 +28,7 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: fetchableBreeds } = useDogBreeds();
-  const activeBreedsList = fetchableBreeds || [];
+  const activeBreedsList = useMemo(() => fetchableBreeds || [], [fetchableBreeds]);
 
   const [showBreeds, setShowBreeds] = useState(false);
   const breedRef = useRef<HTMLDivElement>(null);
