@@ -3,7 +3,11 @@ export type OfflineMutationKind =
   | 'update-booking'
   | 'close-booking'
   | 'create-report'
-  | 'update-report';
+  | 'update-report'
+  | 'create-dog'
+  | 'update-dog'
+  | 'delete-dog'
+  | 'update-profile';
 
 export interface OfflineMutation<T = Record<string, unknown>> {
   id: string;
@@ -33,7 +37,10 @@ function getStorage(): StorageAdapter {
     return candidate as StorageAdapter;
   }
   return {
-    getItem: (_key: string) => memoryStore,
+    getItem: (key: string) => {
+      void key;
+      return memoryStore;
+    },
     setItem: (_key: string, value: string) => {
       memoryStore = value;
     },

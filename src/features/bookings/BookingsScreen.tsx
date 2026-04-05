@@ -9,6 +9,11 @@ import { type BookingStatus, type BookingRecord } from '@/lib/bookingService';
 import { useBookings } from '@/hooks/useBookings';
 import { CreateBookingSheet } from './CreateBookingSheet';
 import { format } from 'date-fns';
+import { PendingRequestCard } from './PendingRequestCard';
+import { AcceptRequestModal } from './AcceptRequestModal';
+import { DeclineRequestModal } from './DeclineRequestModal';
+import { acceptClientRequest, declineClientRequest } from '@/lib/bookingService';
+import { useAuthContext } from '@/features/auth/useAuthContext';
 import {
   bookingStatusOptions,
   formatBookingRange,
@@ -23,13 +28,16 @@ interface GroupedBookings {
 
 export function BookingsScreen() {
   const navigate = useNavigate();
+  const { user } = useAuthContext();
   const { data: bookings = [], isLoading, isError, error } = useBookings();
-  const [filter, setFilter] = useState<BookingStatus>('active');
+  const [filter, setFilter] = useState<'all' | BookingStatus>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [accepting, setAccepting] = useState<BookingRecord | null>(null);
+  const [declining, setDeclining] = useState<BookingRecord | null>(null);
 
   const filteredBookings = useMemo(() => {
-    let result = bookings.filter((booking) => booking.status === filter);
+    let result = filter === 'all' ? bookings : bookings.filter((booking) => booking.status === filter);
     
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -50,7 +58,7 @@ export function BookingsScreen() {
     const sortedItems = [...filteredBookings].sort((a, b) => {
       const dateA = new Date(a.start_date).getTime();
       const dateB = new Date(b.start_date).getTime();
-      return filter === 'active' ? dateA - dateB : dateB - dateA;
+      return filter === 'active' || filter === 'pending' ? dateA - dateB : dateB - dateA;
     });
 
     sortedItems.forEach((booking) => {
@@ -70,7 +78,7 @@ export function BookingsScreen() {
       const dateA = new Date(a);
       const dateB = new Date(b);
       
-      if (filter === 'active') {
+      if (filter === 'active' || filter === 'pending') {
         return dateA.getTime() - dateB.getTime();
       }
       return dateB.getTime() - dateA.getTime();
@@ -85,14 +93,14 @@ export function BookingsScreen() {
           <div className="px-1 pt-2">
             <h1 className="text-3xl font-black text-bark tracking-tight leading-none mb-1">Bookings</h1>
             <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em]">
-              {filteredBookings.length} {getStatusLabel(filter)}
+              {filteredBookings.length} {filter === 'all' ? 'All' : getStatusLabel(filter)}
             </p>
           </div>
           
           {/* Failsafe Compact Filter Bar - Optimized for No Overlap */}
           <div className="flex items-center">
             <div className="inline-flex rounded-full bg-pebble/10 p-0.5 shadow-sm border border-pebble/5">
-              {bookingStatusOptions.map((status) => (
+              {(['all', ...bookingStatusOptions] as const).map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -156,11 +164,18 @@ export function BookingsScreen() {
                         {/* Timeline Node Connector */}
                         <div className="absolute -left-[5.5px] top-3.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-sage shadow-sm z-10" />
 
-                        <Card
-                          className="p-0 border border-pebble/5 overflow-hidden flex flex-col mb-3 shadow-sm"
-                          pressable
-                          onClick={() => navigate(`/bookings/${booking.id}`)}
-                        >
+                        {booking.status === 'pending' ? (
+                          <PendingRequestCard
+                            booking={booking}
+                            onAccept={() => setAccepting(booking)}
+                            onDecline={() => setDeclining(booking)}
+                          />
+                        ) : (
+                          <Card
+                            className="p-0 border border-pebble/5 overflow-hidden flex flex-col mb-3 shadow-sm"
+                            pressable
+                            onClick={() => navigate(`/bookings/${booking.id}`)}
+                          >
                           {/* Timeline Date Header */}
                           <div className="flex items-center justify-between px-3 py-1.5 bg-pebble/5">
                             <div className="flex items-center gap-2 min-w-0">
@@ -195,15 +210,19 @@ export function BookingsScreen() {
                                   {booking.dog?.owner_name || 'Individual'}
                                 </p>
                               </div>
-                              <div className="text-right shrink-0">
+                            <div className="text-right shrink-0">
                                 <p className="text-base font-black text-terracotta leading-none">
                                   {formatCurrency(booking.total_amount)}
+                                </p>
+                                <p className="text-[9px] text-bark-light uppercase tracking-wide mt-0.5">
+                                  {booking.source ?? 'manual'}
                                 </p>
                               </div>
                             </div>
                             <CaretRight size={14} weight="bold" className="text-pebble/30 shrink-0 ml-1" />
                           </div>
-                        </Card>
+                          </Card>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -213,7 +232,7 @@ export function BookingsScreen() {
         ) : (
           <div className="mt-8">
             <EmptyState
-              title={searchQuery ? "No matches found" : `No ${getStatusLabel(filter).toLowerCase()} bookings`}
+              title={searchQuery ? "No matches found" : `No ${(filter === 'all' ? 'all' : getStatusLabel(filter)).toLowerCase()} bookings`}
               description={searchQuery ? "Try a different dog or owner name." : "Tap the + button to create a booking."}
             />
           </div>
@@ -224,6 +243,24 @@ export function BookingsScreen() {
 
       <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
       <AddButton onClick={() => setIsCreateOpen(true)} variant="booking" isActive={isCreateOpen} />
+      <AcceptRequestModal
+        isOpen={Boolean(accepting)}
+        booking={accepting}
+        onClose={() => setAccepting(null)}
+        onConfirm={() => {
+          if (!accepting || !user?.id) return;
+          void acceptClientRequest(accepting.id, user.id).finally(() => setAccepting(null));
+        }}
+      />
+      <DeclineRequestModal
+        isOpen={Boolean(declining)}
+        booking={declining}
+        onClose={() => setDeclining(null)}
+        onConfirm={(reason) => {
+          if (!declining || !user?.id) return;
+          void declineClientRequest(declining.id, user.id, reason).finally(() => setDeclining(null));
+        }}
+      />
     </div>
   );
 }

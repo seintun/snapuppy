@@ -1,7 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
-import { buildPaymentCloseUpdate } from '@/lib/bookingService';
-import { supabase } from '@/lib/supabase';
+import { useCloseBooking } from '@/hooks/useBookings';
 
 interface CloseBookingSheetProps {
   isOpen: boolean;
@@ -15,6 +14,7 @@ interface CloseBookingValues {
 }
 
 export function CloseBookingSheet({ isOpen, onClose, bookingId }: CloseBookingSheetProps) {
+  const { mutateAsync: closeBooking, isPending } = useCloseBooking();
   const { register, handleSubmit, formState } = useForm<CloseBookingValues>({
     defaultValues: {
       tipAmount: 0,
@@ -23,13 +23,13 @@ export function CloseBookingSheet({ isOpen, onClose, bookingId }: CloseBookingSh
   });
 
   const submit = handleSubmit(async (values) => {
-    const payload = buildPaymentCloseUpdate({
+    await closeBooking({
+      id: bookingId,
+      input: {
       tipAmount: values.tipAmount,
       paymentNotes: values.paymentNotes,
+      },
     });
-
-    const { error } = await supabase.from('bookings').update(payload).eq('id', bookingId);
-    if (error) throw error;
     onClose();
   });
 
@@ -44,8 +44,8 @@ export function CloseBookingSheet({ isOpen, onClose, bookingId }: CloseBookingSh
           Payment notes
           <textarea className="form-input mt-1" {...register('paymentNotes')} />
         </label>
-        <button className="btn-sage w-full" type="submit" disabled={formState.isSubmitting}>
-          {formState.isSubmitting ? 'Closing…' : 'Mark as Paid'}
+        <button className="btn-sage w-full" type="submit" disabled={formState.isSubmitting || isPending}>
+          {formState.isSubmitting || isPending ? 'Closing…' : 'Mark as Paid'}
         </button>
       </form>
     </SlideUpSheet>

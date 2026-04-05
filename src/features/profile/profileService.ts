@@ -9,6 +9,8 @@ const PROFILE_SELECT_WITH_BUSINESS_NAME = `
   email,
   display_name,
   business_name,
+  business_logo_url,
+  payment_instructions,
   nightly_rate,
   daycare_rate,
   holiday_surcharge,
@@ -22,6 +24,8 @@ const PROFILE_SELECT_FALLBACK = `
   id,
   email,
   display_name,
+  business_logo_url,
+  payment_instructions,
   nightly_rate,
   daycare_rate,
   holiday_surcharge,
@@ -101,4 +105,17 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
   }
 
   throw error;
+}
+
+export async function updateClientToken(userId: string, token: string): Promise<void> {
+  const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      client_token: token,
+      client_token_expires: expiresAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+  if (error) throw error;
 }

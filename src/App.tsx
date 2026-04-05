@@ -39,6 +39,9 @@ const ClientDashboard = lazy(() =>
 const ClientBookingDetail = lazy(() =>
   import('@/features/client').then((m) => ({ default: m.ClientBookingDetail })),
 );
+const ClientInvoiceView = lazy(() =>
+  import('@/features/invoice').then((m) => ({ default: m.ClientInvoiceView })),
+);
 
 function LoadingFallback() {
   return (
@@ -104,6 +107,14 @@ export default function App() {
             />
           </Route>
         </Route>
+        <Route
+          path="/invoice/:bookingId"
+          element={
+            <Suspense fallback={<LoadingFallback />}>
+              <ClientInvoiceView />
+            </Suspense>
+          }
+        />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>

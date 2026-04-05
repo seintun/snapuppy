@@ -7,6 +7,7 @@ import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
 import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
+import { CloseBookingSheet } from './CloseBookingSheet';
 
 export function BookingDetailScreen() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,7 @@ export function BookingDetailScreen() {
   const { mutateAsync: updateBookingStatusMutation } = useUpdateBookingStatus();
 
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [closeSheetOpen, setCloseSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleCancel = useCallback(async () => {
@@ -211,11 +213,34 @@ export function BookingDetailScreen() {
           </div>
         )}
 
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <button
+            type="button"
+            className="btn-sage"
+            onClick={() => navigate(`/invoice/${booking.id}`)}
+          >
+            Generate Invoice
+          </button>
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={() => setCloseSheetOpen(true)}
+            disabled={booking.status === 'cancelled' || booking.is_paid === true}
+          >
+            {booking.is_paid ? 'Already Paid' : 'Mark as Paid'}
+          </button>
+        </div>
+
         <div className="mt-3">
           <h2 className="text-sm font-black text-bark mb-2 uppercase tracking-wide">Daily Reports</h2>
           <ReportList bookingId={booking.id} />
         </div>
       </div>
+      <CloseBookingSheet
+        isOpen={closeSheetOpen}
+        onClose={() => setCloseSheetOpen(false)}
+        bookingId={booking.id}
+      />
     </div>
   );
 }

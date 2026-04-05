@@ -22,7 +22,7 @@ export type CalendarBooking = {
   is_holiday: boolean;
   status: string;
   dog_id: string;
-  dogs: { name: string; photo_url: string | null } | null;
+  dogs: { name: string; photo_url: string | null; owner_phone?: string | null; notes?: string | null } | null;
 };
 
 /** Returns bookings active on a given date (string comparison, avoids TZ issues) */

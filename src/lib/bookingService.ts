@@ -56,7 +56,10 @@ export interface CreateBookingInput {
   startDate: string;
   endDate: string;
   status?: BookingStatus;
+  source?: BookingSource;
+  notes?: string | null;
   pickupDateTime?: string;
+  dropoffDateTime?: string;
   holidayDates?: true | Iterable<BookingDateInput>;
 }
 
@@ -253,6 +256,10 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     start_date: input.startDate,
     end_date: input.endDate,
     status: input.status ?? 'active',
+    source: input.source ?? 'manual',
+    notes: input.notes ?? null,
+    pickup_time: input.pickupDateTime ?? null,
+    dropoff_time: input.dropoffDateTime ?? null,
     type: pricing.type,
     total_amount: pricing.totalAmount,
     is_holiday: pricing.isHoliday,
@@ -390,6 +397,58 @@ export async function deleteBooking(bookingId: string, sitterId: string): Promis
     .eq('id', bookingId)
     .eq('sitter_id', sitterId);
 
+  if (error) throw error;
+}
+
+export async function createClientRequest(input: {
+  sitterId: string;
+  dogId: string;
+  startDate: string;
+  endDate: string;
+  notes?: string | null;
+}) {
+  return createBooking({
+    sitterId: input.sitterId,
+    dogId: input.dogId,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    status: 'pending',
+    source: 'client_request',
+    notes: input.notes ?? null,
+  });
+}
+
+export async function acceptClientRequest(bookingId: string, sitterId: string): Promise<void> {
+  await updateBookingStatus(bookingId, sitterId, 'active');
+}
+
+export async function declineClientRequest(
+  bookingId: string,
+  sitterId: string,
+  reason?: string,
+): Promise<void> {
+  const supabase = await getSupabase();
+  const { error } = await supabase
+    .from('bookings')
+    .update({
+      status: 'cancelled',
+      payment_notes: reason ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', bookingId)
+    .eq('sitter_id', sitterId);
+
+  if (error) throw error;
+}
+
+export async function closeBooking(bookingId: string, sitterId: string, input: PaymentCloseInput) {
+  const supabase = await getSupabase();
+  const payload = buildPaymentCloseUpdate(input);
+  const { error } = await supabase
+    .from('bookings')
+    .update(payload)
+    .eq('id', bookingId)
+    .eq('sitter_id', sitterId);
   if (error) throw error;
 }
 

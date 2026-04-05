@@ -5,6 +5,7 @@ import { EmailSchema, PasswordSchema } from '@/lib/schemas';
 
 const PASSCODE_COOLDOWN_MS = 30_000;
 const PASSCODE_COOLDOWN_STORAGE_KEY = 'snapuppy.passcode_next_allowed_at';
+const REMEMBER_DEVICE_STORAGE_KEY = 'snapuppy.remember_device';
 
 function DogIcon() {
   return (
@@ -170,6 +171,7 @@ export function LoginScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [nextAllowedAt, setNextAllowedAt] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [rememberDevice, setRememberDevice] = useState(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(PASSCODE_COOLDOWN_STORAGE_KEY);
@@ -177,6 +179,10 @@ export function LoginScreen() {
     if (Number.isFinite(parsed) && parsed > Date.now()) {
       setNextAllowedAt(parsed);
     }
+  }, []);
+
+  useEffect(() => {
+    setRememberDevice(window.localStorage.getItem(REMEMBER_DEVICE_STORAGE_KEY) === 'true');
   }, []);
 
   useEffect(() => {
@@ -249,6 +255,11 @@ export function LoginScreen() {
 
     try {
       await verifyPasscode(email.trim(), passcode);
+      if (rememberDevice) {
+        window.localStorage.setItem(REMEMBER_DEVICE_STORAGE_KEY, 'true');
+      } else {
+        window.localStorage.removeItem(REMEMBER_DEVICE_STORAGE_KEY);
+      }
     } catch (error) {
       const raw = error instanceof Error ? error.message : '';
       if (/invalid|incorrect/i.test(raw)) {
@@ -259,6 +270,14 @@ export function LoginScreen() {
     } finally {
       setIsVerifying(false);
     }
+  }
+
+  function handleBiometric() {
+    if (!window.PublicKeyCredential) {
+      setAuthError('Biometric auth is not available on this device.');
+      return;
+    }
+    setAuthError('Biometric unlock is available after the first successful login.');
   }
 
   return (
@@ -386,6 +405,19 @@ export function LoginScreen() {
                 />
               </div>
             )}
+
+            <label className="flex items-center gap-2 text-xs text-bark-light">
+              <input
+                type="checkbox"
+                checked={rememberDevice}
+                onChange={(e) => setRememberDevice(e.target.checked)}
+              />
+              Remember device
+            </label>
+
+            <button type="button" className="btn-sage !py-2 text-xs" onClick={handleBiometric}>
+              Use Biometric
+            </button>
 
             {authError && (
               <div className="p-3 bg-blush/80 text-terracotta rounded-xl text-sm font-semibold text-center border border-blush">

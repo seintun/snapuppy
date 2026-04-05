@@ -1,6 +1,6 @@
 import { useCalendarBookings } from '@/hooks/useBookings';
 import { format, startOfToday, getHours } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { PawPrint, CheckCircle, Clock, Info } from '@phosphor-icons/react';
@@ -21,6 +21,7 @@ export function DashboardScreen() {
 
   // Fetch current month bookings to identify today's arrivals/departures
   const { data: bookings = [], isLoading } = useCalendarBookings(today);
+  const [arrivedIds, setArrivedIds] = useState<string[]>([]);
 
   const arriving = useMemo(() => 
     bookings.filter((b) => b.start_date === todayStr), 
@@ -106,6 +107,20 @@ export function DashboardScreen() {
                 <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">No arrivals</p>
               </div>
             )}
+            {arriving.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {arriving.map((b) => (
+                  <button
+                    key={`${b.id}-arrived`}
+                    type="button"
+                    className="btn-sage !py-2 !px-3 !text-xs"
+                    onClick={() => setArrivedIds((prev) => [...new Set([...prev, b.id])])}
+                  >
+                    {arrivedIds.includes(b.id) ? `${b.dogs?.name} Arrived` : `Mark ${b.dogs?.name} Arrived`}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="h-px bg-pebble/30 mx-2" />
@@ -147,6 +162,21 @@ export function DashboardScreen() {
                 <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">No pups staying</p>
               </div>
             )}
+            {staying.some((b) => b.dogs?.owner_phone) ? (
+              <div className="flex flex-wrap gap-2">
+                {staying
+                  .filter((b) => Boolean(b.dogs?.owner_phone))
+                  .map((b) => (
+                    <a
+                      key={`${b.id}-call`}
+                      className="btn-sage !py-2 !px-3 !text-xs"
+                      href={`tel:${b.dogs?.owner_phone ?? ''}`}
+                    >
+                      Call {b.dogs?.name}
+                    </a>
+                  ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="h-px bg-pebble/30 mx-2" />

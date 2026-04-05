@@ -54,8 +54,11 @@ export type Database = {
           id: string;
           is_holiday: boolean;
           is_paid: boolean | null;
+          notes: string | null;
+          dropoff_time: string | null;
           paid_at: string | null;
           payment_notes: string | null;
+          pickup_time: string | null;
           sitter_id: string;
           source: string | null;
           start_date: string;
@@ -72,8 +75,11 @@ export type Database = {
           id?: string;
           is_holiday?: boolean;
           is_paid?: boolean | null;
+          notes?: string | null;
+          dropoff_time?: string | null;
           paid_at?: string | null;
           payment_notes?: string | null;
+          pickup_time?: string | null;
           sitter_id: string;
           source?: string | null;
           start_date: string;
@@ -90,8 +96,11 @@ export type Database = {
           id?: string;
           is_holiday?: boolean;
           is_paid?: boolean | null;
+          notes?: string | null;
+          dropoff_time?: string | null;
           paid_at?: string | null;
           payment_notes?: string | null;
+          pickup_time?: string | null;
           sitter_id?: string;
           source?: string | null;
           start_date?: string;
@@ -230,6 +239,7 @@ export type Database = {
           id: string;
           is_guest: boolean;
           nightly_rate: number;
+          payment_instructions: string | null;
           updated_at: string;
         };
         Insert: {
@@ -246,6 +256,7 @@ export type Database = {
           id: string;
           is_guest?: boolean;
           nightly_rate?: number;
+          payment_instructions?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -262,6 +273,7 @@ export type Database = {
           id?: string;
           is_guest?: boolean;
           nightly_rate?: number;
+          payment_instructions?: string | null;
           updated_at?: string;
         };
         Relationships: [];

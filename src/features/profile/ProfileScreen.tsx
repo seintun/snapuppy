@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthContext } from '@/features/auth/useAuthContext';
@@ -7,8 +7,10 @@ import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
 import { SignOut, Buildings, CurrencyDollar, Clock } from '@phosphor-icons/react';
 import { TimePicker } from '@/components/ui/TimePicker';
+import { ClientLinkModal } from './ClientLinkModal';
 
 export function ProfileScreen() {
+  const [clientModalOpen, setClientModalOpen] = useState(false);
   const { signOut, user } = useAuthContext();
   const { addToast } = useToast();
 
@@ -26,6 +28,8 @@ export function ProfileScreen() {
     resolver: zodResolver(ProfileSchema),
     defaultValues: {
       businessName: '',
+      businessLogoUrl: '',
+      paymentInstructions: '',
       nightlyRate: 0,
       daycareRate: 0,
       holidaySurcharge: 0,
@@ -37,6 +41,8 @@ export function ProfileScreen() {
     if (profile) {
       reset({
         businessName: profile.business_name ?? '',
+        businessLogoUrl: profile.business_logo_url ?? '',
+        paymentInstructions: profile.payment_instructions ?? '',
         nightlyRate: profile.nightly_rate,
         daycareRate: profile.daycare_rate,
         holidaySurcharge: profile.holiday_surcharge,
@@ -50,6 +56,8 @@ export function ProfileScreen() {
       try {
         await updateProfileMutation({
           business_name: data.businessName || null,
+          business_logo_url: data.businessLogoUrl || null,
+          payment_instructions: data.paymentInstructions || null,
           nightly_rate: data.nightlyRate,
           daycare_rate: data.daycareRate,
           holiday_surcharge: data.holidaySurcharge,
@@ -76,14 +84,23 @@ export function ProfileScreen() {
       {/* Header row */}
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-xl font-extrabold text-bark tracking-tight">Profile</h1>
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className="flex items-center gap-1.5 text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
-        >
-          <SignOut size={14} weight="bold" />
-          Sign Out
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="btn-sage !px-3 !py-1.5 !text-xs"
+            onClick={() => setClientModalOpen(true)}
+          >
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="flex items-center gap-1.5 text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
+          >
+            <SignOut size={14} weight="bold" />
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Email chip */}
@@ -117,6 +134,19 @@ export function ProfileScreen() {
             {errors.businessName && (
               <p className="text-[11px] text-terracotta mt-1">{errors.businessName.message}</p>
             )}
+            <input
+              id="business-logo-url"
+              type="url"
+              className={`form-input w-full text-sm py-2.5 mt-2 ${errors.businessLogoUrl ? 'border-terracotta' : ''}`}
+              placeholder="Business logo URL"
+              {...register('businessLogoUrl')}
+            />
+            <textarea
+              id="payment-instructions"
+              className={`form-input w-full text-sm py-2.5 mt-2 ${errors.paymentInstructions ? 'border-terracotta' : ''}`}
+              placeholder="Payment instructions (Venmo/CashApp/Zelle)"
+              {...register('paymentInstructions')}
+            />
           </div>
         </div>
 
@@ -258,6 +288,7 @@ export function ProfileScreen() {
           {saving ? 'Saving…' : 'Save Changes 🐾'}
         </button>
       </form>
+      <ClientLinkModal isOpen={clientModalOpen} onClose={() => setClientModalOpen(false)} />
     </div>
   );
 }
