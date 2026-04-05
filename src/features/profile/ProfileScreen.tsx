@@ -1,16 +1,30 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
-import { SignOut, Buildings, CurrencyDollar, Clock } from '@phosphor-icons/react';
+import { generateClientToken } from '@/lib/clientToken';
+import {
+  SignOut,
+  Buildings,
+  CurrencyDollar,
+  Clock,
+  Share,
+  Copy,
+  Check,
+} from '@phosphor-icons/react';
 import { TimePicker } from '@/components/ui/TimePicker';
+import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 
 export function ProfileScreen() {
   const { signOut, user } = useAuthContext();
   const { addToast } = useToast();
+  const [showClientLink, setShowClientLink] = useState(false);
+  const [clientToken, setClientToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const { data: profile, isLoading } = useProfile();
   const { mutateAsync: updateProfileMutation, isPending: saving } = useUpdateProfile();
@@ -42,6 +56,9 @@ export function ProfileScreen() {
         holidaySurcharge: profile.holiday_surcharge,
         cutoffTime: profile.cutoff_time,
       });
+      if (profile.client_token) {
+        setClientToken(profile.client_token);
+      }
     }
   }, [profile, reset]);
 
@@ -62,6 +79,29 @@ export function ProfileScreen() {
     },
     [updateProfileMutation, addToast],
   );
+
+  const handleGenerateLink = useCallback(async () => {
+    if (!user) return;
+    setGenerating(true);
+    try {
+      const result = await generateClientToken(user.id);
+      setClientToken(result.token);
+      setShowClientLink(true);
+      addToast('Client link generated!', 'success');
+    } catch (err) {
+      addToast('Failed to generate link', 'error');
+    } finally {
+      setGenerating(false);
+    }
+  }, [user, addToast]);
+
+  const handleCopyLink = useCallback(() => {
+    if (!clientToken) return;
+    const link = `${window.location.origin}/client/${clientToken}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [clientToken]);
 
   if (isLoading) {
     return (
@@ -95,6 +135,29 @@ export function ProfileScreen() {
           <span className="text-xs text-bark font-semibold truncate">{user.email}</span>
         </div>
       )}
+
+      {/* Client Portal Link Section */}
+      <div className="surface-card !p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Share size={14} weight="bold" className="text-sage" />
+            <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
+              Client Portal
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateLink}
+            disabled={generating}
+            className="text-xs font-bold text-sage bg-sage-light px-3 py-1.5 rounded-lg"
+          >
+            {generating ? 'Generating...' : clientToken ? 'View Link' : 'Generate Link'}
+          </button>
+        </div>
+        <p className="text-[10px] text-bark-light mt-2 leading-snug">
+          Share this link with clients so they can view their bookings and request new stays.
+        </p>
+      </div>
 
       <form onSubmit={(e) => void handleSubmit(onSave)(e)} className="flex flex-col gap-3">
         {/* ── Business Info ── */}
@@ -258,6 +321,36 @@ export function ProfileScreen() {
           {saving ? 'Saving…' : 'Save Changes 🐾'}
         </button>
       </form>
+
+      {/* Client Link Modal */}
+      <SlideUpSheet
+        isOpen={showClientLink}
+        onClose={() => setShowClientLink(false)}
+        title="Client Portal Link"
+      >
+        <div className="flex flex-col gap-4 p-2">
+          <p className="text-sm text-bark-light">
+            Share this link with your clients. They can use it to view their bookings and request
+            new stays.
+          </p>
+          <div className="flex items-center gap-2 bg-pebble/20 rounded-xl p-3">
+            <input
+              type="text"
+              readOnly
+              value={clientToken ? `${window.location.origin}/client/${clientToken}` : ''}
+              className="flex-1 bg-transparent text-sm text-bark truncate"
+            />
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="p-2 bg-sage text-white rounded-lg"
+            >
+              {copied ? <Check size={18} weight="bold" /> : <Copy size={18} weight="bold" />}
+            </button>
+          </div>
+          {copied && <p className="text-xs text-sage text-center">Link copied to clipboard!</p>}
+        </div>
+      </SlideUpSheet>
     </div>
   );
 }

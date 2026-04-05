@@ -10,6 +10,8 @@ import {
   getBookings,
   saveBookingDays as svcSaveBookingDays,
   updateBookingStatus as svcUpdateBookingStatus,
+  acceptClientRequest as svcAcceptClientRequest,
+  declineClientRequest as svcDeclineClientRequest,
   type BookingRecord,
   type BookingStatus,
   type CreateBookingInput,
@@ -146,6 +148,33 @@ export function useDeleteBooking() {
     mutationFn: (id: string) => svcDeleteBooking(id, user!.id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+    },
+  });
+}
+
+export function useAcceptRequest() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (bookingId: string) => svcAcceptClientRequest(bookingId, user!.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      logger.info('Client request accepted successfully');
+    },
+  });
+}
+
+export function useDeclineRequest() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bookingId, reason }: { bookingId: string; reason?: string }) =>
+      svcDeclineClientRequest({ bookingId: bookingId, sitterId: user!.id, reason }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      logger.info('Client request declined');
     },
   });
 }

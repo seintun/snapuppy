@@ -5,16 +5,16 @@ import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AddButton } from '@/components/ui/AddButton';
-import { type BookingStatus, type BookingRecord } from '@/lib/bookingService';
+import { type BookingRecord } from '@/lib/bookingService';
 import { useBookings } from '@/hooks/useBookings';
 import { CreateBookingSheet } from './CreateBookingSheet';
 import { format } from 'date-fns';
 import {
-  bookingStatusOptions,
   formatBookingRange,
   formatCurrency,
   getStatusLabel,
   getDurationText,
+  bookingStatusOptions,
 } from './bookingUi';
 
 interface GroupedBookings {
@@ -24,33 +24,36 @@ interface GroupedBookings {
 export function BookingsScreen() {
   const navigate = useNavigate();
   const { data: bookings = [], isLoading, isError, error } = useBookings();
-  const [filter, setFilter] = useState<BookingStatus>('active');
+  const [filter, setFilter] = useState<string>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const filteredBookings = useMemo(() => {
-    let result = bookings.filter((booking) => booking.status === filter);
-    
+    let result = bookings;
+
+    if (filter !== 'all') {
+      result = bookings.filter((booking) => booking.status === filter);
+    }
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (b) =>
           b.dog?.name.toLowerCase().includes(query) ||
-          b.dog?.owner_name?.toLowerCase().includes(query)
+          b.dog?.owner_name?.toLowerCase().includes(query),
       );
     }
-    
+
     return result;
   }, [bookings, filter, searchQuery]);
 
   const groupedBookings = useMemo(() => {
     const groups: GroupedBookings = {};
-    
-    // Create a copy and sort internal items first
+
     const sortedItems = [...filteredBookings].sort((a, b) => {
       const dateA = new Date(a.start_date).getTime();
       const dateB = new Date(b.start_date).getTime();
-      return filter === 'active' ? dateA - dateB : dateB - dateA;
+      return dateA - dateB;
     });
 
     sortedItems.forEach((booking) => {
@@ -61,21 +64,17 @@ export function BookingsScreen() {
       }
       groups[monthYear].push(booking);
     });
-    
+
     return groups;
-  }, [filteredBookings, filter]);
+  }, [filteredBookings]);
 
   const sortedMonthKeys = useMemo(() => {
     return Object.keys(groupedBookings).sort((a, b) => {
       const dateA = new Date(a);
       const dateB = new Date(b);
-      
-      if (filter === 'active') {
-        return dateA.getTime() - dateB.getTime();
-      }
-      return dateB.getTime() - dateA.getTime();
+      return dateA.getTime() - dateB.getTime();
     });
-  }, [groupedBookings, filter]);
+  }, [groupedBookings]);
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
@@ -83,12 +82,15 @@ export function BookingsScreen() {
       <div className="sticky top-0 z-20 bg-warm-beige/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-pebble/10">
         <div className="flex flex-col gap-4 mb-4">
           <div className="px-1 pt-2">
-            <h1 className="text-3xl font-black text-bark tracking-tight leading-none mb-1">Bookings</h1>
+            <h1 className="text-3xl font-black text-bark tracking-tight leading-none mb-1">
+              Bookings
+            </h1>
             <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em]">
-              {filteredBookings.length} {getStatusLabel(filter)}
+              {filteredBookings.length}{' '}
+              {getStatusLabel(filter as 'active' | 'pending' | 'completed' | 'cancelled')}
             </p>
           </div>
-          
+
           {/* Failsafe Compact Filter Bar - Optimized for No Overlap */}
           <div className="flex items-center">
             <div className="inline-flex rounded-full bg-pebble/10 p-0.5 shadow-sm border border-pebble/5">
@@ -111,9 +113,9 @@ export function BookingsScreen() {
         </div>
 
         <div className="relative group">
-          <MagnifyingGlass 
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-bark-light/20 transition-colors group-focus-within:text-sage" 
-            size={12} 
+          <MagnifyingGlass
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-bark-light/20 transition-colors group-focus-within:text-sage"
+            size={12}
             weight="bold"
           />
           <input
@@ -132,7 +134,7 @@ export function BookingsScreen() {
             Syncing bookings…
           </div>
         ) : null}
-        
+
         {isError ? (
           <div className="p-6 text-center text-terracotta text-sm font-black">
             {error instanceof Error ? error.message : 'Sync failed'}
@@ -152,7 +154,10 @@ export function BookingsScreen() {
                   </div>
                   <div className="flex flex-col gap-2">
                     {groupedBookings[monthYear].map((booking) => (
-                      <div key={booking.id} className="relative pl-3 border-l-[1.5px] border-pebble/20 ml-2">
+                      <div
+                        key={booking.id}
+                        className="relative pl-3 border-l-[1.5px] border-pebble/20 ml-2"
+                      >
                         {/* Timeline Node Connector */}
                         <div className="absolute -left-[5.5px] top-3.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-sage shadow-sm z-10" />
 
@@ -180,9 +185,19 @@ export function BookingsScreen() {
                           {/* Info Body */}
                           <div className="flex items-center gap-3 p-2.5 pt-1.5">
                             <div className="relative shrink-0">
-                              <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="md" />
-                              <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm ${booking.type === 'daycare' ? 'bg-sky' : 'bg-sage'}`}>
-                                {booking.type === 'daycare' ? <Sun size={10} weight="fill" className="text-white" /> : <Moon size={10} weight="fill" className="text-white" />}
+                              <DogAvatar
+                                name={booking.dog?.name ?? 'Dog'}
+                                src={booking.dog?.photo_url}
+                                size="md"
+                              />
+                              <div
+                                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm ${booking.type === 'daycare' ? 'bg-sky' : 'bg-sage'}`}
+                              >
+                                {booking.type === 'daycare' ? (
+                                  <Sun size={10} weight="fill" className="text-white" />
+                                ) : (
+                                  <Moon size={10} weight="fill" className="text-white" />
+                                )}
                               </div>
                             </div>
 
@@ -201,7 +216,11 @@ export function BookingsScreen() {
                                 </p>
                               </div>
                             </div>
-                            <CaretRight size={14} weight="bold" className="text-pebble/30 shrink-0 ml-1" />
+                            <CaretRight
+                              size={14}
+                              weight="bold"
+                              className="text-pebble/30 shrink-0 ml-1"
+                            />
                           </div>
                         </Card>
                       </div>
@@ -210,16 +229,23 @@ export function BookingsScreen() {
                 </div>
               ))}
             </div>
-        ) : (
-          <div className="mt-8">
-            <EmptyState
-              title={searchQuery ? "No matches found" : `No ${getStatusLabel(filter).toLowerCase()} bookings`}
-              description={searchQuery ? "Try a different dog or owner name." : "Tap the + button to create a booking."}
-            />
-          </div>
-        )
-      ) : null}
-
+          ) : (
+            <div className="mt-8">
+              <EmptyState
+                title={
+                  searchQuery
+                    ? 'No matches found'
+                    : `No ${getStatusLabel(filter as 'active' | 'pending' | 'completed' | 'cancelled').toLowerCase()} bookings`
+                }
+                description={
+                  searchQuery
+                    ? 'Try a different dog or owner name.'
+                    : 'Tap the + button to create a booking.'
+                }
+              />
+            </div>
+          )
+        ) : null}
       </div>
 
       <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />

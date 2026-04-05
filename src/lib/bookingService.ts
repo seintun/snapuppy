@@ -18,7 +18,7 @@ type BookingDayRow = Tables<'booking_days'>;
 type DogRow = Tables<'dogs'>;
 type ProfileRow = Tables<'profiles'>;
 
-export type BookingStatus = 'active' | 'completed' | 'cancelled';
+export type BookingStatus = 'active' | 'pending' | 'completed' | 'cancelled';
 
 export interface EditableBookingDay extends Omit<BookingDayRow, 'rate_type'> {
   rate_type: BookingRateType;
@@ -55,6 +55,7 @@ export interface CreateBookingInput {
   startDate: string;
   endDate: string;
   status?: BookingStatus;
+  source?: string;
   pickupDateTime?: string;
   holidayDates?: true | Iterable<BookingDateInput>;
 }
@@ -249,6 +250,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     type: pricing.type,
     total_amount: pricing.totalAmount,
     is_holiday: pricing.isHoliday,
+    source: input.source ?? undefined,
   };
 
   const { data: createdBooking, error: bookingError } = await supabase
@@ -409,7 +411,8 @@ function normalizeBookingDays(days: ReadonlyArray<BookingDayRow>): EditableBooki
 }
 
 function normalizeStatus(status: string): BookingStatus {
-  return status === 'completed' || status === 'cancelled' ? status : 'active';
+  if (status === 'pending' || status === 'completed' || status === 'cancelled') return status;
+  return 'active';
 }
 
 function normalizeType(type: string): BookingType {
@@ -457,4 +460,119 @@ async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow>
 
 function toCurrencyAmount(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+export interface CreateClientRequestInput {
+  sitterId: string;
+  dogId: string;
+  startDate: string;
+  endDate: string;
+  specialRequests?: string;
+}
+
+export async function createClientRequest(input: CreateClientRequestInput): Promise<BookingRecord> {
+  return createBooking({
+    sitterId: input.sitterId,
+    dogId: input.dogId,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    status: 'pending',
+    source: 'client_request',
+  });
+}
+
+export async function acceptClientRequest(
+  bookingId: string,
+  sitterId: string,
+): Promise<BookingRecord> {
+  const supabase = await getSupabase();
+  const [options, booking] = await Promise.all([
+    getBookingFormOptions(sitterId),
+    getBooking(bookingId),
+  ]);
+
+  if (!options.profile) {
+    throw new Error('Set your profile rates before accepting a request.');
+  }
+
+  const pricing = buildBookingPricing({
+    startDate: booking.start_date,
+    endDate: booking.end_date,
+    rates: toRateSettings(options.profile),
+  });
+
+  const dayRows = pricing.days.map<TablesInsert<'booking_days'>>((day) => ({
+    booking_id: bookingId,
+    date: day.date,
+    rate_type: day.rate_type,
+    is_holiday: day.is_holiday,
+    amount: day.amount,
+    notes: null,
+  }));
+
+  const { error: daysError } = await supabase.from('booking_days').insert(dayRows);
+
+  if (daysError) {
+    logger.error('Failed to insert booking days for accepted request', daysError, { bookingId });
+    throw new DatabaseError('Failed to create booking days', null, daysError);
+  }
+
+  const { error: updateError } = await supabase
+    .from('bookings')
+    .update({
+      status: 'active',
+      type: pricing.type,
+      total_amount: pricing.totalAmount,
+      is_holiday: pricing.isHoliday,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', bookingId)
+    .eq('sitter_id', sitterId);
+
+  if (updateError) {
+    logger.error('Failed to accept client request', updateError, { bookingId });
+    throw new DatabaseError('Failed to accept request', null, updateError);
+  }
+
+  return {
+    ...booking,
+    status: 'active',
+    type: pricing.type,
+    total_amount: pricing.totalAmount,
+    is_holiday: pricing.isHoliday,
+    days: pricing.days.map((day, idx) => ({
+      id: `${bookingId}-${idx}`,
+      booking_id: bookingId,
+      date: day.date,
+      rate_type: day.rate_type,
+      is_holiday: day.is_holiday,
+      amount: day.amount,
+      notes: null,
+    })),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export interface DeclineClientRequestInput {
+  bookingId: string;
+  sitterId: string;
+  reason?: string;
+}
+
+export async function declineClientRequest(input: DeclineClientRequestInput): Promise<void> {
+  const supabase = await getSupabase();
+
+  const { error } = await supabase
+    .from('bookings')
+    .update({
+      status: 'cancelled',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.bookingId)
+    .eq('sitter_id', input.sitterId);
+
+  if (error) {
+    logger.error('Failed to decline client request', error, { bookingId: input.bookingId });
+    throw new DatabaseError('Failed to decline request', null, error);
+  }
 }

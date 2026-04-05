@@ -25,6 +25,13 @@ const ProfileScreen = lazy(() =>
   import('@/features/profile').then((m) => ({ default: m.ProfileScreen })),
 );
 
+const ClientAuthScreen = lazy(() =>
+  import('@/features/client').then((m) => ({ default: m.ClientAuthScreen })),
+);
+const ClientDashboard = lazy(() =>
+  import('@/features/client').then((m) => ({ default: m.ClientDashboard })),
+);
+
 function LoadingFallback() {
   return (
     <div
@@ -119,6 +126,10 @@ export default function App() {
         </Route>
 
         <Route path="*" element={<ErrorScreen error={new Error('Page not found')} />} />
+
+        <Route path="/client" element={<ClientAuthScreen />} />
+        <Route path="/client/:token" element={<ClientAuthScreen />} />
+        <Route path="/client/dashboard" element={<ClientDashboard />} />
       </Routes>
     </ErrorBoundary>
   );

@@ -1,8 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: '14.5';
   };
@@ -59,6 +57,11 @@ export type Database = {
           total_amount: number;
           type: string;
           updated_at: string;
+          source?: string;
+          is_paid?: boolean;
+          paid_at?: string | null;
+          tip_amount?: number;
+          payment_notes?: string | null;
         };
         Insert: {
           created_at?: string;
@@ -72,6 +75,11 @@ export type Database = {
           total_amount?: number;
           type: string;
           updated_at?: string;
+          source?: string;
+          is_paid?: boolean;
+          paid_at?: string | null;
+          tip_amount?: number;
+          payment_notes?: string | null;
         };
         Update: {
           created_at?: string;
@@ -85,6 +93,11 @@ export type Database = {
           total_amount?: number;
           type?: string;
           updated_at?: string;
+          source?: string;
+          is_paid?: boolean;
+          paid_at?: string | null;
+          tip_amount?: number;
+          payment_notes?: string | null;
         };
         Relationships: [
           {
@@ -99,6 +112,56 @@ export type Database = {
             columns: ['sitter_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      daily_reports: {
+        Row: {
+          id: string;
+          booking_id: string;
+          date: string;
+          photos: string[] | null;
+          notes: string | null;
+          potty_status: string | null;
+          meals_given: string[] | null;
+          behavior: string | null;
+          medications_given: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          booking_id: string;
+          date: string;
+          photos?: string[] | null;
+          notes?: string | null;
+          potty_status?: string | null;
+          meals_given?: string[] | null;
+          behavior?: string | null;
+          medications_given?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          booking_id?: string;
+          date?: string;
+          photos?: string[] | null;
+          notes?: string | null;
+          potty_status?: string | null;
+          meals_given?: string[] | null;
+          behavior?: string | null;
+          medications_given?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'daily_reports_booking_id_fkey';
+            columns: ['booking_id'];
+            isOneToOne: false;
+            referencedRelation: 'bookings';
             referencedColumns: ['id'];
           },
         ];
@@ -163,6 +226,9 @@ export type Database = {
           is_guest: boolean;
           nightly_rate: number;
           updated_at: string;
+          client_token?: string | null;
+          client_token_expires?: string | null;
+          business_logo_url?: string | null;
         };
         Insert: {
           business_name?: string | null;
@@ -176,6 +242,9 @@ export type Database = {
           is_guest?: boolean;
           nightly_rate?: number;
           updated_at?: string;
+          client_token?: string | null;
+          client_token_expires?: string | null;
+          business_logo_url?: string | null;
         };
         Update: {
           business_name?: string | null;
@@ -189,8 +258,74 @@ export type Database = {
           is_guest?: boolean;
           nightly_rate?: number;
           updated_at?: string;
+          client_token?: string | null;
+          client_token_expires?: string | null;
+          business_logo_url?: string | null;
         };
         Relationships: [];
+      };
+      recurring_bookings: {
+        Row: {
+          id: string;
+          sitter_id: string;
+          dog_id: string;
+          start_date: string;
+          end_date: string | null;
+          repeat_days: string[] | null;
+          repeat_pattern: string | null;
+          time_slot_start: string | null;
+          time_slot_end: string | null;
+          status: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          sitter_id: string;
+          dog_id: string;
+          start_date: string;
+          end_date?: string | null;
+          repeat_days?: string[] | null;
+          repeat_pattern?: string | null;
+          time_slot_start?: string | null;
+          time_slot_end?: string | null;
+          status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          sitter_id?: string;
+          dog_id?: string;
+          start_date?: string;
+          end_date?: string | null;
+          repeat_days?: string[] | null;
+          repeat_pattern?: string | null;
+          time_slot_start?: string | null;
+          time_slot_end?: string | null;
+          status?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recurring_bookings_sitter_id_fkey';
+            columns: ['sitter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'recurring_bookings_dog_id_fkey';
+            columns: ['dog_id'];
+            isOneToOne: false;
+            referencedRelation: 'dogs';
+            referencedColumns: ['id'];
+          },
+        ];
       };
     };
     Views: {
@@ -328,3 +463,11 @@ export const Constants = {
     Enums: {},
   },
 } as const;
+
+export type BookingSource = 'manual' | 'client_request';
+
+export type DailyReportPottyStatus = 'good' | 'accident' | 'none_out';
+
+export type RecurringPattern = 'weekly' | 'biweekly' | 'monthly';
+
+export type RecurringStatus = 'active' | 'paused' | 'cancelled';
