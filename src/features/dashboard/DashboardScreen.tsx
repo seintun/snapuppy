@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { PawPrint, CheckCircle, Clock, Info } from '@phosphor-icons/react';
+import { MetricsDashboard } from './MetricsDashboard';
 
 export function DashboardScreen() {
   const today = startOfToday();
@@ -200,6 +201,7 @@ export function DashboardScreen() {
           <p className="text-[11px] font-bold text-bark-light leading-tight">Dogs have about 100 facial expressions, mostly involving their ears!</p>
         </div>
       </div>
+      <MetricsDashboard />
     </div>
   );
 }

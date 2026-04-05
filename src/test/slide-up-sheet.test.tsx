@@ -14,7 +14,7 @@ describe('SlideUpSheet', () => {
     const dialog = screen.getByRole('dialog', { name: 'New Booking', hidden: true });
 
     await waitFor(() => {
-      expect(dialog).toHaveStyle({ transform: 'translateY(0)' });
+      expect(dialog).toHaveClass('sheet--open');
     });
 
     rerender(
@@ -23,6 +23,6 @@ describe('SlideUpSheet', () => {
       </SlideUpSheet>,
     );
 
-    expect(dialog).toHaveStyle({ transform: 'translateY(0)' });
+    expect(dialog).toHaveClass('sheet--open');
   });
 });

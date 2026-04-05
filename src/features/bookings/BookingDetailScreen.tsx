@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
 import { useQueryClient } from '@tanstack/react-query';
+import { ReportList } from '@/features/reports';
 
 export function BookingDetailScreen() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +35,7 @@ export function BookingDetailScreen() {
       setSaving(false);
       setCancelConfirm(false);
     }
-  }, [booking, navigate, addToast, updateBookingStatusMutation]);
+  }, [booking, navigate, addToast, updateBookingStatusMutation, queryClient]);
 
   if (isLoading) {
     return (
@@ -59,6 +60,7 @@ export function BookingDetailScreen() {
   const dog = booking.dog;
   const statusColors: Record<string, string> = {
     active: 'bg-sage',
+    pending: 'bg-sky',
     completed: 'bg-bark-light',
     cancelled: 'bg-terracotta',
   };
@@ -208,6 +210,11 @@ export function BookingDetailScreen() {
             )}
           </div>
         )}
+
+        <div className="mt-3">
+          <h2 className="text-sm font-black text-bark mb-2 uppercase tracking-wide">Daily Reports</h2>
+          <ReportList bookingId={booking.id} />
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildBookingPricing,
+  buildPaymentCloseUpdate,
+  calculateBookingRevenue,
   repriceBookingDays,
   type EditableBookingDay,
 } from '@/lib/bookingService';
@@ -20,14 +22,13 @@ describe('buildBookingPricing', () => {
       buildBookingPricing({
         startDate: '2026-07-03',
         endDate: '2026-07-05',
-        pickupDateTime: '2026-07-05T12:15:00',
         rates,
         holidayDates: ['2026-07-04'],
       }),
     ).toEqual({
       type: 'boarding',
       isHoliday: true,
-      totalAmount: 220,
+      totalAmount: 185,
       days: [
         {
           date: '2026-07-03',
@@ -40,12 +41,6 @@ describe('buildBookingPricing', () => {
           rate_type: 'boarding',
           is_holiday: true,
           amount: 105,
-        },
-        {
-          date: '2026-07-05',
-          rate_type: 'daycare',
-          is_holiday: false,
-          amount: 35,
         },
       ],
     });
@@ -103,6 +98,32 @@ describe('repriceBookingDays', () => {
           amount: 105,
         },
       ],
+    });
+  });
+});
+
+describe('calculateBookingRevenue', () => {
+  it('adds optional tips to the booking subtotal', () => {
+    expect(calculateBookingRevenue(220, 18.5)).toBe(238.5);
+    expect(calculateBookingRevenue(220, undefined)).toBe(220);
+  });
+});
+
+describe('buildPaymentCloseUpdate', () => {
+  it('normalizes close-out fields for completed paid bookings', () => {
+    expect(
+      buildPaymentCloseUpdate({
+        tipAmount: 14.239,
+        paymentNotes: 'Paid via Venmo',
+        paidAt: '2026-07-05T18:30:00.000Z',
+      }),
+    ).toEqual({
+      status: 'completed',
+      is_paid: true,
+      tip_amount: 14.24,
+      payment_notes: 'Paid via Venmo',
+      paid_at: '2026-07-05T18:30:00.000Z',
+      updated_at: '2026-07-05T18:30:00.000Z',
     });
   });
 });

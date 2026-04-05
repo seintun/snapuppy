@@ -18,7 +18,8 @@ type BookingDayRow = Tables<'booking_days'>;
 type DogRow = Tables<'dogs'>;
 type ProfileRow = Tables<'profiles'>;
 
-export type BookingStatus = 'active' | 'completed' | 'cancelled';
+export type BookingStatus = 'active' | 'completed' | 'cancelled' | 'pending';
+export type BookingSource = 'manual' | 'client_request';
 
 export interface EditableBookingDay extends Omit<BookingDayRow, 'rate_type'> {
   rate_type: BookingRateType;
@@ -57,6 +58,12 @@ export interface CreateBookingInput {
   status?: BookingStatus;
   pickupDateTime?: string;
   holidayDates?: true | Iterable<BookingDateInput>;
+}
+
+export interface PaymentCloseInput {
+  tipAmount?: number;
+  paymentNotes?: string | null;
+  paidAt?: string;
 }
 
 export interface SaveBookingDaysInput {
@@ -409,7 +416,10 @@ function normalizeBookingDays(days: ReadonlyArray<BookingDayRow>): EditableBooki
 }
 
 function normalizeStatus(status: string): BookingStatus {
-  return status === 'completed' || status === 'cancelled' ? status : 'active';
+  if (status === 'completed' || status === 'cancelled' || status === 'pending') {
+    return status;
+  }
+  return 'active';
 }
 
 function normalizeType(type: string): BookingType {
@@ -457,4 +467,27 @@ async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow>
 
 function toCurrencyAmount(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+export function calculateBookingRevenue(totalAmount: number, tipAmount?: number): number {
+  return toCurrencyAmount(totalAmount + (tipAmount ?? 0));
+}
+
+export function buildPaymentCloseUpdate(input: PaymentCloseInput): {
+  status: 'completed';
+  is_paid: true;
+  tip_amount: number;
+  payment_notes: string | null;
+  paid_at: string;
+  updated_at: string;
+} {
+  const paidAt = input.paidAt ?? new Date().toISOString();
+  return {
+    status: 'completed',
+    is_paid: true,
+    tip_amount: toCurrencyAmount(Math.max(0, input.tipAmount ?? 0)),
+    payment_notes: input.paymentNotes?.trim() || null,
+    paid_at: paidAt,
+    updated_at: paidAt,
+  };
 }

@@ -53,9 +53,14 @@ export type Database = {
           end_date: string;
           id: string;
           is_holiday: boolean;
+          is_paid: boolean | null;
+          paid_at: string | null;
+          payment_notes: string | null;
           sitter_id: string;
+          source: string | null;
           start_date: string;
           status: string;
+          tip_amount: number | null;
           total_amount: number;
           type: string;
           updated_at: string;
@@ -66,9 +71,14 @@ export type Database = {
           end_date: string;
           id?: string;
           is_holiday?: boolean;
+          is_paid?: boolean | null;
+          paid_at?: string | null;
+          payment_notes?: string | null;
           sitter_id: string;
+          source?: string | null;
           start_date: string;
           status?: string;
+          tip_amount?: number | null;
           total_amount?: number;
           type: string;
           updated_at?: string;
@@ -79,9 +89,14 @@ export type Database = {
           end_date?: string;
           id?: string;
           is_holiday?: boolean;
+          is_paid?: boolean | null;
+          paid_at?: string | null;
+          payment_notes?: string | null;
           sitter_id?: string;
+          source?: string | null;
           start_date?: string;
           status?: string;
+          tip_amount?: number | null;
           total_amount?: number;
           type?: string;
           updated_at?: string;
@@ -99,6 +114,56 @@ export type Database = {
             columns: ['sitter_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      daily_reports: {
+        Row: {
+          behavior: string | null;
+          booking_id: string;
+          created_at: string;
+          date: string;
+          id: string;
+          meals_given: string[] | null;
+          medications_given: string | null;
+          notes: string | null;
+          photos: string[] | null;
+          potty_status: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          behavior?: string | null;
+          booking_id: string;
+          created_at?: string;
+          date: string;
+          id?: string;
+          meals_given?: string[] | null;
+          medications_given?: string | null;
+          notes?: string | null;
+          photos?: string[] | null;
+          potty_status?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          behavior?: string | null;
+          booking_id?: string;
+          created_at?: string;
+          date?: string;
+          id?: string;
+          meals_given?: string[] | null;
+          medications_given?: string | null;
+          notes?: string | null;
+          photos?: string[] | null;
+          potty_status?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'daily_reports_booking_id_fkey';
+            columns: ['booking_id'];
+            isOneToOne: false;
+            referencedRelation: 'bookings';
             referencedColumns: ['id'];
           },
         ];
@@ -152,7 +217,10 @@ export type Database = {
       };
       profiles: {
         Row: {
+          business_logo_url: string | null;
           business_name: string | null;
+          client_token: string | null;
+          client_token_expires: string | null;
           created_at: string;
           cutoff_time: string;
           daycare_rate: number;
@@ -165,7 +233,10 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          business_logo_url?: string | null;
           business_name?: string | null;
+          client_token?: string | null;
+          client_token_expires?: string | null;
           created_at?: string;
           cutoff_time?: string;
           daycare_rate?: number;
@@ -178,7 +249,10 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          business_logo_url?: string | null;
           business_name?: string | null;
+          client_token?: string | null;
+          client_token_expires?: string | null;
           created_at?: string;
           cutoff_time?: string;
           daycare_rate?: number;
@@ -191,6 +265,69 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      recurring_bookings: {
+        Row: {
+          created_at: string;
+          dog_id: string;
+          end_date: string | null;
+          id: string;
+          notes: string | null;
+          repeat_days: string[];
+          repeat_pattern: string;
+          sitter_id: string;
+          start_date: string;
+          status: string;
+          time_slot_end: string | null;
+          time_slot_start: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          dog_id: string;
+          end_date?: string | null;
+          id?: string;
+          notes?: string | null;
+          repeat_days?: string[];
+          repeat_pattern: string;
+          sitter_id: string;
+          start_date: string;
+          status?: string;
+          time_slot_end?: string | null;
+          time_slot_start?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          dog_id?: string;
+          end_date?: string | null;
+          id?: string;
+          notes?: string | null;
+          repeat_days?: string[];
+          repeat_pattern?: string;
+          sitter_id?: string;
+          start_date?: string;
+          status?: string;
+          time_slot_end?: string | null;
+          time_slot_start?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recurring_bookings_dog_id_fkey';
+            columns: ['dog_id'];
+            isOneToOne: false;
+            referencedRelation: 'dogs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'recurring_bookings_sitter_id_fkey';
+            columns: ['sitter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
       };
     };
     Views: {
