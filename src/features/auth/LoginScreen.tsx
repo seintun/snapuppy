@@ -113,7 +113,13 @@ function PasscodeInput({
               const digit = e.target.value.replace(/\D/g, '').slice(-1);
               if (digit) handleDigitInput(i, digit);
             }}
-            onKeyDown={(e) => handleKeyDown(i, e)}
+            onKeyDown={(e) => {
+              handleKeyDown(i, e);
+              if (e.key === 'Enter' && i === 5 && value.length === 6) {
+                e.preventDefault();
+                onSubmit(value);
+              }
+            }}
             className="w-11 h-12 text-lg font-bold text-center bg-cream border-2 border-pebble rounded-xl focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all"
           />
         ))}
@@ -308,7 +314,13 @@ export function LoginScreen() {
             onResend={handleSendCode}
           />
         ) : (
-          <div className="flex flex-col gap-4">
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendCode();
+            }}
+          >
             <div className="form-field">
               <label className="form-label text-xs uppercase tracking-wide">Email</label>
               <input
@@ -330,6 +342,14 @@ export function LoginScreen() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={action === 'sign-up' ? 'new-password' : 'current-password'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (email && password && (action === 'sign-in' || confirmPassword)) {
+                      handleSendCode();
+                    }
+                  }
+                }}
               />
             </div>
 
@@ -345,6 +365,14 @@ export function LoginScreen() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (email && password && confirmPassword) {
+                        handleSendCode();
+                      }
+                    }
+                  }}
                 />
               </div>
             )}
@@ -356,16 +384,15 @@ export function LoginScreen() {
             )}
 
             <button
-              type="button"
+              type="submit"
               className="btn-sage mt-3 py-4 text-base"
-              onClick={handleSendCode}
               disabled={
                 isSending || !email || !password || (action === 'sign-up' && !confirmPassword)
               }
             >
               {isSending ? 'Sending...' : isCoolingDown ? `Wait ${secondsLeft}s` : 'Send Code'}
             </button>
-          </div>
+          </form>
         )}
       </div>
 
