@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, Warning, FileText, Plus } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
 import { useQueryClient } from '@tanstack/react-query';
+import { ReportSheet } from '@/features/reports/ReportSheet';
+import { ReportList } from '@/features/reports/ReportList';
 
 export function BookingDetailScreen() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +20,8 @@ export function BookingDetailScreen() {
 
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
+  const [editingReportId, setEditingReportId] = useState<string | undefined>();
 
   const handleCancel = useCallback(async () => {
     if (!booking) return;
@@ -208,7 +212,52 @@ export function BookingDetailScreen() {
             )}
           </div>
         )}
+
+        {/* Daily Reports Section */}
+        <div className="mt-6 pt-4 border-t border-pebble/30">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FileText size={18} weight="bold" className="text-sage" />
+              <h3 className="text-base font-bold text-bark">Daily Reports</h3>
+            </div>
+            {booking.status === 'active' && (
+              <button
+                onClick={() => {
+                  setEditingReportId(undefined);
+                  setShowReportSheet(true);
+                }}
+                className="flex items-center gap-1 text-xs font-bold text-sage bg-sage-light px-3 py-1.5 rounded-lg"
+              >
+                <Plus size={14} weight="bold" />
+                Add Report
+              </button>
+            )}
+          </div>
+          <ReportList
+            bookingId={booking.id}
+            onEditReport={(reportId) => {
+              setEditingReportId(reportId);
+              setShowReportSheet(true);
+            }}
+            onViewReport={(reportId) => {
+              setEditingReportId(reportId);
+              setShowReportSheet(true);
+            }}
+          />
+        </div>
       </div>
+
+      <ReportSheet
+        isOpen={showReportSheet}
+        onClose={() => {
+          setShowReportSheet(false);
+          setEditingReportId(undefined);
+        }}
+        bookingId={booking.id}
+        bookingStartDate={booking.start_date}
+        bookingEndDate={booking.end_date}
+        editingReportId={editingReportId}
+      />
     </div>
   );
 }

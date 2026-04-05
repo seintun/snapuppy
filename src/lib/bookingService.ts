@@ -576,3 +576,35 @@ export async function declineClientRequest(input: DeclineClientRequestInput): Pr
     throw new DatabaseError('Failed to decline request', null, error);
   }
 }
+
+export interface CloseBookingInput {
+  bookingId: string;
+  sitterId: string;
+  tipAmount: number;
+  paymentNotes?: string;
+}
+
+export async function closeBooking(input: CloseBookingInput): Promise<BookingRecord> {
+  const supabase = await getSupabase();
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('bookings')
+    .update({
+      status: 'completed',
+      is_paid: true,
+      paid_at: now,
+      tip_amount: input.tipAmount,
+      payment_notes: input.paymentNotes ?? null,
+      updated_at: now,
+    })
+    .eq('id', input.bookingId)
+    .eq('sitter_id', input.sitterId);
+
+  if (error) {
+    logger.error('Failed to close booking', error, { bookingId: input.bookingId });
+    throw new DatabaseError('Failed to close booking', null, error);
+  }
+
+  return getBooking(input.bookingId);
+}
