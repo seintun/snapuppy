@@ -137,14 +137,15 @@ function PasscodeInput({
       <div className="flex justify-center gap-4 text-sm">
         <button
           type="button"
-          className="text-bark-light hover:text-sage font-semibold"
+          className={`font-semibold ${isVerifying ? 'text-bark-light cursor-not-allowed' : 'text-bark-light hover:text-sage'}`}
           onClick={onChangeEmail}
+          disabled={isVerifying}
         >
           ← Change email
         </button>
         <button
           type="button"
-          className={`font-semibold ${isCoolingDown ? 'text-bark-light cursor-not-allowed' : 'text-sage hover:underline'}`}
+          className={`font-semibold ${isCoolingDown || isVerifying ? 'text-bark-light cursor-not-allowed' : 'text-sage hover:underline'}`}
           onClick={onResend}
           disabled={isCoolingDown || isVerifying}
         >
@@ -326,10 +327,11 @@ export function LoginScreen() {
               <input
                 type="email"
                 placeholder="you@example.com"
-                className="form-input"
+                className="form-input disabled:opacity-50"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                disabled={isSending || isCoolingDown}
               />
             </div>
 
@@ -338,14 +340,21 @@ export function LoginScreen() {
               <input
                 type="password"
                 placeholder="••••••••"
-                className="form-input"
+                className="form-input disabled:opacity-50"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete={action === 'sign-up' ? 'new-password' : 'current-password'}
+                disabled={isSending || isCoolingDown}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (email && password && (action === 'sign-in' || confirmPassword)) {
+                    if (
+                      email &&
+                      password &&
+                      (action === 'sign-in' || confirmPassword) &&
+                      !isSending &&
+                      !isCoolingDown
+                    ) {
                       handleSendCode();
                     }
                   }
@@ -361,14 +370,15 @@ export function LoginScreen() {
                 <input
                   type="password"
                   placeholder="••••••••"
-                  className="form-input"
+                  className="form-input disabled:opacity-50"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"
+                  disabled={isSending || isCoolingDown}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      if (email && password && confirmPassword) {
+                      if (email && password && confirmPassword && !isSending && !isCoolingDown) {
                         handleSendCode();
                       }
                     }
