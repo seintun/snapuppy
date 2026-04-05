@@ -1,55 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  createReport as svcCreateReport,
-  deleteReport as svcDeleteReport,
-  getReportsByBooking,
-  updateReport as svcUpdateReport,
-  type CreateReportInput,
-  type UpdateReportInput,
+  deleteDailyReport,
+  getBookingReports,
+  saveDailyReport,
+  type SaveDailyReportInput,
 } from '@/lib/reportService';
-import { logger } from '@/lib/logger';
 
-export function useBookingReports(bookingId: string | undefined) {
+export function useReports(bookingId?: string) {
   return useQuery({
-    queryKey: ['reports', bookingId],
-    queryFn: () => getReportsByBooking(bookingId!),
-    enabled: !!bookingId,
+    queryKey: ['daily-reports', bookingId],
+    queryFn: () => getBookingReports(bookingId!),
+    enabled: Boolean(bookingId),
   });
 }
 
-export function useCreateReport() {
+export function useSaveReport(bookingId?: string) {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (input: CreateReportInput) => svcCreateReport(input),
-    onSuccess: (_, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['reports', variables.bookingId] });
-      logger.info('Report created successfully, cache invalidated');
+    mutationFn: (input: SaveDailyReportInput) => saveDailyReport(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['daily-reports', bookingId] });
     },
   });
 }
 
-export function useUpdateReport() {
+export function useDeleteReport(bookingId?: string) {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateReportInput }) =>
-      svcUpdateReport(id, input),
-    onSuccess: (_, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['reports', variables.id] });
-      logger.info('Report updated successfully, cache invalidated');
-    },
-  });
-}
-
-export function useDeleteReport() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => svcDeleteReport(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['reports'] });
-      logger.info('Report deleted successfully, cache invalidated');
+    mutationFn: (reportId: string) => deleteDailyReport(reportId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['daily-reports', bookingId] });
     },
   });
 }

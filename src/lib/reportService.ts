@@ -1,181 +1,177 @@
+import { compressImageWithAutoFormat, isImageTooLarge, isValidImageFile } from '@/lib/image-utils';
+import { DatabaseError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database';
-import { logger } from './logger';
-import { DatabaseError } from './errors';
 
-type DailyReport = Tables<'daily_reports'>;
-type DailyReportInsert = TablesInsert<'daily_reports'>;
-type DailyReportUpdate = TablesUpdate<'daily_reports'>;
+export type PottyStatus = 'good' | 'accident' | 'none_out';
+export type DailyReportRow = Tables<'daily_reports'>;
 
-export interface CreateReportInput {
+export interface SaveDailyReportInput {
+  id?: string;
   bookingId: string;
   date: string;
-  notes?: string;
-  pottyStatus?: string;
-  mealsGiven?: string[];
-  behavior?: string;
-  medicationsGiven?: string;
-  photos?: string[];
+  notes?: string | null;
+  pottyStatus?: PottyStatus | null;
+  mealsGiven?: string[] | null;
+  behavior?: string | null;
+  medicationsGiven?: string | null;
+  existingPhotos?: string[] | null;
+  newPhotos?: File[];
+  sitterId?: string;
 }
 
-export interface UpdateReportInput {
-  notes?: string;
-  pottyStatus?: string;
-  mealsGiven?: string[];
-  behavior?: string;
-  medicationsGiven?: string;
-  photos?: string[];
+export function normalizeMeals(input: string): string[] {
+  return input
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
-interface DateValidationParams {
-  date: string;
-  bookingStartDate: string;
-  bookingEndDate: string;
+export function serializeMeals(input: string[] | null | undefined): string {
+  return (input ?? []).join(', ');
 }
 
-function validateDateWithinBooking({
-  date,
-  bookingStartDate,
-  bookingEndDate,
-}: DateValidationParams): void {
-  if (date < bookingStartDate || date > bookingEndDate) {
-    throw new Error(
-      `Date ${date} is outside booking range ${bookingStartDate} - ${bookingEndDate}`,
-    );
-  }
+export function buildReportPhotoPath(
+  sitterId: string,
+  bookingId: string,
+  reportDate: string,
+  fileName: string,
+) {
+  const cleanName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+  return `${sitterId}/reports/${bookingId}/${reportDate}/${cleanName}`;
 }
 
-export async function getReportsByBooking(bookingId: string): Promise<DailyReport[]> {
+export async function getBookingReports(bookingId: string): Promise<DailyReportRow[]> {
   const { data, error } = await supabase
     .from('daily_reports')
     .select('*')
     .eq('booking_id', bookingId)
-    .order('date', { ascending: true });
+    .order('date', { ascending: false });
 
   if (error) {
-    logger.error('Failed to fetch reports by booking', { bookingId, error });
-    throw new DatabaseError('Failed to fetch reports', error);
+    logger.error('Failed to fetch booking reports', error, { bookingId });
+    throw new DatabaseError('Failed to load daily reports', { bookingId }, error);
   }
 
-  return data as DailyReport[];
+  return data ?? [];
 }
 
-export async function getReportById(id: string): Promise<DailyReport | null> {
-  const { data, error } = await supabase.from('daily_reports').select('*').eq('id', id).single();
+export async function saveDailyReport(input: SaveDailyReportInput): Promise<DailyReportRow> {
+  const uploadedPhotos =
+    input.sitterId && input.newPhotos?.length
+      ? await uploadReportPhotos(input.sitterId, input.bookingId, input.date, input.newPhotos)
+      : [];
 
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    logger.error('Failed to fetch report by id', { id, error });
-    throw new DatabaseError('Failed to fetch report', error);
-  }
+  const photoUrls = [...(input.existingPhotos ?? []), ...uploadedPhotos];
 
-  return data as DailyReport;
-}
-
-export async function createReport(input: CreateReportInput): Promise<DailyReport> {
-  const { bookingId, date, notes, pottyStatus, mealsGiven, behavior, medicationsGiven, photos } =
-    input;
-
-  const { data: booking, error: bookingError } = await supabase
-    .from('bookings')
-    .select('start_date, end_date')
-    .eq('id', bookingId)
-    .single();
-
-  if (bookingError) {
-    logger.error('Failed to fetch booking for date validation', { bookingId, error: bookingError });
-    throw new DatabaseError('Booking not found', bookingError);
-  }
-
-  validateDateWithinBooking({
-    date,
-    bookingStartDate: booking.start_date,
-    bookingEndDate: booking.end_date,
-  });
-
-  const reportData: DailyReportInsert = {
-    booking_id: bookingId,
-    date,
-    notes: notes ?? null,
-    potty_status: pottyStatus ?? null,
-    meals_given: mealsGiven ?? null,
-    behavior: behavior ?? null,
-    medications_given: medicationsGiven ?? null,
-    photos: photos ?? null,
+  const sharedPayload = {
+    booking_id: input.bookingId,
+    date: input.date,
+    notes: input.notes?.trim() || null,
+    potty_status: input.pottyStatus ?? null,
+    meals_given: input.mealsGiven?.length ? input.mealsGiven : null,
+    behavior: input.behavior?.trim() || null,
+    medications_given: input.medicationsGiven?.trim() || null,
+    photos: photoUrls.length ? photoUrls : null,
+    updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase.from('daily_reports').insert(reportData).select().single();
+  if (input.id) {
+    const updatePayload: TablesUpdate<'daily_reports'> = sharedPayload;
+    const { data, error } = await supabase
+      .from('daily_reports')
+      .update(updatePayload)
+      .eq('id', input.id)
+      .select('*')
+      .single();
 
-  if (error) {
-    logger.error('Failed to create report', { bookingId, date, error });
-    throw new DatabaseError('Failed to create report', error);
+    if (error) {
+      logger.error('Failed to update daily report', error, { reportId: input.id });
+      throw new DatabaseError('Failed to update report', { reportId: input.id }, error);
+    }
+
+    return data;
   }
 
-  logger.info('Report created successfully', { reportId: data.id, bookingId, date });
-  return data as DailyReport;
-}
-
-export async function updateReport(id: string, input: UpdateReportInput): Promise<DailyReport> {
-  const { notes, pottyStatus, mealsGiven, behavior, medicationsGiven, photos } = input;
-
-  const updateData: DailyReportUpdate = {
-    ...(notes !== undefined && { notes }),
-    ...(pottyStatus !== undefined && { potty_status: pottyStatus }),
-    ...(mealsGiven !== undefined && { meals_given: mealsGiven }),
-    ...(behavior !== undefined && { behavior }),
-    ...(medicationsGiven !== undefined && { medications_given: medicationsGiven }),
-    ...(photos !== undefined && { photos }),
-  };
-
+  const insertPayload: TablesInsert<'daily_reports'> = sharedPayload;
   const { data, error } = await supabase
     .from('daily_reports')
-    .update(updateData)
-    .eq('id', id)
-    .select()
+    .upsert(insertPayload, { onConflict: 'booking_id,date' })
+    .select('*')
     .single();
 
   if (error) {
-    logger.error('Failed to update report', { id, error });
-    throw new DatabaseError('Failed to update report', error);
+    logger.error('Failed to save daily report', error, { bookingId: input.bookingId, date: input.date });
+    throw new DatabaseError('Failed to save report', { bookingId: input.bookingId, date: input.date }, error);
   }
 
-  logger.info('Report updated successfully', { reportId: id });
-  return data as DailyReport;
+  return data;
 }
 
-export async function deleteReport(id: string): Promise<void> {
-  const { error } = await supabase.from('daily_reports').delete().eq('id', id);
+export async function deleteDailyReport(reportId: string): Promise<void> {
+  const { error } = await supabase.from('daily_reports').delete().eq('id', reportId);
 
   if (error) {
-    logger.error('Failed to delete report', { id, error });
-    throw new DatabaseError('Failed to delete report', error);
+    logger.error('Failed to delete daily report', error, { reportId });
+    throw new DatabaseError('Failed to delete report', { reportId }, error);
   }
-
-  logger.info('Report deleted successfully', { reportId: id });
 }
 
-export async function uploadReportPhoto(
+export async function uploadReportPhotos(
+  sitterId: string,
   bookingId: string,
-  date: string,
-  file: File,
-): Promise<string> {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-  const dateStr = date.replace(/-/g, '');
-  const filePath = `reports/${bookingId}/${dateStr}/${fileName}`;
+  reportDate: string,
+  files: File[],
+): Promise<string[]> {
+  const results: string[] = [];
 
-  const { error } = await supabase.storage.from('dog-photos').upload(filePath, file, {
-    cacheControl: '3600',
-    upsert: false,
-  });
+  for (const file of files) {
+    if (!isValidImageFile(file)) {
+      throw new Error('Invalid image file. Please upload a JPEG, PNG, WebP, or GIF image.');
+    }
 
-  if (error) {
-    logger.error('Failed to upload report photo', { bookingId, date, error });
-    throw new DatabaseError('Failed to upload photo', error);
+    if (isImageTooLarge(file, 10)) {
+      throw new Error('Image file is too large. Maximum size is 10MB.');
+    }
+
+    const { file: compressedFile } = await compressImageWithAutoFormat(file);
+    const preferredPath = buildReportPhotoPath(sitterId, bookingId, reportDate, compressedFile.name);
+    const fallbackPath = `${bookingId}/reports/${reportDate}/${compressedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+    const { error: preferredError } = await supabase.storage
+      .from('dog-photos')
+      .upload(preferredPath, compressedFile, { upsert: true });
+
+    if (!preferredError) {
+      const { data } = supabase.storage.from('dog-photos').getPublicUrl(preferredPath);
+      results.push(data.publicUrl);
+      continue;
+    }
+
+    const isRlsError =
+      (typeof preferredError === 'object' &&
+        preferredError !== null &&
+        'statusCode' in preferredError &&
+        String((preferredError as { statusCode?: string }).statusCode) === '403') ||
+      (typeof preferredError.message === 'string' &&
+        preferredError.message.toLowerCase().includes('row-level security'));
+
+    if (!isRlsError) {
+      throw preferredError;
+    }
+
+    const { error: fallbackError } = await supabase.storage
+      .from('dog-photos')
+      .upload(fallbackPath, compressedFile, { upsert: true });
+
+    if (fallbackError) {
+      throw fallbackError;
+    }
+
+    const { data } = supabase.storage.from('dog-photos').getPublicUrl(fallbackPath);
+    results.push(data.publicUrl);
   }
 
-  const { data: urlData } = supabase.storage.from('dog-photos').getPublicUrl(filePath);
-
-  logger.info('Report photo uploaded successfully', { path: filePath });
-  return urlData.publicUrl;
+  return results;
 }

@@ -1,46 +1,32 @@
-import { useNavigate } from 'react-router';
-import { DogAvatar } from '@/components/ui/DogAvatar';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import {
-  formatBookingRange,
-  formatCurrency,
-  getStatusLabel,
-  getStatusVariant,
-} from '@/features/bookings/bookingUi';
-import type { ClientBooking } from './clientService';
+import { format } from 'date-fns';
 
 interface ClientBookingCardProps {
-  booking: ClientBooking;
+  booking: {
+    id: string;
+    start_date: string;
+    end_date: string;
+    status: string;
+    total_amount: number;
+    dog?: { name?: string | null } | null;
+  };
+  onSelect?: (bookingId: string) => void;
 }
 
-export function ClientBookingCard({ booking }: ClientBookingCardProps) {
-  const navigate = useNavigate();
-
-  const handlePress = () => {
-    navigate(`/client/bookings/${booking.id}`);
-  };
-
-  const statusVariant = getStatusVariant(booking.status);
-  const statusLabel = getStatusLabel(booking.status);
-
+export function ClientBookingCard({ booking, onSelect }: ClientBookingCardProps) {
   return (
-    <Card pressable onClick={handlePress} className="flex items-center gap-3">
-      <DogAvatar name={booking.dogName} src={booking.dogPhotoUrl} size="md" />
-      <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-bark truncate">{booking.dogName}</h3>
-        <p className="text-sm text-bark-light truncate">
-          {formatBookingRange({
-            start_date: booking.startDate,
-            end_date: booking.endDate,
-            type: booking.type,
-          })}
-        </p>
+    <button
+      type="button"
+      className="surface-card p-3 w-full text-left"
+      onClick={() => onSelect?.(booking.id)}
+    >
+      <p className="text-sm font-black text-bark">{booking.dog?.name ?? 'Dog Booking'}</p>
+      <p className="text-xs text-bark-light">
+        {format(new Date(booking.start_date), 'MMM d')} - {format(new Date(booking.end_date), 'MMM d, yyyy')}
+      </p>
+      <div className="mt-2 flex items-center justify-between text-xs">
+        <span className="badge">{booking.status}</span>
+        <span className="font-bold text-terracotta">${booking.total_amount.toFixed(2)}</span>
       </div>
-      <div className="flex flex-col items-end gap-1">
-        <Badge variant={statusVariant}>{statusLabel}</Badge>
-        <span className="text-sm font-bold text-bark">{formatCurrency(booking.totalAmount)}</span>
-      </div>
-    </Card>
+    </button>
   );
 }

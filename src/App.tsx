@@ -24,12 +24,23 @@ const DogDetailScreen = lazy(() =>
 const ProfileScreen = lazy(() =>
   import('@/features/profile').then((m) => ({ default: m.ProfileScreen })),
 );
-
 const ClientAuthScreen = lazy(() =>
   import('@/features/client').then((m) => ({ default: m.ClientAuthScreen })),
 );
+const ClientLayout = lazy(() =>
+  import('@/features/client').then((m) => ({ default: m.ClientLayout })),
+);
+const RequireClientAuth = lazy(() =>
+  import('@/features/client').then((m) => ({ default: m.RequireClientAuth })),
+);
 const ClientDashboard = lazy(() =>
   import('@/features/client').then((m) => ({ default: m.ClientDashboard })),
+);
+const ClientBookingDetail = lazy(() =>
+  import('@/features/client').then((m) => ({ default: m.ClientBookingDetail })),
+);
+const ClientInvoiceView = lazy(() =>
+  import('@/features/invoice').then((m) => ({ default: m.ClientInvoiceView })),
 );
 
 function LoadingFallback() {
@@ -55,6 +66,55 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/auth/callback" element={<AuthCallbackScreen />} />
+        <Route
+          path="/client/:token"
+          element={
+            <Suspense fallback={<LoadingFallback />}>
+              <ClientAuthScreen />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/client/:token"
+          element={
+            <Suspense fallback={<LoadingFallback />}>
+              <RequireClientAuth />
+            </Suspense>
+          }
+        >
+          <Route
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <ClientLayout />
+              </Suspense>
+            }
+          >
+            <Route
+              path="dashboard"
+              element={
+                <Suspense fallback={<LoadingFallback />}>
+                  <ClientDashboard />
+                </Suspense>
+              }
+            />
+            <Route
+              path="bookings/:bookingId"
+              element={
+                <Suspense fallback={<LoadingFallback />}>
+                  <ClientBookingDetail />
+                </Suspense>
+              }
+            />
+          </Route>
+        </Route>
+        <Route
+          path="/invoice/:bookingId"
+          element={
+            <Suspense fallback={<LoadingFallback />}>
+              <ClientInvoiceView />
+            </Suspense>
+          }
+        />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>

@@ -5,77 +5,7 @@ import { EmailSchema, PasswordSchema } from '@/lib/schemas';
 
 const PASSCODE_COOLDOWN_MS = 30_000;
 const PASSCODE_COOLDOWN_STORAGE_KEY = 'snapuppy.passcode_next_allowed_at';
-const REMEMBER_DEVICE_KEY = 'snapuppy_remember_device';
-
-interface RememberDeviceData {
-  email: string;
-  expiresAt: number;
-}
-
-function isBiometricAvailable(): boolean {
-  return (
-    !!window.PublicKeyCredential &&
-    !!(window.navigator as unknown as { webauthn?: unknown }).webauthn
-  );
-}
-
-async function tryBiometricLogin(email: string): Promise<boolean> {
-  try {
-    const stored = localStorage.getItem(REMEMBER_DEVICE_KEY + '_' + email);
-    if (!stored) return false;
-
-    const data: RememberDeviceData = JSON.parse(stored);
-    if (data.expiresAt < Date.now()) {
-      localStorage.removeItem(REMEMBER_DEVICE_KEY + '_' + email);
-      return false;
-    }
-
-    const token = localStorage.getItem(REMEMBER_DEVICE_KEY + '_token_' + email);
-    if (!token) return false;
-
-    const credentialId = Uint8Array.from(atob(token), (c) => c.charCodeAt(0));
-    const assertion = await navigator.credentials.get({
-      publicKey: {
-        challenge: new TextEncoder().encode('snapuppy-auth'),
-        allowCredentials: [{ id: credentialId, type: 'public-key' }],
-      },
-    });
-
-    return !!assertion;
-  } catch {
-    return false;
-  }
-}
-
-async function registerBiometric(email: string, credential: PublicKeyCredential): Promise<void> {
-  const token = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-  localStorage.setItem(REMEMBER_DEVICE_KEY + '_token_' + email, token);
-  const data: RememberDeviceData = {
-    email,
-    expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
-  };
-  localStorage.setItem(REMEMBER_DEVICE_KEY + '_' + email, JSON.stringify(data));
-}
-
-async function createBiometricCredential(email: string): Promise<PublicKeyCredential | null> {
-  try {
-    const credential = await navigator.credentials.create({
-      publicKey: {
-        challenge: new TextEncoder().encode('snapuppy-register'),
-        rp: { name: 'Snapuppy' },
-        user: {
-          id: new TextEncoder().encode(email),
-          name: email,
-          displayName: email,
-        },
-        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-      },
-    });
-    return credential as PublicKeyCredential | null;
-  } catch {
-    return null;
-  }
-}
+const REMEMBER_DEVICE_STORAGE_KEY = 'snapuppy.remember_device';
 
 function DogIcon() {
   return (
@@ -242,31 +172,6 @@ export function LoginScreen() {
   const [nextAllowedAt, setNextAllowedAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [rememberDevice, setRememberDevice] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-
-  useEffect(() => {
-    setBiometricAvailable(isBiometricAvailable());
-  }, []);
-
-  useEffect(() => {
-    if (!biometricAvailable) return;
-
-    const storedKeys = Object.keys(localStorage).filter(
-      (k) => k.startsWith(REMEMBER_DEVICE_KEY + '_') && !k.includes('_token_'),
-    );
-    if (storedKeys.length === 0) return;
-
-    const storedEmail = storedKeys[0].replace(REMEMBER_DEVICE_KEY + '_', '');
-    setEmail(storedEmail);
-
-    (async () => {
-      const success = await tryBiometricLogin(storedEmail);
-      if (!success) {
-        localStorage.removeItem(REMEMBER_DEVICE_KEY + '_' + storedEmail);
-        localStorage.removeItem(REMEMBER_DEVICE_KEY + '_token_' + storedEmail);
-      }
-    })();
-  }, [biometricAvailable]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(PASSCODE_COOLDOWN_STORAGE_KEY);
@@ -274,6 +179,10 @@ export function LoginScreen() {
     if (Number.isFinite(parsed) && parsed > Date.now()) {
       setNextAllowedAt(parsed);
     }
+  }, []);
+
+  useEffect(() => {
+    setRememberDevice(window.localStorage.getItem(REMEMBER_DEVICE_STORAGE_KEY) === 'true');
   }, []);
 
   useEffect(() => {
@@ -320,29 +229,11 @@ export function LoginScreen() {
     }
 
     try {
-      if (action === 'sign-up' && biometricAvailable) {
-        const credential = await createBiometricCredential(emailResult.data.email);
-        if (credential) {
-          await registerBiometric(emailResult.data.email, credential);
-        }
-      }
-
       await sendPasscode(emailResult.data.email);
       setStep('verify');
       const nextTime = Date.now() + PASSCODE_COOLDOWN_MS;
       setNextAllowedAt(nextTime);
       window.localStorage.setItem(PASSCODE_COOLDOWN_STORAGE_KEY, String(nextTime));
-
-      if (rememberDevice && !biometricAvailable) {
-        const data: RememberDeviceData = {
-          email: emailResult.data.email,
-          expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
-        };
-        localStorage.setItem(
-          REMEMBER_DEVICE_KEY + '_' + emailResult.data.email,
-          JSON.stringify(data),
-        );
-      }
     } catch (error) {
       const raw = error instanceof Error ? error.message : '';
       if (/rate\s*limit|429/i.test(raw)) {
@@ -364,6 +255,11 @@ export function LoginScreen() {
 
     try {
       await verifyPasscode(email.trim(), passcode);
+      if (rememberDevice) {
+        window.localStorage.setItem(REMEMBER_DEVICE_STORAGE_KEY, 'true');
+      } else {
+        window.localStorage.removeItem(REMEMBER_DEVICE_STORAGE_KEY);
+      }
     } catch (error) {
       const raw = error instanceof Error ? error.message : '';
       if (/invalid|incorrect/i.test(raw)) {
@@ -376,13 +272,13 @@ export function LoginScreen() {
     }
   }
 
-  const biometricLabel = (() => {
-    if (!biometricAvailable) return null;
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes('mac') && ua.includes('os x')) return 'Face ID';
-    if (ua.includes('touch') || ua.includes('ipad') || ua.includes('iphone')) return 'Touch ID';
-    return 'Biometric';
-  })();
+  function handleBiometric() {
+    if (!window.PublicKeyCredential) {
+      setAuthError('Biometric auth is not available on this device.');
+      return;
+    }
+    setAuthError('Biometric unlock is available after the first successful login.');
+  }
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-8">
@@ -510,6 +406,19 @@ export function LoginScreen() {
               </div>
             )}
 
+            <label className="flex items-center gap-2 text-xs text-bark-light">
+              <input
+                type="checkbox"
+                checked={rememberDevice}
+                onChange={(e) => setRememberDevice(e.target.checked)}
+              />
+              Remember device
+            </label>
+
+            <button type="button" className="btn-sage !py-2 text-xs" onClick={handleBiometric}>
+              Use Biometric
+            </button>
+
             {authError && (
               <div className="p-3 bg-blush/80 text-terracotta rounded-xl text-sm font-semibold text-center border border-blush">
                 {authError}
@@ -525,47 +434,6 @@ export function LoginScreen() {
             >
               {isSending ? 'Sending...' : isCoolingDown ? `Wait ${secondsLeft}s` : 'Send Code'}
             </button>
-
-            {!biometricAvailable && (
-              <label className="flex items-center gap-3 cursor-pointer mt-2">
-                <input
-                  type="checkbox"
-                  checked={rememberDevice}
-                  onChange={(e) => setRememberDevice(e.target.checked)}
-                  className="w-5 h-5 rounded border-2 border-pebble checked:bg-sage checked:border-sage focus:ring-2 focus:ring-sage/20 focus:ring-offset-2"
-                />
-                <span className="text-sm text-bark">Remember this device</span>
-              </label>
-            )}
-
-            {biometricAvailable && (
-              <button
-                type="button"
-                className="flex items-center justify-center gap-2 py-3 text-sm text-sage hover:text-bark transition-colors"
-                onClick={async () => {
-                  if (!email) {
-                    setAuthError('Enter your email first');
-                    return;
-                  }
-                  const success = await tryBiometricLogin(email);
-                  if (!success) {
-                    setAuthError('Biometric verification failed');
-                  }
-                }}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-                </svg>
-                Use {biometricLabel}
-              </button>
-            )}
           </form>
         )}
       </div>

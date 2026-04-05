@@ -1,13 +1,12 @@
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 export function OfflineBanner() {
-  const { isOnline } = useOnlineStatus();
-
+  const isOnline = useOnlineStatus();
   if (isOnline) return null;
 
   return (
-    <div className="bg-terracotta text-cream text-center text-sm font-semibold py-2 px-4 sticky top-0 z-50">
-      You're offline
+    <div className="bg-terracotta text-white text-xs font-bold px-3 py-2 text-center">
+      You're offline. Changes will sync when connection returns.
     </div>
   );
 }

@@ -5,5 +5,8 @@ export * from './useProfile';
 export * from './usePwaInstall';
 export * from './useSwipeToDismiss';
 export * from './useVirtualList';
+export * from './useReports';
+export * from './useRecurring';
 export * from './useOnlineStatus';
 export * from './useOfflineSync';
+export * from './useClientBooking';

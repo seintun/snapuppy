@@ -29,12 +29,14 @@ const dateStr = z
  */
 export const CreateBookingSchema = z
   .object({
-    dogId: z.string().min(1, 'Please select a dog'),
+    dogId: z.string().optional().default(''),
     startDate: dateStr,
     endDate: dateStr,
     isHoliday: z.boolean().default(false),
-    status: z.enum(['active', 'completed', 'cancelled']).default('active'),
+    status: z.enum(['active', 'pending', 'completed', 'cancelled']).default('active'),
     pickupDateTime: z.string().optional(),
+    dropoffDateTime: z.string().optional(),
+    notes: z.string().max(500).optional(),
   })
   .refine((data) => data.endDate >= data.startDate, {
     message: 'Check-out cannot be before check-in',
@@ -116,6 +118,17 @@ export const ProfileSchema = z.object({
     .string()
     .trim()
     .max(100, 'Business name must be 100 characters or fewer')
+    .optional()
+    .or(z.literal('')),
+  businessLogoUrl: z
+    .string()
+    .url('Logo must be a valid URL')
+    .optional()
+    .or(z.literal('')),
+  paymentInstructions: z
+    .string()
+    .trim()
+    .max(300, 'Payment instructions must be 300 characters or fewer')
     .optional()
     .or(z.literal('')),
   nightlyRate: rateField('Nightly rate'),

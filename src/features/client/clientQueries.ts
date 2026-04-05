@@ -1,58 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
-import { getClientBookings, type ClientBooking } from './clientService';
-import { getClientSession } from './clientAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
-interface UseClientBookingsResult {
-  bookings: ClientBooking[];
-  loading: boolean;
-  error: string | null;
-  refresh: () => void;
-}
+export function useClientBookings(sitterId?: string, ownerPhone?: string) {
+  return useQuery({
+    queryKey: ['client-bookings', sitterId, ownerPhone],
+    enabled: Boolean(sitterId && ownerPhone),
+    queryFn: async () => {
+      const normalizedPhone = ownerPhone!.replace(/\D/g, '');
+      const { data: dogs, error: dogsError } = await supabase
+        .from('dogs')
+        .select('id')
+        .eq('sitter_id', sitterId!)
+        .neq('owner_phone', null);
 
-export function useClientBookings(): UseClientBookingsResult {
-  const [bookings, setBookings] = useState<ClientBooking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
+      if (dogsError) throw dogsError;
+      const dogIds = (dogs ?? []).map((dog) => dog.id);
+      if (dogIds.length === 0) return [];
 
-  const session = getClientSession();
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*, dog:dogs(*)')
+        .in('dog_id', dogIds)
+        .order('start_date', { ascending: false });
 
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
-
-  useEffect(() => {
-    if (!session) {
-      queueMicrotask(() => {
-        setBookings([]);
-        setError('No session');
-        setLoading(false);
-      });
-      return;
-    }
-
-    let cancelled = false;
-
-    getClientBookings(session.sitterId, session.dogId)
-      .then((data) => {
-        if (!cancelled) {
-          setBookings(data);
-          setLoading(false);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load bookings');
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session, tick]);
-
-  return { bookings, loading, error, refresh };
-}
-
-export function useClientSession() {
-  return getClientSession();
+      if (error) throw error;
+      return (data ?? []).filter(
+        (booking) => (booking.dog?.owner_phone ?? '').replace(/\D/g, '') === normalizedPhone,
+      );
+    },
+  });
 }

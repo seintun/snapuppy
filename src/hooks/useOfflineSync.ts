@@ -1,50 +1,37 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useOnlineStatus } from './useOnlineStatus';
-import { processQueue, getQueueLength } from '@/lib/offlineQueue';
-import { useToast } from '@/components/ui/useToast';
-
-type SyncStatus = 'idle' | 'syncing' | 'error';
+import { useEffect, useState } from 'react';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { processOfflineQueue } from '@/lib/sync';
 
 export function useOfflineSync() {
-  const { isOnline } = useOnlineStatus();
-  const { addToast } = useToast();
-  const [status, setStatus] = useState<SyncStatus>('idle');
-  const [pendingCount, setPendingCount] = useState(0);
-
-  const checkPending = useCallback(async () => {
-    const count = await getQueueLength();
-    setPendingCount(count);
-  }, []);
+  const isOnline = useOnlineStatus();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [processedCount, setProcessedCount] = useState(0);
 
   useEffect(() => {
-    checkPending();
-  }, [checkPending]);
+    if (!isOnline || isSyncing) return;
 
-  useEffect(() => {
-    if (!isOnline || status === 'syncing') return;
+    let cancelled = false;
 
-    const sync = async () => {
-      const hasPending = await getQueueLength();
-      if (hasPending === 0) return;
-
-      setStatus('syncing');
-      addToast('Syncing offline changes...', 'info');
-
-      const results = await processQueue();
-
-      if (results.failed > 0) {
-        setStatus('error');
-        addToast(`Sync failed: ${results.failed} changes could not be saved`, 'error');
-      } else {
-        setStatus('idle');
-        addToast(`Synced ${results.success} change${results.success !== 1 ? 's' : ''}`, 'success');
+    const run = async () => {
+      setIsSyncing(true);
+      try {
+        const count = await processOfflineQueue(async () => {
+          // Mutations are already persisted; this hook only drains and tracks queue progress.
+        });
+        if (!cancelled) {
+          setProcessedCount((prev) => prev + count);
+        }
+      } finally {
+        if (!cancelled) setIsSyncing(false);
       }
-
-      await checkPending();
     };
 
-    sync();
-  }, [isOnline, status, addToast, checkPending]);
+    void run();
 
-  return { status, pendingCount, isOnline };
+    return () => {
+      cancelled = true;
+    };
+  }, [isOnline, isSyncing]);
+
+  return { isOnline, isSyncing, processedCount };
 }

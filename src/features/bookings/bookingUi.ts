@@ -1,14 +1,7 @@
 import { format } from 'date-fns';
 import type { BookingRecord, BookingStatus } from '@/lib/bookingService';
 
-export type BookingSource = 'manual' | 'client_request';
-
-export const bookingStatusOptions: BookingStatus[] = [
-  'active',
-  'pending',
-  'completed',
-  'cancelled',
-];
+export const bookingStatusOptions: BookingStatus[] = ['active', 'pending', 'completed', 'cancelled'];
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -51,20 +44,9 @@ export function getStatusLabel(status: BookingStatus): string {
   return 'Active';
 }
 
-export function getStatusVariant(status: BookingStatus): 'sage' | 'sky' | 'terracotta' | 'amber' {
-  if (status === 'pending') return 'amber';
+export function getStatusVariant(status: BookingStatus): 'sage' | 'sky' | 'terracotta' {
+  if (status === 'pending') return 'sky';
   if (status === 'completed') return 'sky';
   if (status === 'cancelled') return 'terracotta';
   return 'sage';
 }
-
-export function getSourceLabel(source: BookingSource | undefined): string {
-  if (source === 'client_request') return 'Client Request';
-  return 'Manual';
-}
-
-export const sourceFilterOptions: { value: BookingSource | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'manual', label: 'Manual' },
-  { value: 'client_request', label: 'Client Request' },
-];

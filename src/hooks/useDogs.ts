@@ -8,6 +8,7 @@ import {
   deleteDog as svcDeleteDog,
 } from '@/features/dogs/dogService';
 import type { Database } from '@/types/database';
+import { enqueueOfflineMutation } from '@/lib/offlineQueue';
 
 type Dog = Database['public']['Tables']['dogs']['Row'];
 type DogInsert = Database['public']['Tables']['dogs']['Insert'];
@@ -61,6 +62,12 @@ export function useCreateDog() {
       // Also invalidate booking options as they include dogs
       void queryClient.invalidateQueries({ queryKey: ['booking-options', user?.id] });
     },
+    onError: async (_, variables) => {
+      await enqueueOfflineMutation({
+        kind: 'create-dog',
+        payload: { entity: 'dog', action: 'create', userId: user?.id, ...variables },
+      });
+    },
   });
 }
 
@@ -77,6 +84,12 @@ export function useDeleteDog() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['booking-options', user?.id] });
+    },
+    onError: async (_, variables) => {
+      await enqueueOfflineMutation({
+        kind: 'delete-dog',
+        payload: { entity: 'dog', action: 'delete', userId: user?.id, dogId: variables },
+      });
     },
   });
 }
@@ -95,6 +108,12 @@ export function useUpdateDog() {
       void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id, data.id] });
       void queryClient.invalidateQueries({ queryKey: ['booking-options', user?.id] });
+    },
+    onError: async (_, variables) => {
+      await enqueueOfflineMutation({
+        kind: 'update-dog',
+        payload: { entity: 'dog', action: 'update', userId: user?.id, ...variables },
+      });
     },
   });
 }

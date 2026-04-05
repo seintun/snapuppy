@@ -1,29 +1,19 @@
-import { useMutation } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
-import {
-  createClientRequest as svcCreateClientRequest,
-  type CreateClientRequestInput,
-} from '@/lib/bookingService';
-import { getClientSession } from '@/features/client/clientAuth';
-import { logger } from '@/lib/logger';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createClientRequest } from '@/lib/bookingService';
 
 export function useClientBooking() {
-  const session = getClientSession();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: Omit<CreateClientRequestInput, 'sitterId'>) => {
-      if (!session?.sitterId) {
-        throw new Error('No client session found');
-      }
-
-      return svcCreateClientRequest({
-        ...input,
-        sitterId: session.sitterId,
-      });
-    },
-    onSuccess: () => {
-      logger.info('Client booking request created successfully');
-      void supabase.from('bookings').select('id');
+    mutationFn: (input: { sitterId: string; dogId: string; startDate: string; endDate: string }) =>
+      createClientRequest({
+        sitterId: input.sitterId,
+        dogId: input.dogId,
+        startDate: input.startDate,
+        endDate: input.endDate,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },
   });
 }

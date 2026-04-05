@@ -1,185 +1,100 @@
-import { get, set, del } from 'idb-keyval';
-import type { Database } from '@/types/database';
+export type OfflineMutationKind =
+  | 'create-booking'
+  | 'update-booking'
+  | 'close-booking'
+  | 'create-report'
+  | 'update-report'
+  | 'create-dog'
+  | 'update-dog'
+  | 'delete-dog'
+  | 'update-profile';
 
-const QUEUE_KEY = 'snapuppy-offline-mutation-queue';
-const MAX_RETRIES = 3;
-
-type TableName = keyof Database['public']['Tables'];
-
-export interface OfflineMutation<T extends TableName = TableName> {
+export interface OfflineMutation<T = Record<string, unknown>> {
   id: string;
-  type: 'create' | 'update' | 'delete';
-  table: T;
-  data: Database['public']['Tables'][T]['Insert'] | Database['public']['Tables'][T]['Update'];
-  timestamp: number;
-  retries: number;
+  kind: OfflineMutationKind;
+  payload: T;
+  createdAt: string;
 }
 
-async function getQueue(): Promise<OfflineMutation[]> {
-  const queue = await get<OfflineMutation[]>(QUEUE_KEY);
-  return queue ?? [];
-}
+const STORAGE_KEY = 'snapuppy:offline-queue';
+let memoryStore = '[]';
 
-async function saveQueue(queue: OfflineMutation[]): Promise<void> {
-  await set(QUEUE_KEY, queue);
-}
+type StorageAdapter = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+};
 
-export async function addToQueue(
-  mutation: Omit<OfflineMutation, 'id' | 'timestamp' | 'retries'>,
-): Promise<void> {
-  const queue = await getQueue();
-  queue.push({
-    ...mutation,
-    id: crypto.randomUUID(),
-    timestamp: Date.now(),
-    retries: 0,
-  });
-  await saveQueue(queue);
-}
-
-export async function processQueue(): Promise<{ success: number; failed: number }> {
-  const queue = await getQueue();
-  if (queue.length === 0) {
-    return { success: 0, failed: 0 };
+function getStorage(): StorageAdapter {
+  const candidate = globalThis.localStorage as unknown;
+  if (
+    candidate &&
+    typeof candidate === 'object' &&
+    'getItem' in candidate &&
+    'setItem' in candidate &&
+    typeof (candidate as { getItem: unknown }).getItem === 'function' &&
+    typeof (candidate as { setItem: unknown }).setItem === 'function'
+  ) {
+    return candidate as StorageAdapter;
   }
-
-  const results = { success: 0, failed: 0 };
-  const remaining: OfflineMutation[] = [];
-
-  for (const mutation of queue) {
-    try {
-      await executeMutation(mutation);
-      results.success++;
-    } catch {
-      mutation.retries++;
-      if (mutation.retries < MAX_RETRIES) {
-        const delay = Math.pow(2, mutation.retries) * 1000;
-        await sleep(delay);
-        try {
-          await executeMutation(mutation);
-          results.success++;
-        } catch {
-          remaining.push(mutation);
-          results.failed++;
-        }
-      } else {
-        remaining.push(mutation);
-        results.failed++;
-      }
-    }
-  }
-
-  await saveQueue(remaining);
-  return results;
+  return {
+    getItem: (key: string) => {
+      void key;
+      return memoryStore;
+    },
+    setItem: (_key: string, value: string) => {
+      memoryStore = value;
+    },
+  };
 }
 
-async function executeMutation(mutation: OfflineMutation): Promise<void> {
-  const { supabase } = await import('@/lib/supabase');
-  const client = supabase;
+function readQueue(): OfflineMutation[] {
+  const raw = getStorage().getItem(STORAGE_KEY);
+  if (!raw) return [];
 
-  switch (mutation.table) {
-    case 'dogs': {
-      if (mutation.type === 'create') {
-        await client
-          .from('dogs')
-          .insert(mutation.data as Database['public']['Tables']['dogs']['Insert']);
-      } else if (mutation.type === 'update') {
-        await client
-          .from('dogs')
-          .update(mutation.data as Database['public']['Tables']['dogs']['Update'])
-          .eq('id', (mutation.data as { id: string }).id);
-      } else {
-        await client
-          .from('dogs')
-          .delete()
-          .eq('id', (mutation.data as { id: string }).id);
-      }
-      break;
-    }
-    case 'bookings': {
-      if (mutation.type === 'create') {
-        await client
-          .from('bookings')
-          .insert(mutation.data as Database['public']['Tables']['bookings']['Insert']);
-      } else if (mutation.type === 'update') {
-        await client
-          .from('bookings')
-          .update(mutation.data as Database['public']['Tables']['bookings']['Update'])
-          .eq('id', (mutation.data as { id: string }).id);
-      } else {
-        await client
-          .from('bookings')
-          .delete()
-          .eq('id', (mutation.data as { id: string }).id);
-      }
-      break;
-    }
-    case 'booking_days': {
-      if (mutation.type === 'create') {
-        await client
-          .from('booking_days')
-          .insert(mutation.data as Database['public']['Tables']['booking_days']['Insert']);
-      } else if (mutation.type === 'update') {
-        await client
-          .from('booking_days')
-          .update(mutation.data as Database['public']['Tables']['booking_days']['Update'])
-          .eq('id', (mutation.data as { id: string }).id);
-      } else {
-        await client
-          .from('booking_days')
-          .delete()
-          .eq('id', (mutation.data as { id: string }).id);
-      }
-      break;
-    }
-    case 'daily_reports': {
-      if (mutation.type === 'create') {
-        await client
-          .from('daily_reports')
-          .insert(mutation.data as Database['public']['Tables']['daily_reports']['Insert']);
-      } else if (mutation.type === 'update') {
-        await client
-          .from('daily_reports')
-          .update(mutation.data as Database['public']['Tables']['daily_reports']['Update'])
-          .eq('id', (mutation.data as { id: string }).id);
-      } else {
-        await client
-          .from('daily_reports')
-          .delete()
-          .eq('id', (mutation.data as { id: string }).id);
-      }
-      break;
-    }
-    case 'recurring_bookings': {
-      if (mutation.type === 'create') {
-        await client
-          .from('recurring_bookings')
-          .insert(mutation.data as Database['public']['Tables']['recurring_bookings']['Insert']);
-      } else if (mutation.type === 'update') {
-        await client
-          .from('recurring_bookings')
-          .update(mutation.data as Database['public']['Tables']['recurring_bookings']['Update'])
-          .eq('id', (mutation.data as { id: string }).id);
-      } else {
-        await client
-          .from('recurring_bookings')
-          .delete()
-          .eq('id', (mutation.data as { id: string }).id);
-      }
-      break;
-    }
+  try {
+    const parsed = JSON.parse(raw) as OfflineMutation[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function writeQueue(queue: OfflineMutation[]) {
+  getStorage().setItem(STORAGE_KEY, JSON.stringify(queue));
 }
 
-export async function clearQueue(): Promise<void> {
-  await del(QUEUE_KEY);
+function createMutationId() {
+  return `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export async function getQueueLength(): Promise<number> {
-  const queue = await getQueue();
-  return queue.length;
+export async function enqueueOfflineMutation<T = Record<string, unknown>>(input: {
+  kind: OfflineMutationKind;
+  payload: T;
+}): Promise<OfflineMutation<T>> {
+  const queue = readQueue();
+  const mutation: OfflineMutation<T> = {
+    id: createMutationId(),
+    kind: input.kind,
+    payload: input.payload,
+    createdAt: new Date().toISOString(),
+  };
+
+  writeQueue([...queue, mutation as OfflineMutation]);
+  return mutation;
+}
+
+export async function dequeueOfflineMutation(): Promise<OfflineMutation | null> {
+  const queue = readQueue();
+  const [head, ...rest] = queue;
+  if (!head) return null;
+  writeQueue(rest);
+  return head;
+}
+
+export async function listOfflineMutations(): Promise<OfflineMutation[]> {
+  return readQueue();
+}
+
+export async function clearOfflineQueue(): Promise<void> {
+  writeQueue([]);
 }

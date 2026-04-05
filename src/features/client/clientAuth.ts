@@ -1,56 +1,44 @@
-const CLIENT_SESSION_KEY = 'snapuppy_client_session';
-const SESSION_DURATION_DAYS = 7;
-
-export interface ClientSession {
+interface ClientSession {
+  token: string;
   sitterId: string;
-  sitterToken: string;
-  clientName: string;
-  clientPhone: string;
-  dogId: string;
-  dogName: string;
+  ownerName: string;
+  ownerPhone: string;
   expiresAt: string;
 }
 
-export function setClientSession(session: Omit<ClientSession, 'expiresAt'>): void {
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + SESSION_DURATION_DAYS);
+const CLIENT_SESSION_KEY = 'snapuppy:client-session';
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-  const fullSession: ClientSession = {
-    ...session,
-    expiresAt: expiresAt.toISOString(),
+export function setClientSession(input: {
+  token: string;
+  sitterId: string;
+  ownerName: string;
+  ownerPhone: string;
+}) {
+  const session: ClientSession = {
+    ...input,
+    expiresAt: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
   };
-
-  localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(fullSession));
+  localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(session));
 }
 
 export function getClientSession(): ClientSession | null {
-  const stored = localStorage.getItem(CLIENT_SESSION_KEY);
-  if (!stored) return null;
+  const raw = localStorage.getItem(CLIENT_SESSION_KEY);
+  if (!raw) return null;
 
   try {
-    const session: ClientSession = JSON.parse(stored);
-
-    if (new Date(session.expiresAt) < new Date()) {
-      clearClientSession();
+    const session = JSON.parse(raw) as ClientSession;
+    if (new Date(session.expiresAt).getTime() < Date.now()) {
+      localStorage.removeItem(CLIENT_SESSION_KEY);
       return null;
     }
-
     return session;
   } catch {
-    clearClientSession();
+    localStorage.removeItem(CLIENT_SESSION_KEY);
     return null;
   }
 }
 
-export function clearClientSession(): void {
+export function clearClientSession() {
   localStorage.removeItem(CLIENT_SESSION_KEY);
-}
-
-export function isClientAuthenticated(): boolean {
-  return getClientSession() !== null;
-}
-
-export function getClientSessionSitterToken(): string | null {
-  const session = getClientSession();
-  return session?.sitterToken ?? null;
 }

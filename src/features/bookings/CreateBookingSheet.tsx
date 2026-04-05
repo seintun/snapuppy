@@ -8,8 +8,10 @@ import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
 import { buildBookingPricing } from '@/lib/bookingService';
 import { useBookingOptions, useCreateBooking } from '@/hooks/useBookings';
+import { useCreateDog } from '@/hooks/useDogs';
 import { CreateBookingSchema, type CreateBookingFormData } from '@/lib/schemas';
 import { DogAvatar } from '@/components/ui/DogAvatar';
+import { TimePicker } from '@/components/ui/TimePicker';
 
 export interface CreateBookingSheetProps {
   isOpen: boolean;
@@ -436,6 +438,8 @@ export function CreateBookingSheet({
 
   const { data: options = { dogs: [], profile: null } } = useBookingOptions();
   const { mutateAsync: createBookingMutation, isPending: submitting } = useCreateBooking();
+  const { mutateAsync: createDogMutation } = useCreateDog();
+  const [quickAdd, setQuickAdd] = useState(false);
 
   const {
     register,
@@ -452,6 +456,9 @@ export function CreateBookingSheet({
       isHoliday: false,
       dogId: '',
       status: 'active',
+      pickupDateTime: '',
+      dropoffDateTime: '',
+      notes: '',
     },
   });
 
@@ -460,6 +467,8 @@ export function CreateBookingSheet({
   const endDate = useWatch({ control, name: 'endDate' });
   const isHoliday = useWatch({ control, name: 'isHoliday' });
   const selectedDogId = useWatch({ control, name: 'dogId' });
+  const pickupDateTime = useWatch({ control, name: 'pickupDateTime' });
+  const dropoffDateTime = useWatch({ control, name: 'dropoffDateTime' });
 
   // Reset form when opening/closing or prefilled date changes
   useEffect(() => {
@@ -471,6 +480,9 @@ export function CreateBookingSheet({
         isHoliday: false,
         dogId: '',
         status: 'active',
+        pickupDateTime: '',
+        dropoffDateTime: '',
+        notes: '',
       });
     }
   }, [isOpen, prefilledDate, reset]);
@@ -500,8 +512,35 @@ export function CreateBookingSheet({
       if (!user) return;
 
       try {
+        let nextDogId = data.dogId ?? '';
+
+        if (quickAdd && !nextDogId) {
+          const name = window.prompt('Dog name for quick add');
+          const phone = window.prompt('Owner phone (10 digits)');
+          if (!name) {
+            addToast('Dog name is required for quick add.', 'error');
+            return;
+          }
+          const createdDog = await createDogMutation({
+            name,
+            owner_name: 'Quick Add',
+            owner_phone: phone ?? null,
+            notes: null,
+            photo_url: null,
+            breed: null,
+          });
+          nextDogId = createdDog.id;
+        }
+
+        if (!nextDogId) {
+          addToast('Please select a dog or use Quick Add.', 'error');
+          return;
+        }
+
         await createBookingMutation({
           ...data,
+          dogId: nextDogId,
+          source: quickAdd ? 'manual' : 'manual',
           holidayDates: data.isHoliday ? true : [],
         });
 
@@ -512,7 +551,7 @@ export function CreateBookingSheet({
         addToast(err instanceof Error ? err.message : 'Failed to create booking', 'error');
       }
     },
-    [user, createBookingMutation, addToast, onSuccess, onClose],
+    [user, createBookingMutation, createDogMutation, quickAdd, addToast, onSuccess, onClose],
   );
 
   const ratesSet = options.profile && (options.profile.nightly_rate ?? 0) > 0;
@@ -521,17 +560,25 @@ export function CreateBookingSheet({
     <SlideUpSheet isOpen={isOpen} onClose={onClose} title="New Booking">
       <form onSubmit={(e) => void handleSubmit(onFormSubmit)(e)} className="flex flex-col gap-4">
         {/* Dog selector */}
-        <DogDropdown
-          dogs={options.dogs}
-          value={selectedDogId}
-          onChange={(v) => setValue('dogId', v, { shouldValidate: true, shouldDirty: true })}
-          error={errors.dogId?.message}
-        />
+        <label className="flex items-center justify-between rounded-xl border border-pebble p-3">
+          <span className="text-sm font-bold text-bark">Quick Add</span>
+          <input type="checkbox" checked={quickAdd} onChange={(e) => setQuickAdd(e.target.checked)} />
+        </label>
+        {!quickAdd ? (
+          <DogDropdown
+            dogs={options.dogs}
+            value={selectedDogId ?? ''}
+            onChange={(v) => setValue('dogId', v, { shouldValidate: true, shouldDirty: true })}
+            error={errors.dogId?.message}
+          />
+        ) : (
+          <p className="text-xs text-bark-light">Quick Add will create a dog from basic prompt fields.</p>
+        )}
 
         {/* Unified date-range picker */}
         <DateRangePicker
-          startDate={startDate}
-          endDate={endDate}
+          startDate={startDate ?? today()}
+          endDate={endDate ?? startDate ?? today()}
           onStartChange={(v) => setValue('startDate', v, { shouldValidate: true, shouldDirty: true })}
           onEndChange={(v) => setValue('endDate', v, { shouldValidate: true, shouldDirty: true })}
           startError={errors.startDate?.message}
@@ -613,7 +660,33 @@ export function CreateBookingSheet({
           </div>
         </div>
 
-        <button type="submit" className="btn-sage mt-1" disabled={submitting || !selectedDogId}>
+        <label className="form-label">
+          Booking notes
+          <textarea className="form-input mt-1" {...register('notes')} />
+        </label>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="form-label">Pickup Time</label>
+            <TimePicker
+              value={(pickupDateTime || '11:00').slice(0, 5)}
+              onChange={(value) => setValue('pickupDateTime', `${startDate}T${value}:00`)}
+            />
+          </div>
+          <div>
+            <label className="form-label">Dropoff Time</label>
+            <TimePicker
+              value={(dropoffDateTime || '11:00').slice(0, 5)}
+              onChange={(value) => setValue('dropoffDateTime', `${endDate}T${value}:00`)}
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="btn-sage mt-1"
+          disabled={submitting || (!selectedDogId && !quickAdd)}
+        >
           {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
         </button>
       </form>

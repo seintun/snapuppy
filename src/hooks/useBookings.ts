@@ -5,19 +5,20 @@ import { getMonthQueryRange, type CalendarBooking } from '@/features/calendar/ca
 import {
   createBooking as svcCreateBooking,
   deleteBooking as svcDeleteBooking,
+  closeBooking as svcCloseBooking,
   getBooking,
   getBookingFormOptions,
   getBookings,
   saveBookingDays as svcSaveBookingDays,
   updateBookingStatus as svcUpdateBookingStatus,
-  acceptClientRequest as svcAcceptClientRequest,
-  declineClientRequest as svcDeclineClientRequest,
   type BookingRecord,
   type BookingStatus,
   type CreateBookingInput,
   type EditableBookingDay,
+  type PaymentCloseInput,
 } from '@/lib/bookingService';
 import { logger } from '@/lib/logger';
+import { enqueueOfflineMutation } from '@/lib/offlineQueue';
 
 // --- CALENDAR QUERIES ---
 
@@ -34,7 +35,9 @@ export function useCalendarBookings(month: Date) {
       const { rangeStart, rangeEnd } = getMonthQueryRange(month);
       const { data, error } = await supabase
         .from('bookings')
-        .select('id, start_date, end_date, type, is_holiday, status, dog_id, dogs(name, photo_url)')
+        .select(
+          'id, start_date, end_date, type, is_holiday, status, dog_id, dogs(name, photo_url, owner_phone, notes)',
+        )
         .lte('start_date', rangeEnd)
         .gte('end_date', rangeStart)
         .neq('status', 'cancelled');
@@ -109,6 +112,12 @@ export function useCreateBooking() {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       logger.info('Booking created successfully, cache invalidated');
     },
+    onError: async (_, variables) => {
+      await enqueueOfflineMutation({
+        kind: 'create-booking',
+        payload: { userId: user?.id, ...variables },
+      });
+    },
   });
 }
 
@@ -122,6 +131,12 @@ export function useUpdateBookingStatus() {
     onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, variables.id] });
+    },
+    onError: async (_, variables) => {
+      await enqueueOfflineMutation({
+        kind: 'update-booking',
+        payload: { userId: user?.id, ...variables },
+      });
     },
   });
 }
@@ -152,29 +167,16 @@ export function useDeleteBooking() {
   });
 }
 
-export function useAcceptRequest() {
+export function useCloseBooking() {
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (bookingId: string) => svcAcceptClientRequest(bookingId, user!.id),
-    onSuccess: () => {
+    mutationFn: ({ id, input }: { id: string; input: PaymentCloseInput }) =>
+      svcCloseBooking(id, user!.id, input),
+    onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
-      logger.info('Client request accepted successfully');
-    },
-  });
-}
-
-export function useDeclineRequest() {
-  const { user } = useAuthContext();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ bookingId, reason }: { bookingId: string; reason?: string }) =>
-      svcDeclineClientRequest({ bookingId: bookingId, sitterId: user!.id, reason }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
-      logger.info('Client request declined');
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, variables.id] });
     },
   });
 }
