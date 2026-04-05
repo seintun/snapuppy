@@ -53,6 +53,9 @@ function PasscodeInput({
   email,
   onChangeEmail,
   isVerifying,
+  cooldownSeconds,
+  isCoolingDown,
+  onResend,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -60,6 +63,9 @@ function PasscodeInput({
   email: string;
   onChangeEmail: () => void;
   isVerifying: boolean;
+  cooldownSeconds: number;
+  isCoolingDown: boolean;
+  onResend: () => void;
 }) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -122,13 +128,23 @@ function PasscodeInput({
         {isVerifying ? 'Verifying...' : 'Verify Code'}
       </button>
 
-      <button
-        type="button"
-        className="text-xs text-bark-light hover:text-sage text-center font-semibold"
-        onClick={onChangeEmail}
-      >
-        ← Change email
-      </button>
+      <div className="flex justify-center gap-4 text-sm">
+        <button
+          type="button"
+          className="text-bark-light hover:text-sage font-semibold"
+          onClick={onChangeEmail}
+        >
+          ← Change email
+        </button>
+        <button
+          type="button"
+          className={`font-semibold ${isCoolingDown ? 'text-bark-light cursor-not-allowed' : 'text-sage hover:underline'}`}
+          onClick={onResend}
+          disabled={isCoolingDown || isVerifying}
+        >
+          {isCoolingDown ? `Resend in ${cooldownSeconds}s` : 'Resend code'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -287,6 +303,9 @@ export function LoginScreen() {
               setPasscode('');
             }}
             isVerifying={isVerifying}
+            cooldownSeconds={secondsLeft}
+            isCoolingDown={isCoolingDown}
+            onResend={handleSendCode}
           />
         ) : (
           <div className="flex flex-col gap-4">
