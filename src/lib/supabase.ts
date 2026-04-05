@@ -29,6 +29,8 @@ export const sendPasscode = (email: string) =>
     email,
     options: {
       shouldCreateUser: true,
+      // @ts-expect-error - emailRedirectTo: null forces numeric code
+      emailRedirectTo: null,
     },
   });
 
