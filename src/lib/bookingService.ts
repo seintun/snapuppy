@@ -162,6 +162,7 @@ export async function getBookingFormOptions(sitterId: string): Promise<BookingFo
         `,
         )
         .eq('sitter_id', sitterId)
+        .is('archived_at', null)
         .order('name'),
       supabase
         .from('profiles')
@@ -555,6 +556,7 @@ async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow>
     )
     .eq('id', dogId)
     .eq('sitter_id', sitterId)
+    .is('archived_at', null)
     .single();
 
   if (error) throw error;

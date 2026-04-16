@@ -6,6 +6,7 @@ import {
   createDog as svcCreateDog,
   updateDog as svcUpdateDog,
   deleteDog as svcDeleteDog,
+  cancelDogBookings,
 } from '@/features/dogs/dogService';
 import type { Database } from '@/types/database';
 import { enqueueOfflineMutation } from '@/lib/offlineQueue';
@@ -80,10 +81,15 @@ export function useDeleteDog() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (dogId: string) => svcDeleteDog(dogId, user!.id),
+    mutationFn: async (dogId: string) => {
+      await cancelDogBookings(dogId);
+      await svcDeleteDog(dogId, user!.id);
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['booking-options', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
     },
     onError: async (_, variables) => {
       await enqueueOfflineMutation({

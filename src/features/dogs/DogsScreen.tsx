@@ -125,7 +125,7 @@ export function DogsScreen() {
       <ConfirmModal
         isOpen={!!deleteConfirm}
         title="Remove Dog"
-        message={`Remove ${deleteConfirm?.name}? This will also cancel all their upcoming stays.`}
+        message={`Remove ${deleteConfirm?.name} from your roster? Active and pending stays will be cancelled. Completed stays and earnings history are preserved.`}
         confirmLabel="Remove"
         loading={isDeleting}
         onConfirm={handleDeleteConfirm}

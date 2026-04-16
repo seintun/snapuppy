@@ -179,6 +179,7 @@ export type Database = {
       };
       dogs: {
         Row: {
+          archived_at: string | null;
           breed: string | null;
           created_at: string;
           id: string;
@@ -203,6 +204,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          archived_at?: string | null;
           breed?: string | null;
           created_at?: string;
           id?: string;

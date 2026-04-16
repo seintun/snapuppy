@@ -11,6 +11,7 @@ export async function verifyClientCredentials(input: {
     .select('id, owner_name, owner_phone')
     .eq('sitter_id', input.sitterId)
     .ilike('owner_name', input.ownerName.trim())
+    .is('archived_at', null)
     .limit(1);
 
   if (error) throw error;

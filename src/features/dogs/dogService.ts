@@ -36,6 +36,7 @@ export async function getDogs(sitterId: string): Promise<Dog[]> {
     .from('dogs')
     .select(DOG_SELECT_WITH_BREED)
     .eq('sitter_id', sitterId)
+    .is('archived_at', null)
     .order('name');
 
   if (!error) {
@@ -48,6 +49,7 @@ export async function getDogs(sitterId: string): Promise<Dog[]> {
       .from('dogs')
       .select(DOG_SELECT_FALLBACK)
       .eq('sitter_id', sitterId)
+      .is('archived_at', null)
       .order('name');
 
     if (fallbackError) throw fallbackError;
@@ -140,11 +142,35 @@ export async function updateDog(id: string, updates: DogUpdate): Promise<Dog> {
 }
 
 export async function deleteDog(id: string, sitterId?: string): Promise<void> {
-  let query = supabase.from('dogs').delete().eq('id', id);
+  let query = supabase
+    .from('dogs')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', id);
   if (sitterId) query = query.eq('sitter_id', sitterId);
 
   const { error } = await query;
   if (error) throw error;
+}
+
+export async function cancelDogBookings(dogId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('dog_id', dogId)
+    .in('status', ['active', 'pending']);
+
+  if (error) throw error;
+  if (!data?.length) return;
+
+  const { error: updateError } = await supabase
+    .from('bookings')
+    .update({ status: 'cancelled' })
+    .in(
+      'id',
+      data.map((b) => b.id),
+    );
+
+  if (updateError) throw updateError;
 }
 
 export async function uploadDogPhoto(sitterId: string, dogId: string, file: File): Promise<string> {
