@@ -13,7 +13,7 @@ const variantClasses: Record<BadgeVariant, string> = {
   sky: 'bg-[#d6f0f9] text-[#2a7a96]',
   blush: 'bg-blush text-[#8b4040]',
   sunshine: 'bg-[#fef4c0] text-[#7a6018]',
-  amber: 'bg-amber/20 text-amber',
+  amber: 'bg-amber/15 text-amber border border-amber/50',
 };
 
 export function Badge({ variant = 'sage', children, className = '' }: BadgeProps) {

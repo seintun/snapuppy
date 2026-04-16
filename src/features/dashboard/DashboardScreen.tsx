@@ -1,7 +1,7 @@
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useBookings, useCalendarBookings } from '@/hooks/useBookings';
-import { CheckCircle, Clock, Info, PawPrint } from '@phosphor-icons/react';
+import { CheckCircle, Clock, Info, PawPrint, SignIn, SignOut } from '@phosphor-icons/react';
 import { format, getHours, startOfToday } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -208,11 +208,13 @@ export function DashboardScreen() {
                               : [...new Set([...prev, b.id])],
                           );
                         }}
-                        className={`text-[5px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md transition-all active:scale-95 ${
-                          isArrived ? 'bg-sage/10 text-sage' : 'bg-terracotta/10 text-terracotta'
-                        }`}
+                        className={`btn-sage !w-auto !px-3 !py-1 !text-[10px] ${isArrived ? 'opacity-70' : ''}`}
                       >
-                        {isArrived ? '✓ Arrived' : 'Check-In'}
+                        {isArrived ? (
+                          <><CheckCircle size={10} weight="bold" />Arrived</>
+                        ) : (
+                          <><SignIn size={10} weight="bold" />Check-In</>
+                        )}
                       </button>
                     </div>
                   );
@@ -360,11 +362,13 @@ export function DashboardScreen() {
                               : [...new Set([...prev, b.id])],
                           );
                         }}
-                        className={`text-[5px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md transition-all active:scale-95 ${
-                          isDeparted ? 'bg-sage/10 text-sage' : 'bg-terracotta/10 text-terracotta'
-                        }`}
+                        className={`btn-danger !w-auto !px-3 !py-1 !text-[10px] ${isDeparted ? 'opacity-70' : ''}`}
                       >
-                        {isDeparted ? '✓ Departed' : 'Check-Out'}
+                        {isDeparted ? (
+                          <><CheckCircle size={10} weight="bold" />Departed</>
+                        ) : (
+                          <><SignOut size={10} weight="bold" />Check-Out</>
+                        )}
                       </button>
                     </div>
                   );

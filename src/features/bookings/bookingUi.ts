@@ -23,7 +23,7 @@ export function formatBookingRange(
   const end = new Date(`${booking.end_date}T00:00:00`);
 
   if (booking.type === 'daycare') {
-    return `${format(start, 'MMM d, yyyy')} · Daycare`;
+    return format(start, 'MMM d, yyyy');
   }
 
   return `${format(start, 'MMM d')} → ${format(end, 'MMM d, yyyy')}`;

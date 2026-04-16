@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MagnifyingGlass } from '@phosphor-icons/react';
+import { MagnifyingGlass, SignIn, SignOut, CurrencyDollar } from '@phosphor-icons/react';
 import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
+import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AddButton } from '@/components/ui/AddButton';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
@@ -12,10 +13,11 @@ import {
   useBookings,
   useCheckInBooking,
   useCheckOutBooking,
-  useCloseBooking,
 } from '@/hooks/useBookings';
 import { type BookingRecord, type BookingStatus } from '@/lib/bookingService';
 import { CreateBookingSheet } from './CreateBookingSheet';
+import { CloseBookingSheet } from './CloseBookingSheet';
+import { BookingTypePill } from './BookingTypePill';
 import {
   bookingStatusOptions,
   formatBookingRange,
@@ -57,8 +59,6 @@ export function BookingsScreen() {
   const { data: bookings = [], isLoading, isError, error } = useBookings();
   const { mutateAsync: checkInBooking, isPending: checkingIn } = useCheckInBooking();
   const { mutateAsync: checkOutBooking, isPending: checkingOut } = useCheckOutBooking();
-  const { mutateAsync: markPaid, isPending: markingPaid } = useCloseBooking();
-
   const requestedTab = searchParams.get('tab');
   const defaultTab = requestedTab && TABS.includes(requestedTab as BookingStatus)
     ? (requestedTab as BookingStatus)
@@ -67,6 +67,7 @@ export function BookingsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
+  const [closeSheetBookingId, setCloseSheetBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!requestedTab) return;
@@ -113,11 +114,11 @@ export function BookingsScreen() {
     }
 
     if (booking.status === 'awaiting') {
-      await markPaid({ id: booking.id, input: { tipAmount: 0, paymentNotes: '' } });
+      setCloseSheetBookingId(booking.id);
     }
   }
 
-  const ctaBusy = checkingIn || checkingOut || markingPaid;
+  const ctaBusy = checkingIn || checkingOut;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-transparent">
@@ -205,50 +206,55 @@ export function BookingsScreen() {
                   onClick={() => navigate(`/bookings/${booking.id}`)}
                 >
                   <div className="flex items-start justify-between gap-3 px-3 pb-2 pt-3">
-                    <div className="min-w-0">
-                      <h2 className="truncate text-sm font-black text-bark">{booking.dog?.name ?? 'Unknown Dog'}</h2>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-bark-light/60">
-                        {formatBookingRange(booking)}
-                      </p>
-                      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-bark-light/60">
-                        {booking.dog?.owner_name ?? 'No owner listed'}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="sm" />
+                      <div className="min-w-0">
+                        <h2 className="truncate text-sm font-black text-bark">{booking.dog?.name ?? 'Unknown Dog'}</h2>
+                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-bark-light/60">
+                          {formatBookingRange(booking)}
+                        </p>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge
+                        variant={getStatusVariant(booking.status)}
+                        className="px-2 py-0.5 text-[9px] uppercase tracking-wide"
+                      >
+                        {getStatusLabel(booking.status)}
+                      </Badge>
                       <p className="text-lg font-black leading-none text-terracotta">
                         {formatCurrency(booking.total_amount)}
                       </p>
-                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-bark-light/50">
+                      <p className="text-[9px] font-bold uppercase tracking-wide text-bark-light/50">
                         {getDurationText(booking)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 border-t border-pebble/10 bg-cream/60 px-3 py-2">
-                    <Badge
-                      variant={getStatusVariant(booking.status)}
-                      className="px-2 py-0.5 text-[9px] uppercase tracking-wide"
-                    >
-                      {getStatusLabel(booking.status)}
-                    </Badge>
-                    {booking.status !== 'paid' ? (
+                  {booking.status !== 'paid' ? (
+                    <div className="flex justify-center border-t border-pebble/10 bg-cream/60 px-3 py-2">
                       <button
                         type="button"
-                        className={booking.status === 'awaiting' ? 'btn-danger !px-3 !py-1.5 !text-[10px]' : 'btn-sage !px-3 !py-1.5 !text-[10px]'}
+                        className="btn-sage !w-auto !px-6 !py-1.5 !text-[10px]"
                         onClick={(event) => {
                           event.stopPropagation();
                           void runPrimaryAction(booking);
                         }}
                         disabled={ctaBusy}
                       >
-                        {booking.status === 'upcoming'
-                          ? 'Check In'
-                          : booking.status === 'active'
-                            ? 'Check Out'
-                            : 'Mark as Paid'}
+                        {booking.status === 'upcoming' ? (
+                          <><SignIn size={12} weight="bold" />Check In</>
+                        ) : booking.status === 'active' ? (
+                          <><SignOut size={12} weight="bold" />Check Out</>
+                        ) : (
+                          <><CurrencyDollar size={12} weight="bold" />Mark as Paid</>
+                        )}
                       </button>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
                 </Card>
               ))}
 
@@ -312,6 +318,13 @@ export function BookingsScreen() {
       </div>
 
       <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
+      {closeSheetBookingId ? (
+        <CloseBookingSheet
+          isOpen={true}
+          onClose={() => setCloseSheetBookingId(null)}
+          bookingId={closeSheetBookingId}
+        />
+      ) : null}
       <AddButton onClick={() => setIsCreateOpen(true)} variant="booking" isActive={isCreateOpen} />
     </div>
   );

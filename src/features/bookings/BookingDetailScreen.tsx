@@ -15,6 +15,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
 import { getStatusLabel, getStatusVariant } from './bookingUi';
+import { BookingTypePill } from './BookingTypePill';
 import { CloseBookingSheet } from './CloseBookingSheet';
 
 export function BookingDetailScreen() {
@@ -110,11 +111,7 @@ export function BookingDetailScreen() {
             >
               {getStatusLabel(booking.status)}
             </Badge>
-            {booking.is_holiday && (
-              <span className="bg-terracotta text-white rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider drop-shadow-sm">
-                Holiday
-              </span>
-            )}
+            <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
           </div>
         </div>
       </div>
