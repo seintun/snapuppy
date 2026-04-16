@@ -33,7 +33,8 @@ export function ProfileScreen() {
       paymentInstructions: '',
       nightlyRate: 0,
       daycareRate: 0,
-      holidaySurcharge: 0,
+      holidayBoardingRate: 0,
+      holidayDaycareRate: 0,
       cutoffTime: '11:00',
     },
   });
@@ -46,7 +47,8 @@ export function ProfileScreen() {
         paymentInstructions: profile.payment_instructions ?? '',
         nightlyRate: profile.nightly_rate,
         daycareRate: profile.daycare_rate,
-        holidaySurcharge: profile.holiday_surcharge,
+        holidayBoardingRate: profile.holiday_boarding_rate,
+        holidayDaycareRate: profile.holiday_daycare_rate,
         cutoffTime: profile.cutoff_time,
       });
     }
@@ -63,7 +65,8 @@ export function ProfileScreen() {
           payment_instructions: data.paymentInstructions || null,
           nightly_rate: data.nightlyRate,
           daycare_rate: data.daycareRate,
-          holiday_surcharge: data.holidaySurcharge,
+          holiday_boarding_rate: data.holidayBoardingRate,
+          holiday_daycare_rate: data.holidayDaycareRate,
           cutoff_time: data.cutoffTime,
         });
         addToast('Profile saved 🐾', 'success');
@@ -217,31 +220,60 @@ export function ProfileScreen() {
               )}
             </div>
 
-            {/* Holiday surcharge */}
+            {/* Holiday boarding rate */}
             <div>
               <label
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
-                htmlFor="holiday-surcharge"
+                htmlFor="holiday-boarding-rate"
               >
-                🎄 Holiday surcharge
+                🎄 Holiday boarding / night
               </label>
               <div className="flex">
                 <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
-                  +$
+                  $
                 </span>
                 <input
-                  id="holiday-surcharge"
+                  id="holiday-boarding-rate"
                   type="number"
                   step="0.01"
                   min="0"
                   max="9999.99"
-                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidaySurcharge ? 'border-terracotta' : ''}`}
-                  {...register('holidaySurcharge', { valueAsNumber: true })}
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidayBoardingRate ? 'border-terracotta' : ''}`}
+                  {...register('holidayBoardingRate', { valueAsNumber: true })}
                 />
               </div>
-              {errors.holidaySurcharge && (
+              {errors.holidayBoardingRate && (
                 <p className="text-[10px] text-terracotta mt-0.5">
-                  {errors.holidaySurcharge.message}
+                  {errors.holidayBoardingRate.message}
+                </p>
+              )}
+            </div>
+
+            {/* Holiday daycare rate */}
+            <div>
+              <label
+                className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
+                htmlFor="holiday-daycare-rate"
+              >
+                🎄 Holiday daycare / day
+              </label>
+              <div className="flex">
+                <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
+                  $
+                </span>
+                <input
+                  id="holiday-daycare-rate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="9999.99"
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidayDaycareRate ? 'border-terracotta' : ''}`}
+                  {...register('holidayDaycareRate', { valueAsNumber: true })}
+                />
+              </div>
+              {errors.holidayDaycareRate && (
+                <p className="text-[10px] text-terracotta mt-0.5">
+                  {errors.holidayDaycareRate.message}
                 </p>
               )}
             </div>

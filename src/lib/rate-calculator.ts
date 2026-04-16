@@ -7,7 +7,8 @@ export type BookingDateInput = string | Date;
 export interface ProfileRateSettings {
   nightly_rate: number | null;
   daycare_rate: number | null;
-  holiday_surcharge: number | null;
+  holiday_boarding_rate: number | null;
+  holiday_daycare_rate: number | null;
   cutoff_time: string | null;
 }
 
@@ -64,7 +65,8 @@ export function generateBookingDays(input: {
 
   const nightlyRate = input.rates.nightly_rate ?? 0;
   const daycareRate = input.rates.daycare_rate ?? 0;
-  const holidaySurcharge = input.rates.holiday_surcharge ?? 0;
+  const holidayBoardingRate = input.rates.holiday_boarding_rate ?? nightlyRate;
+  const holidayDaycareRate = input.rates.holiday_daycare_rate ?? daycareRate;
 
   // Build holiday set
   const allHolidays = input.holidayDates === true;
@@ -79,7 +81,7 @@ export function generateBookingDays(input: {
     // Daycare — single day
     const dateStr = input.startDate;
     const is_holiday = allHolidays || holidaySet.has(dateStr);
-    const amount = roundCurrency(daycareRate + (is_holiday ? holidaySurcharge : 0));
+    const amount = roundCurrency(is_holiday ? holidayDaycareRate : daycareRate);
     return [{ date: dateStr, rate_type: 'daycare', is_holiday, amount }];
   }
 
@@ -90,7 +92,7 @@ export function generateBookingDays(input: {
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
     const is_holiday = allHolidays || holidaySet.has(dateStr);
-    const amount = roundCurrency(nightlyRate + (is_holiday ? holidaySurcharge : 0));
+    const amount = roundCurrency(is_holiday ? holidayBoardingRate : nightlyRate);
     rows.push({ date: dateStr, rate_type: 'boarding', is_holiday, amount });
   }
   return rows;
@@ -102,7 +104,12 @@ export function generateBookingDays(input: {
 export function calculateBookingPricing(
   startDate: string,
   endDate: string,
-  rates: { nightly_rate: number; daycare_rate: number; holiday_surcharge: number },
+  rates: {
+    nightly_rate: number;
+    daycare_rate: number;
+    holiday_boarding_rate: number;
+    holiday_daycare_rate: number;
+  },
   isHoliday: boolean,
 ): BookingPricingResult {
   const days = generateBookingDays({

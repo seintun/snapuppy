@@ -15,7 +15,8 @@ import type { ProfileRateSettings } from '@/lib/rate-calculator';
 const rates: ProfileRateSettings = {
   nightly_rate: 80,
   daycare_rate: 35,
-  holiday_surcharge: 25,
+  holiday_boarding_rate: 105,
+  holiday_daycare_rate: 60,
   cutoff_time: '11:00',
 };
 

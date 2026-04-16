@@ -17,7 +17,8 @@ describe('updateProfile', () => {
       display_name: null,
       nightly_rate: 55,
       daycare_rate: 30,
-      holiday_surcharge: 15,
+      holiday_boarding_rate: 70,
+      holiday_daycare_rate: 45,
       cutoff_time: '11:00',
       is_guest: false,
       created_at: '2026-01-01T00:00:00.000Z',
@@ -44,7 +45,8 @@ describe('updateProfile', () => {
       business_name: 'Happy Paws',
       nightly_rate: 55,
       daycare_rate: 30,
-      holiday_surcharge: 15,
+      holiday_boarding_rate: 70,
+      holiday_daycare_rate: 45,
       cutoff_time: '11:00',
     });
 

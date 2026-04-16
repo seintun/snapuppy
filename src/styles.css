@@ -210,6 +210,7 @@ input[type='date'].form-input {
 .sheet-backdrop {
   position: fixed;
   inset: 0;
+  opacity: 0;
   background: rgba(74, 55, 40, 0.4);
   backdrop-filter: blur(4px);
   display: flex;

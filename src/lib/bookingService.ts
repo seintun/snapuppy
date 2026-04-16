@@ -119,11 +119,20 @@ export function repriceBookingDays(
     const override = overrides[day.date];
     const rate_type = override?.rate_type ?? day.rate_type;
     const is_holiday = override?.is_holiday ?? day.is_holiday;
+    const boardingRate = rates.nightly_rate ?? 0;
+    const daycareRate = rates.daycare_rate ?? 0;
+    const holidayBoardingRate = rates.holiday_boarding_rate ?? boardingRate;
+    const holidayDaycareRate = rates.holiday_daycare_rate ?? daycareRate;
     const amount =
       override?.amount ??
       toCurrencyAmount(
-        (rate_type === 'boarding' ? (rates.nightly_rate ?? 0) : (rates.daycare_rate ?? 0)) +
-          (is_holiday ? (rates.holiday_surcharge ?? 0) : 0),
+        rate_type === 'boarding'
+          ? is_holiday
+            ? holidayBoardingRate
+            : boardingRate
+          : is_holiday
+            ? holidayDaycareRate
+            : daycareRate,
       );
 
     return {
@@ -173,7 +182,8 @@ export async function getBookingFormOptions(sitterId: string): Promise<BookingFo
           display_name,
           nightly_rate,
           daycare_rate,
-          holiday_surcharge,
+          holiday_boarding_rate,
+          holiday_daycare_rate,
           cutoff_time,
           is_guest,
           created_at,
@@ -526,7 +536,8 @@ function toRateSettings(profile: ProfileRow): ProfileRateSettings {
   return {
     nightly_rate: profile.nightly_rate,
     daycare_rate: profile.daycare_rate,
-    holiday_surcharge: profile.holiday_surcharge,
+    holiday_boarding_rate: profile.holiday_boarding_rate,
+    holiday_daycare_rate: profile.holiday_daycare_rate,
     cutoff_time: profile.cutoff_time,
   };
 }

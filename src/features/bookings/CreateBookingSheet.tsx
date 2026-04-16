@@ -558,7 +558,8 @@ export function CreateBookingSheet({
         rates: {
           nightly_rate: options.profile.nightly_rate ?? 0,
           daycare_rate: options.profile.daycare_rate ?? 0,
-          holiday_surcharge: options.profile.holiday_surcharge ?? 0,
+          holiday_boarding_rate: options.profile.holiday_boarding_rate ?? 0,
+          holiday_daycare_rate: options.profile.holiday_daycare_rate ?? 0,
           cutoff_time: options.profile.cutoff_time ?? '11:00',
         },
         holidayDates: isHoliday ? true : [],
@@ -611,153 +612,146 @@ export function CreateBookingSheet({
 
   return (
     <>
-      {!isAddDogOpen && (
-        <SlideUpSheet isOpen={isOpen} onClose={onClose} title="New Booking">
-          <form
-            onSubmit={(e) => void handleSubmit(onFormSubmit)(e)}
-            className="flex flex-col gap-4"
+      <SlideUpSheet isOpen={isOpen && !isAddDogOpen} onClose={onClose} title="New Booking">
+        <form onSubmit={(e) => void handleSubmit(onFormSubmit)(e)} className="flex flex-col gap-4">
+          {/* Dog selector */}
+          <DogDropdown
+            dogs={options.dogs}
+            value={selectedDogId ?? ''}
+            onChange={(v) => setValue('dogId', v, { shouldValidate: true, shouldDirty: true })}
+            onAddNew={() => setIsAddDogOpen(true)}
+            error={errors.dogId?.message}
+          />
+
+          {/* Unified date-range picker */}
+          <DateRangePicker
+            startDate={startDate ?? today()}
+            endDate={endDate ?? startDate ?? today()}
+            onStartChange={(v) =>
+              setValue('startDate', v, { shouldValidate: true, shouldDirty: true })
+            }
+            onEndChange={(v) => setValue('endDate', v, { shouldValidate: true, shouldDirty: true })}
+            startError={errors.startDate?.message}
+            endError={errors.endDate?.message}
+          />
+
+          {/* Holiday toggle */}
+          <div
+            className={`flex items-center justify-between rounded-xl p-3.5 border-1.5 transition-all duration-150 ${
+              isHoliday ? 'bg-blush border-terracotta' : 'bg-cream border-pebble'
+            }`}
           >
-            {/* Dog selector */}
-            <DogDropdown
-              dogs={options.dogs}
-              value={selectedDogId ?? ''}
-              onChange={(v) => setValue('dogId', v, { shouldValidate: true, shouldDirty: true })}
-              onAddNew={() => setIsAddDogOpen(true)}
-              error={errors.dogId?.message}
-            />
-
-            {/* Unified date-range picker */}
-            <DateRangePicker
-              startDate={startDate ?? today()}
-              endDate={endDate ?? startDate ?? today()}
-              onStartChange={(v) =>
-                setValue('startDate', v, { shouldValidate: true, shouldDirty: true })
-              }
-              onEndChange={(v) =>
-                setValue('endDate', v, { shouldValidate: true, shouldDirty: true })
-              }
-              startError={errors.startDate?.message}
-              endError={errors.endDate?.message}
-            />
-
-            {/* Holiday toggle */}
-            <div
-              className={`flex items-center justify-between rounded-xl p-3.5 border-1.5 transition-all duration-150 ${
-                isHoliday ? 'bg-blush border-terracotta' : 'bg-cream border-pebble'
-              }`}
-            >
-              <div>
-                <div className={`font-bold text-sm ${isHoliday ? 'text-terracotta' : 'text-bark'}`}>
-                  🎄 Holiday booking
-                </div>
-                <div className="text-[11px] text-bark-light mt-0.5">Applies holiday surcharge</div>
+            <div>
+              <div className={`font-bold text-sm ${isHoliday ? 'text-terracotta' : 'text-bark'}`}>
+                🎄 Holiday booking
               </div>
-              <label className="relative inline-block w-11 h-6 cursor-pointer">
-                <input type="checkbox" className="sr-only" {...register('isHoliday')} />
-                <span
-                  className={`absolute inset-0 rounded-full transition-colors duration-200 ${
-                    isHoliday ? 'bg-terracotta' : 'bg-pebble'
-                  }`}
-                />
-                <span
-                  className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-all duration-200 shadow-sm ${
-                    isHoliday ? 'left-[23px]' : 'left-[3px]'
-                  }`}
-                />
-              </label>
+              <div className="text-[11px] text-bark-light mt-0.5">Uses holiday rates</div>
             </div>
-
-            {/* Rate preview */}
-            <div className="bg-sage-light rounded-xl p-3.5">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[11px] font-bold text-bark-light uppercase tracking-wider">
-                  Rate Preview
-                </span>
-                <span className="text-[11px] font-bold text-sage bg-white rounded-full px-2 py-0.5 uppercase">
-                  {pricing?.type ?? (startDate === endDate ? 'daycare' : 'boarding')}
-                </span>
-              </div>
-
-              {!ratesSet && (
-                <p className="text-[11px] text-bark-light mb-2">
-                  ⚠️ Set both Boarding and Daycare rates in Profile to confirm booking.
-                </p>
-              )}
-
-              {pricing && pricing.days.length > 0 && (
-                <div className="flex flex-col pb-2">
-                  <div className="flex justify-between items-center text-[13px] text-bark">
-                    <div className="flex items-center">
-                      <span className="font-bold">
-                        {pricing.type === 'boarding' ? 'Boarding' : 'Daycare'}
-                      </span>
-                      {pricing.isHoliday && (
-                        <span className="text-[10px] font-black text-terracotta uppercase bg-white px-1.5 py-[1px] rounded-md ml-2 drop-shadow-sm">
-                          Holiday
-                        </span>
-                      )}
-                      <span className="text-bark-light font-medium ml-2">
-                        × {pricing.days.length}{' '}
-                        {pricing.type === 'boarding'
-                          ? pricing.days.length === 1
-                            ? 'night'
-                            : 'nights'
-                          : 'day'}
-                      </span>
-                    </div>
-                    <span className="text-bark-light font-semibold text-xs">
-                      ${pricing.days[0].amount.toFixed(2)}/
-                      {pricing.type === 'boarding' ? 'nt' : 'day'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center border-t border-sage pt-2">
-                <span className="font-bold text-bark">Total</span>
-                <span className="text-2xl font-black text-terracotta tracking-tight">
-                  ${(pricing?.totalAmount ?? 0).toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <label className="form-label">
-              Booking notes
-              <textarea className="form-input mt-1" {...register('notes')} />
+            <label className="relative inline-block w-11 h-6 cursor-pointer">
+              <input type="checkbox" className="sr-only" {...register('isHoliday')} />
+              <span
+                className={`absolute inset-0 rounded-full transition-colors duration-200 ${
+                  isHoliday ? 'bg-terracotta' : 'bg-pebble'
+                }`}
+              />
+              <span
+                className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-all duration-200 shadow-sm ${
+                  isHoliday ? 'left-[23px]' : 'left-[3px]'
+                }`}
+              />
             </label>
+          </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="form-label">Pickup Time</label>
-                <TimePicker
-                  value={pickupDateTime || DEFAULT_BOOKING_TIME}
-                  onChange={(value) => setValue('pickupDateTime', value)}
-                />
-              </div>
-              <div>
-                <label className="form-label">Dropoff Time</label>
-                <TimePicker
-                  value={dropoffDateTime || DEFAULT_BOOKING_TIME}
-                  onChange={(value) => setValue('dropoffDateTime', value)}
-                />
-              </div>
+          {/* Rate preview */}
+          <div className="bg-sage-light rounded-xl p-3.5">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-[11px] font-bold text-bark-light uppercase tracking-wider">
+                Rate Preview
+              </span>
+              <span className="text-[11px] font-bold text-sage bg-white rounded-full px-2 py-0.5 uppercase">
+                {pricing?.type ?? (startDate === endDate ? 'daycare' : 'boarding')}
+              </span>
             </div>
 
-            <button
-              type="submit"
-              className="btn-sage mt-1"
-              disabled={submitting || !selectedDogId || !ratesSet}
-            >
-              {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
-            </button>
             {!ratesSet && (
-              <p className="text-xs font-bold text-terracotta text-center mt-1">
-                Rate required: Set Boarding and Daycare pricing in Profile before confirming.
+              <p className="text-[11px] text-bark-light mb-2">
+                ⚠️ Set both Boarding and Daycare rates in Profile to confirm booking.
               </p>
             )}
-          </form>
-        </SlideUpSheet>
-      )}
+
+            {pricing && pricing.days.length > 0 && (
+              <div className="flex flex-col pb-2">
+                <div className="flex justify-between items-center text-[13px] text-bark">
+                  <div className="flex items-center">
+                    <span className="font-bold">
+                      {pricing.type === 'boarding' ? 'Boarding' : 'Daycare'}
+                    </span>
+                    {pricing.isHoliday && (
+                      <span className="text-[10px] font-black text-terracotta uppercase bg-white px-1.5 py-[1px] rounded-md ml-2 drop-shadow-sm">
+                        Holiday
+                      </span>
+                    )}
+                    <span className="text-bark-light font-medium ml-2">
+                      × {pricing.days.length}{' '}
+                      {pricing.type === 'boarding'
+                        ? pricing.days.length === 1
+                          ? 'night'
+                          : 'nights'
+                        : 'day'}
+                    </span>
+                  </div>
+                  <span className="text-bark-light font-semibold text-xs">
+                    ${pricing.days[0].amount.toFixed(2)}/
+                    {pricing.type === 'boarding' ? 'nt' : 'day'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center border-t border-sage pt-2">
+              <span className="font-bold text-bark">Total</span>
+              <span className="text-2xl font-black text-terracotta tracking-tight">
+                ${(pricing?.totalAmount ?? 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          <label className="form-label">
+            Booking notes
+            <textarea className="form-input mt-1" {...register('notes')} />
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="form-label">Pickup Time</label>
+              <TimePicker
+                value={pickupDateTime || DEFAULT_BOOKING_TIME}
+                onChange={(value) => setValue('pickupDateTime', value)}
+              />
+            </div>
+            <div>
+              <label className="form-label">Dropoff Time</label>
+              <TimePicker
+                value={dropoffDateTime || DEFAULT_BOOKING_TIME}
+                onChange={(value) => setValue('dropoffDateTime', value)}
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="btn-sage mt-1"
+            disabled={submitting || !selectedDogId || !ratesSet}
+          >
+            {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
+          </button>
+          {!ratesSet && (
+            <p className="text-xs font-bold text-terracotta text-center mt-1">
+              Rate required: Set Boarding and Daycare pricing in Profile before confirming.
+            </p>
+          )}
+        </form>
+      </SlideUpSheet>
       <AddDogSheet
         isOpen={isAddDogOpen}
         onClose={() => setIsAddDogOpen(false)}

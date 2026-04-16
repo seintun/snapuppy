@@ -237,7 +237,8 @@ export type Database = {
           daycare_rate: number;
           display_name: string | null;
           email: string | null;
-          holiday_surcharge: number;
+          holiday_boarding_rate: number;
+          holiday_daycare_rate: number;
           id: string;
           is_guest: boolean;
           nightly_rate: number;
@@ -254,7 +255,8 @@ export type Database = {
           daycare_rate?: number;
           display_name?: string | null;
           email?: string | null;
-          holiday_surcharge?: number;
+          holiday_boarding_rate?: number;
+          holiday_daycare_rate?: number;
           id: string;
           is_guest?: boolean;
           nightly_rate?: number;
@@ -271,7 +273,8 @@ export type Database = {
           daycare_rate?: number;
           display_name?: string | null;
           email?: string | null;
-          holiday_surcharge?: number;
+          holiday_boarding_rate?: number;
+          holiday_daycare_rate?: number;
           id?: string;
           is_guest?: boolean;
           nightly_rate?: number;

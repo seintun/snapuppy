@@ -8,7 +8,8 @@ insert into public.profiles (
   business_name,
   nightly_rate,
   daycare_rate,
-  holiday_surcharge,
+  holiday_boarding_rate,
+  holiday_daycare_rate,
   cutoff_time
 )
 select
@@ -18,7 +19,8 @@ select
   'Happy Paws Dev',
   55.00,
   35.00,
-  15.00,
+  70.00,
+  45.00,
   '11:00'
 from auth.users as u
 where u.id = '00000000-0000-0000-0000-000000000001'

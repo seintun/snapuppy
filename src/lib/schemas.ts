@@ -120,11 +120,7 @@ export const ProfileSchema = z.object({
     .max(100, 'Business name must be 100 characters or fewer')
     .optional()
     .or(z.literal('')),
-  businessLogoUrl: z
-    .string()
-    .url('Logo must be a valid URL')
-    .optional()
-    .or(z.literal('')),
+  businessLogoUrl: z.string().url('Logo must be a valid URL').optional().or(z.literal('')),
   paymentInstructions: z
     .string()
     .trim()
@@ -133,7 +129,8 @@ export const ProfileSchema = z.object({
     .or(z.literal('')),
   nightlyRate: rateField('Nightly rate'),
   daycareRate: rateField('Daycare rate'),
-  holidaySurcharge: rateField('Holiday surcharge'),
+  holidayBoardingRate: rateField('Holiday boarding rate'),
+  holidayDaycareRate: rateField('Holiday daycare rate'),
   cutoffTime: cutoffTimeStr,
 });
 

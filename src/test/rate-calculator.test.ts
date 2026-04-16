@@ -5,7 +5,8 @@ import { calculateBookingPricing } from '@/lib/rate-calculator';
 const rates = {
   nightly_rate: 75,
   daycare_rate: 35,
-  holiday_surcharge: 20,
+  holiday_boarding_rate: 95,
+  holiday_daycare_rate: 50,
 };
 
 describe('calculateBookingPricing', () => {
@@ -21,13 +22,13 @@ describe('calculateBookingPricing', () => {
       });
     });
 
-    it('applies holiday surcharge for daycare on holiday', () => {
+    it('applies holiday rate for daycare on holiday', () => {
       const result = calculateBookingPricing('2026-12-25', '2026-12-25', rates, true);
 
       expect(result).toEqual({
         type: 'daycare',
         isHoliday: true,
-        totalAmount: 55,
+        totalAmount: 50,
         nights: 0,
       });
     });
@@ -45,7 +46,7 @@ describe('calculateBookingPricing', () => {
       });
     });
 
-    it('applies holiday surcharge for boarding on holiday', () => {
+    it('applies holiday rate for boarding on holiday', () => {
       const result = calculateBookingPricing('2026-12-24', '2026-12-26', rates, true);
 
       expect(result).toEqual({
@@ -85,7 +86,8 @@ describe('calculateBookingPricing', () => {
       const ratesWithCents = {
         nightly_rate: 49.99,
         daycare_rate: 29.99,
-        holiday_surcharge: 9.99,
+        holiday_boarding_rate: 59.98,
+        holiday_daycare_rate: 39.98,
       };
 
       const result = calculateBookingPricing('2026-06-15', '2026-06-18', ratesWithCents, false);
