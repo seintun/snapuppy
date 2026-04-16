@@ -16,7 +16,7 @@ interface AddDogSheetProps {
   isOpen: boolean;
   onClose: () => void;
   editingDog?: Dog;
-  onSuccess?: () => void;
+  onSuccess?: (dog?: Dog) => void;
 }
 
 export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSheetProps) {
@@ -119,7 +119,7 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
             photoUrl = await uploadDogPhoto(user.id, editingDog.id, selectedPhoto);
           }
 
-          await updateDogMutation({
+          const updatedDog = await updateDogMutation({
             id: editingDog.id,
             updates: {
               name: data.name,
@@ -131,6 +131,7 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
             },
           });
           addToast(`${data.name} updated successfully! 🐾`, 'success');
+          onSuccess?.(updatedDog);
         } else {
           const createdDog = await createDogMutation({
             name: data.name,
@@ -141,18 +142,19 @@ export function AddDogSheet({ isOpen, onClose, editingDog, onSuccess }: AddDogSh
             photo_url: null,
           });
 
+          let finalizedDog = createdDog;
+
           if (selectedPhoto && user?.id) {
             const photoUrl = await uploadDogPhoto(user.id, createdDog.id, selectedPhoto);
-            await updateDogMutation({
+            finalizedDog = await updateDogMutation({
               id: createdDog.id,
               updates: { photo_url: photoUrl },
             });
           }
 
           addToast(`${data.name} added successfully! 🐾`, 'success');
+          onSuccess?.(finalizedDog);
         }
-
-        onSuccess?.();
         onClose();
       } catch (err) {
         addToast(err instanceof Error ? err.message : 'Failed to save dog', 'error');
