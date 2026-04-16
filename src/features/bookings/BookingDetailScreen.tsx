@@ -99,14 +99,14 @@ export function BookingDetailScreen() {
       <div className="bg-cream px-4 pt-2 pb-4 border-b border-pebble/60 shadow-[0_2px_8px_rgba(74,55,40,0.04)]">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-bark-light hover:text-bark font-bold text-xs bg-transparent border-none cursor-pointer py-1 mb-3 transition-colors"
+          className="flex items-center gap-1.5 text-bark-light hover:text-bark font-semibold text-sm bg-transparent border-none cursor-pointer py-1 mb-3 transition-colors"
         >
           <ArrowLeft size={16} weight="bold" />
           Back
         </button>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {dog ? (
               <DogAvatar name={dog.name} src={dog.photo_url} size="md" />
             ) : (
@@ -115,21 +115,21 @@ export function BookingDetailScreen() {
               </div>
             )}
 
-            <div>
-              <h1 className="m-0 text-xl font-black text-bark tracking-tight leading-none">
+            <div className="min-w-0">
+              <h1 className="m-0 text-[30px] font-black text-bark tracking-tight leading-none truncate">
                 {dog?.name ?? 'Unknown Dog'}
               </h1>
-              <div className="text-[11px] text-bark-light mt-1.5 font-bold tracking-wide">
-                {format(parseISO(booking.start_date), 'MMM d')} →{' '}
+              <div className="mt-1.5 text-xs text-bark-light font-semibold tracking-[0.01em] whitespace-nowrap truncate">
+                {format(parseISO(booking.start_date), 'MMM d')} -{' '}
                 {format(parseISO(booking.end_date), 'MMM d, yyyy')}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
             <Badge
               variant={getStatusVariant(booking.status)}
-              className="text-[9px] px-2 py-0.5 uppercase tracking-wider"
+              className="text-[10px] px-2 py-0.5 uppercase tracking-[0.08em]"
             >
               {getStatusLabel(booking.status)}
             </Badge>
@@ -149,29 +149,29 @@ export function BookingDetailScreen() {
               {derivedLineItems.map((item) => {
                 const itemTotal = item.count * item.rate;
                 return (
-                <div
-                  key={`${item.type}-${item.isHoliday}-${item.rate}`}
-                  className="flex justify-between items-center text-[13px] text-bark"
-                >
-                  <div className="flex items-center flex-wrap gap-x-2">
-                    <span className="font-bold capitalize">{item.type}</span>
-                    {item.isHoliday && (
-                      <span className="text-[10px] font-black text-terracotta uppercase bg-white/60 border border-terracotta/20 px-1.5 py-[1px] rounded-md drop-shadow-sm">
-                        Holiday
+                  <div
+                    key={`${item.type}-${item.isHoliday}-${item.rate}`}
+                    className="flex justify-between items-center text-[13px] text-bark"
+                  >
+                    <div className="flex items-center flex-wrap gap-x-2">
+                      <span className="font-bold capitalize">{item.type}</span>
+                      {item.isHoliday && (
+                        <span className="text-[10px] font-black text-terracotta uppercase bg-white/60 border border-terracotta/20 px-1.5 py-[1px] rounded-md drop-shadow-sm">
+                          Holiday
+                        </span>
+                      )}
+                      <span className="text-bark-light font-medium ml-1">
+                        × {item.count}{' '}
+                        {item.type === 'boarding' ? (item.count === 1 ? 'night' : 'nights') : 'day'}
                       </span>
-                    )}
-                    <span className="text-bark-light font-medium ml-1">
-                      × {item.count}{' '}
-                      {item.type === 'boarding' ? (item.count === 1 ? 'night' : 'nights') : 'day'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-[14px]">${itemTotal.toFixed(2)}</div>
-                    <div className="text-[10px] text-bark-light font-medium mt-0.5">
-                      ${item.rate.toFixed(2)}/each
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-[14px]">${itemTotal.toFixed(2)}</div>
+                      <div className="text-[10px] text-bark-light font-medium mt-0.5">
+                        ${item.rate.toFixed(2)}/each
+                      </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -251,7 +251,7 @@ export function BookingDetailScreen() {
           {booking.status === 'awaiting' ? (
             <button
               type="button"
-              className="btn-danger"
+              className="btn-danger whitespace-nowrap text-[15px] tracking-tight"
               onClick={() => setCloseSheetOpen(true)}
             >
               Mark as Paid
@@ -261,7 +261,7 @@ export function BookingDetailScreen() {
           {booking.status === 'awaiting' || booking.status === 'paid' ? (
             <button
               type="button"
-              className="btn-sage"
+              className="btn-sage whitespace-nowrap text-[15px] tracking-tight"
               onClick={() => setGenerateSheetOpen(true)}
             >
               Generate Invoice
