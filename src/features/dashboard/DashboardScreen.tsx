@@ -1,7 +1,7 @@
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useBookings, useCalendarBookings } from '@/hooks/useBookings';
-import { CheckCircle, Clock, Info, PawPrint, SignIn, SignOut } from '@phosphor-icons/react';
+import { CaretRight, CheckCircle, Clock, Info, PawPrint, SignIn, SignOut } from '@phosphor-icons/react';
 import { format, getHours, startOfToday } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -85,9 +85,9 @@ export function DashboardScreen() {
 
   return (
     <div className="flex flex-col gap-3 pb-20">
-      <div className="flex flex-col px-1 pt-2 mb-6">
+      <div className="flex flex-col px-1 pt-2 mb-0">
         <h1 className="text-3xl font-black text-bark tracking-tight leading-none">{greeting}</h1>
-        <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em] mt-1">
+        <p className="text-[10px] font-black text-bark-light/80 uppercase tracking-[0.2em] mt-1">
           {format(today, 'EEEE, MMMM do')}
         </p>
       </div>
@@ -95,15 +95,18 @@ export function DashboardScreen() {
       {awaitingCount > 0 ? (
         <button
           type="button"
-          className="w-full rounded-2xl border border-terracotta/30 bg-terracotta/15 px-4 py-3 text-left"
+          className="w-full rounded-2xl border border-terracotta/30 bg-terracotta/15 px-4 py-3 text-left flex items-center justify-between group active:scale-[0.98] transition-transform"
           onClick={() => navigate('/bookings?tab=awaiting')}
         >
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-terracotta">
-            Awaiting Payment
-          </p>
-          <p className="mt-1 text-sm font-black text-bark">
-            {awaitingCount} booking{awaitingCount === 1 ? '' : 's'} need payment follow-up
-          </p>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-terracotta">
+              Awaiting Payment
+            </p>
+            <p className="mt-1 text-sm font-black text-bark">
+              {awaitingCount} booking{awaitingCount === 1 ? '' : 's'} need payment follow-up
+            </p>
+          </div>
+          <CaretRight size={20} weight="bold" className="text-terracotta/60 group-hover:text-terracotta transition-colors" />
         </button>
       ) : null}
 

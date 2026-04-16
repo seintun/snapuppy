@@ -40,21 +40,12 @@ export function InvoicePreview({ invoice, downloadName }: InvoicePreviewProps) {
     }
   };
 
-  const previewLabel = invoice.documentLabel === 'Receipt' ? 'Receipt Preview' : 'Invoice Preview';
-
   return (
-    <section className="surface-card p-4 space-y-3">
-      <h2 className="text-sm font-black text-bark uppercase tracking-wide">{previewLabel}</h2>
-      <div
-        ref={invoiceRef}
-        className="rounded-lg border border-pebble/30 bg-white p-3"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-sage" onClick={() => void handleDownloadPng()}>
-          Download PNG
-        </button>
-      </div>
-    </section>
+    <div className="space-y-3">
+      <div ref={invoiceRef} dangerouslySetInnerHTML={{ __html: html }} />
+      <button type="button" className="btn-sage w-full" onClick={() => void handleDownloadPng()}>
+        Download PNG
+      </button>
+    </div>
   );
 }

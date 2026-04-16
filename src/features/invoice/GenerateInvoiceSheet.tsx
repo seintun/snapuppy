@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { Plus, TagSimple, X } from '@phosphor-icons/react';
+import { CheckCircle, Plus, SignOut, TagSimple, X } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useSaveInvoiceOverrides } from '@/hooks/useBookings';
@@ -197,7 +197,7 @@ export function GenerateInvoiceSheet({
 
   if (mode === 'preview' && previewOverrides) {
     return (
-      <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Invoice Preview">
+      <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Preview">
         <div className="space-y-4">
           <InvoicePreview
             invoice={{
@@ -230,8 +230,8 @@ export function GenerateInvoiceSheet({
   return (
     <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Generate Invoice">
       <form className="space-y-3" onSubmit={submit} noValidate>
-        {/* Line Items — no section heading, reduced outer padding */}
-        <div className="rounded-[14px] border border-sage/30 bg-[linear-gradient(135deg,rgba(143,184,134,0.18)_0%,rgba(212,228,208,0.10)_60%,rgba(253,251,247,1)_100%)] p-2.5 space-y-2">
+        {/* Line Items — simplified hierarchy */}
+        <div className="space-y-2">
           {lineItemFields.map((field, index) => {
             const row = watchedLineItems?.[index];
             const count = Number(row?.count) || 0;
@@ -331,81 +331,51 @@ export function GenerateInvoiceSheet({
                 return (
                   <div
                     key={field.id}
-                    className="relative rounded-[12px] border border-pebble/60 bg-cream p-2.5"
+                    className={`relative rounded-[12px] border p-2 pt-1.5 transition-colors ${
+                      isCharge
+                        ? 'border-terracotta/30 bg-terracotta/10'
+                        : 'border-sage/40 bg-sage/12'
+                    }`}
                   >
-                    {/* Remove × */}
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border border-pebble/60 bg-white text-bark-light"
-                      onClick={() => removeAdjustment(index)}
-                      aria-label={`Remove adjustment ${index + 1}`}
-                    >
-                      <X size={10} weight="bold" />
-                    </button>
-
-                    {/* Kind toggle pills */}
-                    <div className="mb-2 flex gap-1 pr-7">
+                    {/* Header with Kind Label and Remove Button */}
+                    <div className="mb-1 flex items-center justify-between">
+                      <span
+                        className={`text-[9px] font-black uppercase tracking-wider ${
+                          isCharge ? 'text-terracotta' : 'text-sage-dark'
+                        }`}
+                      >
+                        {isCharge ? 'Charge' : 'Discount'}
+                      </span>
                       <button
                         type="button"
-                        className={`flex h-[30px] flex-1 items-center justify-center gap-1 rounded-lg border text-[10px] font-black uppercase tracking-wide transition-colors ${
-                          !isCharge
-                            ? 'border-sage/60 bg-sage/20 text-sage-dark'
-                            : 'border-pebble/50 bg-white text-bark-light'
-                        }`}
-                        onClick={() => {
-                          setValue(`adjustments.${index}.kind`, 'discount', {
-                            shouldDirty: true,
-                            shouldTouch: true,
-                          });
-                          clearErrors(`adjustments.${index}.description`);
-                        }}
+                        className="flex h-5 w-5 items-center justify-center rounded-full text-bark-light/50 hover:text-bark-light transition-colors"
+                        onClick={() => removeAdjustment(index)}
+                        aria-label={`Remove adjustment ${index + 1}`}
                       >
-                        <TagSimple size={10} />
-                        Discount
-                      </button>
-                      <button
-                        type="button"
-                        className={`flex h-[30px] flex-1 items-center justify-center gap-1 rounded-lg border text-[10px] font-black uppercase tracking-wide transition-colors ${
-                          isCharge
-                            ? 'border-terracotta/50 bg-terracotta/12 text-terracotta'
-                            : 'border-pebble/50 bg-white text-bark-light'
-                        }`}
-                        onClick={() => {
-                          setValue(`adjustments.${index}.kind`, 'charge', {
-                            shouldDirty: true,
-                            shouldTouch: true,
-                          });
-                        }}
-                      >
-                        <Plus size={10} />
-                        Charge
+                        <X size={10} weight="bold" />
                       </button>
                     </div>
 
-                    {/* Description + Amount — aligned by items-end on the grid */}
-                    <div className="grid grid-cols-[1fr_96px] items-end gap-2">
-                      <div>
-                        <p className="mb-1 text-[10px] font-black uppercase tracking-wide text-bark-light">
-                          {isCharge ? 'Description *' : 'Description'}
-                        </p>
+                    {/* Inputs Row */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
                         <input
-                          className={`form-input h-[42px] ${showDescriptionError ? 'border-terracotta ring-1 ring-terracotta/30' : ''}`}
+                          className={`form-input h-[36px] text-[13px] ${
+                            showDescriptionError ? 'border-terracotta ring-1 ring-terracotta/30' : ''
+                          }`}
                           type="text"
-                          placeholder={isCharge ? 'Required' : 'Optional'}
+                          placeholder={isCharge ? 'Charge Description *' : 'Discount Description'}
                           {...register(`adjustments.${index}.description`)}
                         />
                       </div>
 
-                      <div>
-                        <p className="mb-1 text-[10px] font-black uppercase tracking-wide text-bark-light">
-                          Amount
-                        </p>
+                      <div className="w-[84px]">
                         <label className="relative block">
-                          <span className="absolute top-1/2 left-2 -translate-y-1/2 text-xs font-black text-bark-light">
+                          <span className="absolute top-1/2 left-2 -translate-y-1/2 text-[10px] font-black text-bark-light">
                             $
                           </span>
                           <input
-                            className="form-input h-[42px] pl-5 text-right"
+                            className="form-input h-[36px] pl-4 text-right text-[13px]"
                             type="number"
                             inputMode="decimal"
                             min={0}
@@ -422,8 +392,8 @@ export function GenerateInvoiceSheet({
                     </div>
 
                     {showDescriptionError && (
-                      <p className="mt-1 text-[11px] font-bold text-terracotta">
-                        Charge description is required
+                      <p className="mt-1 text-[10px] font-bold text-terracotta">
+                        Required
                       </p>
                     )}
                   </div>
@@ -436,18 +406,18 @@ export function GenerateInvoiceSheet({
           <div className="flex gap-2">
             <button
               type="button"
-              className="flex h-[36px] flex-1 items-center justify-center gap-1 rounded-xl border border-sage/50 bg-sage/10 text-[11px] font-black uppercase tracking-wide text-sage-dark"
+              className="btn-sage flex-1 !px-3 !py-1 !text-[10px]"
               onClick={() => addAdjustment('discount')}
             >
-              <TagSimple size={11} />
+              <TagSimple size={11} weight="bold" />
               Add Discount
             </button>
             <button
               type="button"
-              className="flex h-[36px] flex-1 items-center justify-center gap-1 rounded-xl border border-terracotta/40 bg-terracotta/8 text-[11px] font-black uppercase tracking-wide text-terracotta"
+              className="btn-danger flex-1 !px-3 !py-1 !text-[10px]"
               onClick={() => addAdjustment('charge')}
             >
-              <Plus size={11} />
+              <Plus size={11} weight="bold" />
               Add Charge
             </button>
           </div>

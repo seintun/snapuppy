@@ -53,6 +53,7 @@ export function BookingReceiptView() {
           sitterName: 'Snapuppy Sitter',
           clientName: booking.dog?.owner_name ?? 'Client',
           dogName: booking.dog?.name ?? 'Dog',
+          dogPhotoUrl: booking.dog?.photo_url ?? null,
           startDate: booking.start_date,
           endDate: booking.end_date,
           subtotal: booking.total_amount,

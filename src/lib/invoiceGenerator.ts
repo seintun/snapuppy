@@ -26,6 +26,7 @@ export interface InvoiceInput {
   sitterName: string;
   clientName: string;
   dogName: string;
+  dogPhotoUrl?: string | null;
   startDate: string;
   endDate: string;
   subtotal: number;
