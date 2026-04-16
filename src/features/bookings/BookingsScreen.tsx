@@ -6,6 +6,7 @@ import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AddButton } from '@/components/ui/AddButton';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
+import { Badge } from '@/components/ui/Badge';
 import { type BookingStatus, type BookingRecord } from '@/lib/bookingService';
 import { useBookings } from '@/hooks/useBookings';
 import { CreateBookingSheet } from './CreateBookingSheet';
@@ -20,6 +21,7 @@ import {
   formatBookingRange,
   formatCurrency,
   getStatusLabel,
+  getStatusVariant,
   getDurationText,
 } from './bookingUi';
 
@@ -101,14 +103,14 @@ export function BookingsScreen() {
             </p>
           </div>
 
-          {/* Failsafe Compact Filter Bar - Optimized for No Overlap */}
-          <div className="flex items-center">
-            <div className="inline-flex rounded-full bg-pebble/10 p-0.5 shadow-sm border border-pebble/5">
+          {/* Scrollable Filter Bar for small screens */}
+          <div className="flex items-center overflow-x-auto scrollbar-none -mx-1 px-1 py-0.25">
+            <div className="inline-flex w-max rounded-full bg-pebble/10 px-1 py-0.5 shadow-sm border border-pebble/5">
               {(['all', ...bookingStatusOptions] as const).map((status) => (
                 <button
                   key={status}
                   type="button"
-                  className={`py-1.25 px-3 rounded-full text-[8px] font-black transition-all cursor-pointer ${
+                  className={`py-1 px-3.5 rounded-full text-[8px] font-black transition-all cursor-pointer whitespace-nowrap ${
                     filter === status
                       ? 'bg-white text-sage shadow-md scale-[1.02]'
                       : 'text-bark-light/40 hover:text-bark'
@@ -190,10 +192,18 @@ export function BookingsScreen() {
                                   {formatBookingRange(booking)}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-sage shadow-sm border border-sage/10 shrink-0">
-                                <span className="text-[8px] font-black text-white leading-none uppercase tracking-tighter">
-                                  {getDurationText(booking)}
-                                </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-sage shadow-sm border border-sage/10">
+                                  <span className="text-[8px] font-black text-white leading-none uppercase tracking-tighter">
+                                    {getDurationText(booking)}
+                                  </span>
+                                </div>
+                                <Badge
+                                  variant={getStatusVariant(booking.status)}
+                                  className="text-[8px] px-2 py-0.5 uppercase tracking-wide"
+                                >
+                                  {getStatusLabel(booking.status)}
+                                </Badge>
                               </div>
                             </div>
 

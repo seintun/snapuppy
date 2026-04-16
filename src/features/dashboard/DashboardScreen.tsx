@@ -66,8 +66,8 @@ export function DashboardScreen() {
               Today's Pups
             </h2>
           </div>
-          <div className="flex items-center gap-1.5 bg-terracotta/10 text-terracotta px-2.5 py-1 rounded-full border border-terracotta/20">
-            <div className="w-1 h-1 rounded-full bg-terracotta shadow-[0_0_8px_rgba(212,132,90,0.5)] animate-pulse" />
+          <div className="flex items-center gap-1.5 bg-sky/10 text-sky px-2.5 py-1 rounded-full border border-sky/20">
+            <div className="w-1 h-1 rounded-full bg-sky shadow-[0_0_8px_rgba(126,200,227,0.5)] animate-pulse" />
             <span className="text-[8px] font-black uppercase tracking-widest">Active</span>
           </div>
         </div>
@@ -178,21 +178,6 @@ export function DashboardScreen() {
                 </p>
               </div>
             )}
-            {staying.some((b) => b.dogs?.owner_phone) ? (
-              <div className="flex flex-wrap gap-2">
-                {staying
-                  .filter((b) => Boolean(b.dogs?.owner_phone))
-                  .map((b) => (
-                    <a
-                      key={`${b.id}-call`}
-                      className="btn-sage !py-2 !px-3 !text-xs"
-                      href={`tel:${b.dogs?.owner_phone ?? ''}`}
-                    >
-                      Call {b.dogs?.name}
-                    </a>
-                  ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="h-px bg-pebble/30 mx-2" />

@@ -22,6 +22,7 @@ export interface ComputeDashboardMetricsInput {
 
 export interface DashboardMetrics {
   monthlyRevenue: number;
+  pendingRevenue: number;
   occupancyRate: number;
   averageBookingValue: number;
   activeDogs: number;
@@ -36,23 +37,37 @@ export function computeDashboardMetrics(input: ComputeDashboardMetricsInput): Da
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
 
   const monthBookings = input.bookings.filter(
-    (booking) => booking.start_date.startsWith(monthPrefix) || booking.end_date.startsWith(monthPrefix),
+    (booking) =>
+      booking.start_date.startsWith(monthPrefix) || booking.end_date.startsWith(monthPrefix),
   );
 
+  const completedBookings = monthBookings.filter((booking) => booking.status === 'completed');
+  const pendingBookings = monthBookings.filter((booking) => booking.status === 'pending');
+
   const monthlyRevenue = round(
-    monthBookings.reduce(
+    completedBookings.reduce(
       (sum, booking) => sum + booking.total_amount + (booking.tip_amount ?? 0),
       0,
     ),
   );
 
-  const averageBookingValue = monthBookings.length ? round(monthlyRevenue / monthBookings.length) : 0;
-
-  const activeDogIds = new Set(
-    monthBookings.filter((booking) => booking.status !== 'cancelled').map((booking) => booking.dog_id),
+  const pendingRevenue = round(
+    pendingBookings.reduce((sum, booking) => sum + booking.total_amount, 0),
   );
 
-  const newDogsThisMonth = input.dogs.filter((dog) => dog.created_at.startsWith(monthPrefix)).length;
+  const averageBookingValue = completedBookings.length
+    ? round(monthlyRevenue / completedBookings.length)
+    : 0;
+
+  const activeDogIds = new Set(
+    monthBookings
+      .filter((booking) => booking.status !== 'cancelled')
+      .map((booking) => booking.dog_id),
+  );
+
+  const newDogsThisMonth = input.dogs.filter((dog) =>
+    dog.created_at.startsWith(monthPrefix),
+  ).length;
 
   const bookingCountsByDog = new Map<string, number>();
   for (const booking of monthBookings) {
@@ -81,6 +96,7 @@ export function computeDashboardMetrics(input: ComputeDashboardMetricsInput): Da
 
   return {
     monthlyRevenue,
+    pendingRevenue,
     occupancyRate,
     averageBookingValue,
     activeDogs: activeDogIds.size,

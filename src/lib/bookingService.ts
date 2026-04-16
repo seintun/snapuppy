@@ -204,7 +204,6 @@ export async function getBookings(sitterId: string): Promise<BookingRecord[]> {
       `,
     )
     .eq('sitter_id', sitterId)
-    .neq('status', 'cancelled')
     .order('start_date', { ascending: false });
 
   if (error) throw error;

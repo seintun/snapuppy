@@ -4,10 +4,12 @@ import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Warning } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
+import { Badge } from '@/components/ui/Badge';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
 import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
+import { getStatusLabel, getStatusVariant } from './bookingUi';
 import { CloseBookingSheet } from './CloseBookingSheet';
 
 export function BookingDetailScreen() {
@@ -61,13 +63,6 @@ export function BookingDetailScreen() {
   }
 
   const dog = booking.dog;
-  const statusColors: Record<string, string> = {
-    active: 'bg-sage',
-    pending: 'bg-sky',
-    completed: 'bg-bark-light',
-    cancelled: 'bg-terracotta',
-  };
-
   return (
     <div className="pb-24">
       {/* Header */}
@@ -102,11 +97,12 @@ export function BookingDetailScreen() {
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
-            <span
-              className={`${statusColors[booking.status] ?? 'bg-pebble'} text-white rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider drop-shadow-sm`}
+            <Badge
+              variant={getStatusVariant(booking.status)}
+              className="text-[9px] px-2 py-0.5 uppercase tracking-wider"
             >
-              {booking.status}
-            </span>
+              {getStatusLabel(booking.status)}
+            </Badge>
             {booking.is_holiday && (
               <span className="bg-terracotta text-white rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider drop-shadow-sm">
                 Holiday

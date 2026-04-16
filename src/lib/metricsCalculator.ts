@@ -9,6 +9,10 @@ export function calculateOccupancyRate(metrics: DashboardMetrics) {
   return metrics.occupancyRate;
 }
 
+export function calculatePendingRevenue(metrics: DashboardMetrics) {
+  return metrics.pendingRevenue;
+}
+
 export function calculateAverageBookingValue(metrics: DashboardMetrics) {
   return metrics.averageBookingValue;
 }

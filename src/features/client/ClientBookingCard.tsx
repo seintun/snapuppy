@@ -1,4 +1,7 @@
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/Badge';
+import type { BookingStatus } from '@/lib/bookingService';
+import { getStatusLabel, getStatusVariant } from '@/features/bookings/bookingUi';
 
 interface ClientBookingCardProps {
   booking: {
@@ -13,6 +16,8 @@ interface ClientBookingCardProps {
 }
 
 export function ClientBookingCard({ booking, onSelect }: ClientBookingCardProps) {
+  const status = toBookingStatus(booking.status);
+
   return (
     <button
       type="button"
@@ -21,12 +26,25 @@ export function ClientBookingCard({ booking, onSelect }: ClientBookingCardProps)
     >
       <p className="text-sm font-black text-bark">{booking.dog?.name ?? 'Dog Booking'}</p>
       <p className="text-xs text-bark-light">
-        {format(new Date(booking.start_date), 'MMM d')} - {format(new Date(booking.end_date), 'MMM d, yyyy')}
+        {format(new Date(booking.start_date), 'MMM d')} -{' '}
+        {format(new Date(booking.end_date), 'MMM d, yyyy')}
       </p>
       <div className="mt-2 flex items-center justify-between text-xs">
-        <span className="badge">{booking.status}</span>
+        <Badge
+          variant={getStatusVariant(status)}
+          className="text-[10px] px-2 py-0.5 uppercase tracking-wide"
+        >
+          {getStatusLabel(status)}
+        </Badge>
         <span className="font-bold text-terracotta">${booking.total_amount.toFixed(2)}</span>
       </div>
     </button>
   );
+}
+
+function toBookingStatus(status: string): BookingStatus {
+  if (status === 'pending' || status === 'completed' || status === 'cancelled') {
+    return status;
+  }
+  return 'active';
 }

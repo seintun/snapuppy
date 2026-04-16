@@ -5,6 +5,7 @@ import {
   calculateAverageBookingValue,
   calculateMonthlyRevenue,
   calculateOccupancyRate,
+  calculatePendingRevenue,
   calculateMetrics,
   getActiveDogsCount,
   getTopDogsByBookings,
@@ -36,9 +37,18 @@ export function MetricsDashboard() {
 
   return (
     <section className="surface-card p-4 mt-4">
-      <h2 className="text-sm font-black text-bark uppercase tracking-wide mb-3">Business Metrics</h2>
+      <h2 className="text-sm font-black text-bark uppercase tracking-wide mb-3">
+        Business Metrics
+      </h2>
       <div className="grid grid-cols-2 gap-2 text-sm text-bark">
-        <MetricCard label="Monthly Revenue" value={`$${calculateMonthlyRevenue(metrics).toFixed(2)}`} />
+        <MetricCard
+          label="Monthly Revenue"
+          value={`$${calculateMonthlyRevenue(metrics).toFixed(2)}`}
+        />
+        <MetricCard
+          label="Pending Revenue"
+          value={`$${calculatePendingRevenue(metrics).toFixed(2)}`}
+        />
         <MetricCard label="Occupancy" value={`${calculateOccupancyRate(metrics).toFixed(2)}%`} />
         <MetricCard
           label="Avg Booking"
