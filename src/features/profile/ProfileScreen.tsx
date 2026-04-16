@@ -20,6 +20,7 @@ import {
   X,
   Plus,
   Warning,
+  PencilSimple,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -177,6 +178,7 @@ export function ProfileScreen() {
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [paymentErrors, setPaymentErrors] = useState<Record<number, string>>({});
   const [paymentDirty, setPaymentDirty] = useState(false);
@@ -369,14 +371,21 @@ export function ProfileScreen() {
             />
 
             {/* Name + email */}
-            <div className="flex-1 min-w-0 flex flex-col gap-1 pt-1">
-              <input
-                type="text"
-                maxLength={100}
-                placeholder="Snapuppy Sitter"
-                className="text-base font-bold text-bark bg-transparent border-b border-transparent focus:border-sage focus:outline-none transition-colors w-full py-0.5"
-                {...register('displayName')}
-              />
+            <div className="flex-1 min-w-0 flex flex-col gap-1.5 pt-1">
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={100}
+                  placeholder="Snapuppy Sitter"
+                  className="form-input w-full text-sm font-bold text-bark pr-7 py-2"
+                  {...register('displayName')}
+                />
+                <PencilSimple
+                  size={13}
+                  weight="bold"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-bark-light pointer-events-none"
+                />
+              </div>
               {errors.displayName && (
                 <p className="text-[10px] text-terracotta">{errors.displayName.message}</p>
               )}
@@ -384,16 +393,6 @@ export function ProfileScreen() {
                 <span className="text-xs text-bark-light truncate">{user.email}</span>
               )}
             </div>
-
-            {/* Sign out */}
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-terracotta bg-blush/40 border border-blush rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
-            >
-              <SignOut size={13} weight="bold" />
-              Sign Out
-            </button>
           </div>
         </div>
 
@@ -626,6 +625,40 @@ export function ProfileScreen() {
           {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </form>
+
+      {/* Sign Out */}
+      <div className="mt-2">
+        {!confirmSignOut ? (
+          <button
+            type="button"
+            onClick={() => setConfirmSignOut(true)}
+            className="w-full flex items-center justify-center gap-2 text-sm font-bold text-bark-light border border-pebble rounded-xl py-3 bg-cream active:scale-95 transition-transform"
+          >
+            <SignOut size={16} weight="bold" />
+            Sign Out
+          </button>
+        ) : (
+          <div className="surface-card !p-3 flex flex-col gap-2">
+            <p className="text-sm font-semibold text-bark text-center">Sign out of Snapuppy?</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmSignOut(false)}
+                className="flex-1 py-2.5 rounded-xl border border-pebble text-sm font-bold text-bark-light bg-cream active:scale-95 transition-transform"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="flex-1 py-2.5 rounded-xl bg-terracotta text-white text-sm font-bold active:scale-95 transition-transform"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
