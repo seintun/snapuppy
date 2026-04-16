@@ -74,7 +74,57 @@ function WeekRow({
   };
 
   return (
-    <div className="border-b border-pebble/10 last:border-b-0 h-full flex flex-col bg-cream/5 overflow-hidden">
+    <div className="relative border-b border-pebble/10 last:border-b-0 h-full flex flex-col bg-cream/5 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 z-0 grid grid-cols-7">
+        {week.map((day, i) => {
+          const inMonth = isSameMonth(day, currentMonth);
+          const today = isToday(day);
+          const selected = selectedDate && isSameDay(day, selectedDate);
+
+          return (
+            <div
+              key={`grid-${i}`}
+              className={`border-b ${i < 6 ? 'border-r' : ''} ${
+                selected
+                  ? 'border-sage/35 bg-sage/[0.04]'
+                  : today
+                    ? 'border-terracotta/30 bg-terracotta/[0.03]'
+                    : inMonth
+                      ? 'border-pebble/22'
+                      : 'border-pebble/14 bg-pebble/5'
+              }`}
+            />
+          );
+        })}
+      </div>
+
+      <div className="absolute inset-0 z-[5] grid grid-cols-7">
+        {week.map((day, i) => {
+          const inMonth = isSameMonth(day, currentMonth);
+          const today = isToday(day);
+          const selected = selectedDate && isSameDay(day, selectedDate);
+
+          return (
+            <button
+              key={`hit-${i}`}
+              type="button"
+              onClick={() => inMonth && onDateClick(day)}
+              aria-label={format(day, 'MMMM d, yyyy')}
+              className={`appearance-none border-0 p-0 m-0 h-full w-full transition-colors
+                ${
+                  inMonth
+                    ? selected
+                      ? 'cursor-pointer hover:bg-sage/[0.06]'
+                      : today
+                        ? 'cursor-pointer hover:bg-terracotta/[0.06]'
+                        : 'cursor-pointer hover:bg-sage/[0.05]'
+                    : 'pointer-events-none'
+                }`}
+            />
+          );
+        })}
+      </div>
+
       {/* Date Header: Clear vertical space */}
       <div className="grid grid-cols-7 relative h-8 shrink-0 pt-1 pointer-events-none z-10">
         {week.map((day, i) => {
@@ -90,12 +140,10 @@ function WeekRow({
           return (
             <div
               key={i}
-              onClick={() => inMonth && onDateClick(day)}
-              className={`flex flex-col items-center select-none pointer-events-auto h-full px-0.5
-                ${inMonth ? (selected ? 'bg-sage/10' : 'hover:bg-sage/5 cursor-pointer') : 'opacity-10 pointer-events-none'}`}
+              className={`flex flex-col items-center select-none h-full px-0.5 ${inMonth ? '' : 'opacity-35'}`}
             >
               <div
-                className={`w-4 h-4 flex items-center justify-center rounded-full text-[8.5px] font-black
+                className={`w-5 h-5 flex items-center justify-center rounded-md text-[8.5px] font-black
                   ${selected ? 'bg-sage text-white' : today ? 'bg-terracotta text-white' : 'text-bark'}`}
               >
                 {format(day, 'd')}
@@ -123,7 +171,7 @@ function WeekRow({
       </div>
 
       {/* Booking Bars: Separated below header */}
-      <div className="relative px-0.5 ml-px flex-1 flex flex-col overflow-hidden">
+      <div className="relative z-20 pointer-events-none px-0.5 ml-px flex-1 flex flex-col overflow-hidden">
         <div
           className="grid flex-1 items-start"
           style={{
@@ -152,7 +200,7 @@ function WeekRow({
                   e.stopPropagation();
                   onBookingClick(b.id);
                 }}
-                className="flex items-center px-1 overflow-hidden whitespace-nowrap cursor-pointer transition-all hover:brightness-95 active:scale-[0.98] shadow-sm"
+                className="pointer-events-auto flex items-center px-1 overflow-hidden whitespace-nowrap cursor-pointer transition-all hover:brightness-95 active:scale-[0.98] shadow-sm"
                 style={{
                   gridColumn: `${colStart} / ${colEnd}`,
                   gridRow: lane + 1,
@@ -208,7 +256,7 @@ export function CalendarMain() {
   }, [bookings, selectedDate]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-transparent -mx-4 overflow-hidden relative pb-10">
+    <div className="flex flex-col flex-1 min-h-0 bg-transparent -mx-4 overflow-hidden relative pb-2">
       {/* Month Navigation */}
       <div className="mx-4 mt-1 px-4 py-1.5 glass-card rounded-[24px] flush-shadow mb-1 border-b border-white/20">
         <div className="flex items-center justify-between">

@@ -97,7 +97,7 @@ export function ProfileScreen() {
           <button
             type="button"
             onClick={() => void signOut()}
-            className="flex items-center gap-1.5 text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
+            className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
           >
             <SignOut size={14} weight="bold" />
             Sign Out
