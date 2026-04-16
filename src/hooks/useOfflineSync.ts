@@ -8,34 +8,23 @@ export function useOfflineSync() {
   const [processedCount, setProcessedCount] = useState(0);
   const isRunningRef = useRef(false);
   const wasOnlineRef = useRef<boolean | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
 
   const runSync = useCallback(async () => {
     if (isRunningRef.current) return;
 
     isRunningRef.current = true;
-    if (mountedRef.current) {
-      setIsSyncing(true);
-    }
+    setIsSyncing(true);
 
     try {
       const count = await processOfflineQueue(async () => {
         // Mutations are already persisted; this hook only drains and tracks queue progress.
       });
 
-      if (mountedRef.current && count > 0) {
+      if (count > 0) {
         setProcessedCount((prev) => prev + count);
       }
     } finally {
-      if (mountedRef.current) {
-        setIsSyncing(false);
-      }
+      setIsSyncing(false);
       isRunningRef.current = false;
     }
   }, []);

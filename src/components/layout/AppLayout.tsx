@@ -2,7 +2,6 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { BottomTabs } from './BottomTabs';
 import { PwaStatus } from './PwaStatus';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
-import { SyncStatusBanner } from '@/components/ui/SyncStatusBanner';
 
 export function AppLayout() {
   const location = useLocation();
@@ -22,7 +21,6 @@ export function AppLayout() {
         className="flex-1 min-h-0 flex flex-col px-4 pt-[calc(16px+env(safe-area-inset-top))] pb-[80px] overscroll-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200"
       >
         <OfflineBanner />
-        <SyncStatusBanner />
         <div className="flex-1 min-h-0 flex flex-col">
           <Outlet />
         </div>
