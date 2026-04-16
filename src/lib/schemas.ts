@@ -123,7 +123,7 @@ export const PaymentMethodSchema = z.discriminatedUnion('type', [
     handle: z.union([
       z.string().email('Must be a valid email'),
       z.string().regex(usPhoneRegex, 'Must be a valid US phone number'),
-    ], { errorMap: () => ({ message: 'Zelle requires a valid email or US phone number' }) }),
+    ]),
   }),
 ]);
 
