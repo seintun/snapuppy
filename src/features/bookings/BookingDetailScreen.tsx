@@ -16,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
 import { GenerateInvoiceSheet } from '@/features/invoice/GenerateInvoiceSheet';
 import { parseInvoiceOverrides, type InvoiceLineItem } from '@/lib/invoiceGenerator';
+import { useProfile } from '@/hooks/useProfile';
 import { getStatusLabel, getStatusVariant } from './bookingUi';
 import { BookingTypePill } from './BookingTypePill';
 import { CloseBookingSheet } from './CloseBookingSheet';
@@ -27,6 +28,7 @@ export function BookingDetailScreen() {
   const queryClient = useQueryClient();
 
   const { data: booking, isLoading, isError, error: queryError } = useBooking(id);
+  const { data: profile } = useProfile();
   const { mutateAsync: updateBookingStatusMutation } = useUpdateBookingStatus();
   const { mutateAsync: checkInBooking } = useCheckInBooking();
   const { mutateAsync: checkOutBooking } = useCheckOutBooking();
@@ -298,7 +300,7 @@ export function BookingDetailScreen() {
         initialLineItems={derivedLineItems}
         savedOverrides={parseInvoiceOverrides(booking.invoice_overrides)}
         previewInvoice={{
-          sitterName: 'Snapuppy Sitter',
+          sitterName: profile?.display_name || 'Sitter',
           clientName: booking.dog?.owner_name ?? 'Client',
           dogName: booking.dog?.name ?? 'Dog',
           dogPhotoUrl: booking.dog?.photo_url ?? null,

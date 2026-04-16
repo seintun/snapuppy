@@ -69,7 +69,10 @@ export function buildInvoiceHtml(
   // Logo or sitter name top-right
   const headerRightHtml = logoUrl
     ? `<img src="${logoUrl}" alt="logo" crossorigin="anonymous" style="width:36px; height:36px; border-radius:8px; border:2px solid rgba(255,255,255,0.5); object-fit:cover;" />`
-    : `<div style="font-size:10px; font-weight:900; color:rgba(255,255,255,0.8); text-align:right; max-width:72px; line-height:1.3; word-break:break-word;">${sitterName}</div>`;
+    : `<div style="text-align:right;">
+         <div style="font-size:8px; font-weight:900; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:1px;">Cared by</div>
+         <div style="font-size:11px; font-weight:900; color:#fff; line-height:1.2; max-width:80px; word-break:break-word;">${sitterName} 🐾</div>
+       </div>`;
 
   const paidBadgeHtml = input.isPaid
     ? `<div style="margin-top:6px; display:flex; justify-content:flex-end;"><div style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,0.25); border:1px solid rgba(255,255,255,0.5); color:#fff; font-size:9px; font-weight:900; letter-spacing:0.1em; text-transform:uppercase; padding:3px 8px; border-radius:999px;">✓ PAID</div></div>`
@@ -98,7 +101,7 @@ export function buildInvoiceHtml(
 
   const lineItemsBlock = hasLineItems
     ? `<div style="border:1px solid #b8d4b5; border-radius:12px; background:linear-gradient(to bottom, #edf4ea, #fafbf8); padding:10px 12px; margin-bottom:10px;">
-        <div style="font-size:10px; font-weight:900; letter-spacing:0.09em; text-transform:uppercase; color:#6b9a66; margin-bottom:6px;">Service Breakdown</div>
+        <div style="font-size:10px; font-weight:900; letter-spacing:0.09em; text-transform:uppercase; color:#6b9a66; margin-bottom:2px;">Service Breakdown</div>
         ${lineItemsRowsHtml}
       </div>`
     : '';
