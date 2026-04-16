@@ -55,6 +55,14 @@ export function ProfileScreen() {
   }, [profile, reset]);
 
   const cutoffTime = useWatch({ control, name: 'cutoffTime' });
+  const nightlyRate = useWatch({ control, name: 'nightlyRate' });
+  const daycareRate = useWatch({ control, name: 'daycareRate' });
+  const holidayBoardingRate = useWatch({ control, name: 'holidayBoardingRate' });
+  const holidayDaycareRate = useWatch({ control, name: 'holidayDaycareRate' });
+
+  const showHolidayRateReminder =
+    (nightlyRate > 0 && holidayBoardingRate === 0) ||
+    (daycareRate > 0 && holidayDaycareRate === 0);
 
   const onSave = useCallback(
     async (data: ProfileFormData) => {
@@ -185,7 +193,9 @@ export function ProfileScreen() {
                   min="0"
                   max="9999.99"
                   className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.nightlyRate ? 'border-terracotta' : ''}`}
-                  {...register('nightlyRate', { valueAsNumber: true })}
+                  {...register('nightlyRate', {
+                    setValueAs: (value) => (value === '' ? 0 : Number(value)),
+                  })}
                 />
               </div>
               {errors.nightlyRate && (
@@ -212,7 +222,9 @@ export function ProfileScreen() {
                   min="0"
                   max="9999.99"
                   className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.daycareRate ? 'border-terracotta' : ''}`}
-                  {...register('daycareRate', { valueAsNumber: true })}
+                  {...register('daycareRate', {
+                    setValueAs: (value) => (value === '' ? 0 : Number(value)),
+                  })}
                 />
               </div>
               {errors.daycareRate && (
@@ -239,7 +251,9 @@ export function ProfileScreen() {
                   min="0"
                   max="9999.99"
                   className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidayBoardingRate ? 'border-terracotta' : ''}`}
-                  {...register('holidayBoardingRate', { valueAsNumber: true })}
+                  {...register('holidayBoardingRate', {
+                    setValueAs: (value) => (value === '' ? 0 : Number(value)),
+                  })}
                 />
               </div>
               {errors.holidayBoardingRate && (
@@ -268,7 +282,9 @@ export function ProfileScreen() {
                   min="0"
                   max="9999.99"
                   className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidayDaycareRate ? 'border-terracotta' : ''}`}
-                  {...register('holidayDaycareRate', { valueAsNumber: true })}
+                  {...register('holidayDaycareRate', {
+                    setValueAs: (value) => (value === '' ? 0 : Number(value)),
+                  })}
                 />
               </div>
               {errors.holidayDaycareRate && (
@@ -312,6 +328,11 @@ export function ProfileScreen() {
           <p className="text-[10px] text-bark-light mt-2 leading-snug">
             Pickups after cut-off time add a daycare charge on the final day.
           </p>
+          {showHolidayRateReminder && (
+            <div className="mt-2 rounded-lg border border-pebble/60 bg-cream px-2.5 py-2 text-[10px] font-medium text-bark-light">
+              Holiday rates are currently $0. Set them if you charge differently on holidays.
+            </div>
+          )}
         </div>
 
         {/* Save button */}

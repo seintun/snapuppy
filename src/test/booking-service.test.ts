@@ -166,9 +166,30 @@ describe('normalizeOptionalTimestamp', () => {
 });
 
 describe('hasRequiredBookingRates', () => {
-  it('requires both boarding and daycare rates to be greater than zero', () => {
-    expect(hasRequiredBookingRates({ nightly_rate: 60, daycare_rate: 35 })).toBe(true);
-    expect(hasRequiredBookingRates({ nightly_rate: 0, daycare_rate: 35 })).toBe(false);
-    expect(hasRequiredBookingRates({ nightly_rate: 60, daycare_rate: 0 })).toBe(false);
+  it('accepts rates that are zero or greater', () => {
+    expect(
+      hasRequiredBookingRates({
+        nightly_rate: 60,
+        daycare_rate: 35,
+        holiday_boarding_rate: 75,
+        holiday_daycare_rate: 45,
+      }),
+    ).toBe(true);
+    expect(
+      hasRequiredBookingRates({
+        nightly_rate: 0,
+        daycare_rate: 0,
+        holiday_boarding_rate: 0,
+        holiday_daycare_rate: 0,
+      }),
+    ).toBe(true);
+    expect(
+      hasRequiredBookingRates({
+        nightly_rate: 60,
+        daycare_rate: 35,
+        holiday_boarding_rate: -1,
+        holiday_daycare_rate: 0,
+      }),
+    ).toBe(false);
   });
 });

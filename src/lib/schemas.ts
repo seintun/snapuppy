@@ -107,7 +107,11 @@ const cutoffTimeStr = z
 
 /** Non-negative monetary rate capped at $9,999.99 */
 const rateField = (label: string) =>
-  z.number().min(0, `${label} must be $0 or more`).max(9999.99, `${label} cannot exceed $9,999.99`);
+  z
+    .number()
+    .refine(Number.isFinite, `${label} is required`)
+    .min(0, `${label} must be $0 or more`)
+    .max(9999.99, `${label} cannot exceed $9,999.99`);
 
 /**
  * Validates sitter profile settings.
