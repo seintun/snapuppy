@@ -238,8 +238,8 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     getDogForSitter(input.sitterId, input.dogId),
   ]);
 
-  if (!options.profile) {
-    throw new Error('Set your profile rates before creating a booking.');
+  if (!options.profile || !hasRequiredBookingRates(options.profile)) {
+    throw new Error('Set Boarding and Daycare rates in Profile before creating a booking.');
   }
 
   const pricing = buildBookingPricing({
@@ -258,26 +258,42 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     status: input.status ?? 'active',
     source: input.source ?? 'manual',
     notes: input.notes ?? null,
-    pickup_time: input.pickupDateTime ?? null,
-    dropoff_time: input.dropoffDateTime ?? null,
+    pickup_time: normalizeOptionalTimestamp(input.pickupDateTime),
+    dropoff_time: normalizeOptionalTimestamp(input.dropoffDateTime),
     type: pricing.type,
     total_amount: pricing.totalAmount,
     is_holiday: pricing.isHoliday,
   };
 
-  const { data: createdBooking, error: bookingError } = await supabase
+  let { data: createdBooking, error: bookingError } = await supabase
     .from('bookings')
     .insert(bookingInsert)
     .select('*')
     .single();
+
+  if (bookingError && shouldRetryBookingInsertWithoutDropoffTime(bookingError)) {
+    const fallbackInsert = { ...bookingInsert };
+    delete fallbackInsert.dropoff_time;
+    ({ data: createdBooking, error: bookingError } = await supabase
+      .from('bookings')
+      .insert(fallbackInsert)
+      .select('*')
+      .single());
+  }
 
   if (bookingError) {
     logger.error('Failed to insert booking record', bookingError);
     throw new DatabaseError('Failed to create booking', null, bookingError);
   }
 
+  if (!createdBooking) {
+    throw new DatabaseError('Failed to create booking', null, null);
+  }
+
+  const persistedBooking = createdBooking as BookingRow;
+
   const dayRows = pricing.days.map<TablesInsert<'booking_days'>>((day) => ({
-    booking_id: createdBooking.id,
+    booking_id: persistedBooking.id,
     date: day.date,
     rate_type: day.rate_type,
     is_holiday: day.is_holiday,
@@ -291,13 +307,13 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     .select('*');
 
   if (daysError) {
-    logger.error('Failed to insert booking days', daysError, { bookingId: createdBooking.id });
-    await supabase.from('bookings').delete().eq('id', createdBooking.id);
+    logger.error('Failed to insert booking days', daysError, { bookingId: persistedBooking.id });
+    await supabase.from('bookings').delete().eq('id', persistedBooking.id);
     throw new DatabaseError('Failed to create booking days', null, daysError);
   }
 
   const bookingWithDays = mapBookingRow({
-    ...createdBooking,
+    ...persistedBooking,
     dog,
     days: createdDays ?? [],
   });
@@ -489,6 +505,23 @@ function normalizeRateType(rateType: string): BookingRateType {
   return rateType === 'daycare' ? 'daycare' : 'boarding';
 }
 
+export function shouldRetryBookingInsertWithoutDropoffTime(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+
+  const code = 'code' in error ? String(error.code) : '';
+  const message = 'message' in error ? String(error.message) : '';
+
+  return (
+    code === 'PGRST204' && message.includes("'dropoff_time'") && message.includes("'bookings'")
+  );
+}
+
+export function normalizeOptionalTimestamp(value?: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function toRateSettings(profile: ProfileRow): ProfileRateSettings {
   return {
     nightly_rate: profile.nightly_rate,
@@ -496,6 +529,12 @@ function toRateSettings(profile: ProfileRow): ProfileRateSettings {
     holiday_surcharge: profile.holiday_surcharge,
     cutoff_time: profile.cutoff_time,
   };
+}
+
+export function hasRequiredBookingRates(
+  profile: Pick<ProfileRow, 'nightly_rate' | 'daycare_rate'>,
+): boolean {
+  return profile.nightly_rate > 0 && profile.daycare_rate > 0;
 }
 
 async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow> {

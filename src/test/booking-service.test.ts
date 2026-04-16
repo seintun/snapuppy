@@ -4,7 +4,10 @@ import {
   buildBookingPricing,
   buildPaymentCloseUpdate,
   calculateBookingRevenue,
+  hasRequiredBookingRates,
+  normalizeOptionalTimestamp,
   repriceBookingDays,
+  shouldRetryBookingInsertWithoutDropoffTime,
   type EditableBookingDay,
 } from '@/lib/bookingService';
 import type { ProfileRateSettings } from '@/lib/rate-calculator';
@@ -125,5 +128,46 @@ describe('buildPaymentCloseUpdate', () => {
       paid_at: '2026-07-05T18:30:00.000Z',
       updated_at: '2026-07-05T18:30:00.000Z',
     });
+  });
+});
+
+describe('shouldRetryBookingInsertWithoutDropoffTime', () => {
+  it('returns true for schema cache errors about bookings.dropoff_time', () => {
+    expect(
+      shouldRetryBookingInsertWithoutDropoffTime({
+        code: 'PGRST204',
+        message: "Could not find the 'dropoff_time' column of 'bookings' in the schema cache",
+      }),
+    ).toBe(true);
+  });
+
+  it('returns false for unrelated errors', () => {
+    expect(
+      shouldRetryBookingInsertWithoutDropoffTime({
+        code: 'PGRST204',
+        message: "Could not find the 'pickup_time' column of 'bookings' in the schema cache",
+      }),
+    ).toBe(false);
+    expect(shouldRetryBookingInsertWithoutDropoffTime(null)).toBe(false);
+  });
+});
+
+describe('normalizeOptionalTimestamp', () => {
+  it('returns null for missing or blank timestamp inputs', () => {
+    expect(normalizeOptionalTimestamp(undefined)).toBeNull();
+    expect(normalizeOptionalTimestamp('')).toBeNull();
+    expect(normalizeOptionalTimestamp('   ')).toBeNull();
+  });
+
+  it('returns ISO-like values unchanged when present', () => {
+    expect(normalizeOptionalTimestamp('2026-07-05T11:00:00')).toBe('2026-07-05T11:00:00');
+  });
+});
+
+describe('hasRequiredBookingRates', () => {
+  it('requires both boarding and daycare rates to be greater than zero', () => {
+    expect(hasRequiredBookingRates({ nightly_rate: 60, daycare_rate: 35 })).toBe(true);
+    expect(hasRequiredBookingRates({ nightly_rate: 0, daycare_rate: 35 })).toBe(false);
+    expect(hasRequiredBookingRates({ nightly_rate: 60, daycare_rate: 0 })).toBe(false);
   });
 });
