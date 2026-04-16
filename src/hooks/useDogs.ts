@@ -108,6 +108,8 @@ export function useUpdateDog() {
       void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['dogs', user?.id, data.id] });
       void queryClient.invalidateQueries({ queryKey: ['booking-options', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
     },
     onError: async (_, variables) => {
       await enqueueOfflineMutation({
