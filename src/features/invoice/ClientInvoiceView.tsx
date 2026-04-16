@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useBooking } from '@/hooks/useBookings';
 import { parseInvoiceOverrides } from '@/lib/invoiceGenerator';
@@ -6,6 +6,7 @@ import { InvoicePreview } from './InvoicePreview';
 
 export function ClientInvoiceView() {
   const { bookingId = '' } = useParams<{ bookingId: string }>();
+  const navigate = useNavigate();
   const { data: booking, isLoading } = useBooking(bookingId);
 
   if (isLoading) {
@@ -22,11 +23,17 @@ export function ClientInvoiceView() {
   return (
     <div className="min-h-dvh bg-warm-beige p-4">
       <div className="mb-3">
+        <button
+          type="button"
+          className="btn-secondary mb-3"
+          onClick={() => navigate(`/bookings/${booking.id}`)}
+        >
+          Back to Booking
+        </button>
         <h1 className="text-xl font-black text-bark">Invoice</h1>
         <p className="text-sm text-bark-light">{booking.is_paid ? 'PAID' : 'Payment Due'}</p>
       </div>
       <InvoicePreview
-        bookingId={booking.id}
         invoice={{
           sitterName: 'Snapuppy Sitter',
           clientName: booking.dog?.owner_name ?? 'Client',
@@ -36,7 +43,7 @@ export function ClientInvoiceView() {
           subtotal: booking.total_amount,
           lineItems: overrides?.lineItems,
           creditAmount: overrides?.creditAmount,
-          tipAmount: booking.tip_amount ?? 0,
+          tipAmount: 0,
           paymentNotes: booking.payment_notes,
           documentLabel: 'Invoice',
           isPaid: booking.is_paid ?? false,

@@ -5,6 +5,11 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    watch: {
+      ignored: ['**/.worktrees/**', '**/worktrees/**', '**/dist/**'],
+    },
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

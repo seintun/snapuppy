@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { buildInvoiceHtml } from '@/lib/invoiceTemplate';
-import { calculateInvoiceTotals, generateInvoiceMarkdown, parseInvoiceOverrides } from '@/lib/invoiceGenerator';
+import {
+  calculateInvoiceTotals,
+  generateInvoiceMarkdown,
+  parseInvoiceOverrides,
+} from '@/lib/invoiceGenerator';
 
 describe('invoiceTemplate', () => {
   it('escapes user-provided fields in generated HTML', () => {
@@ -27,10 +31,12 @@ describe('invoiceTemplate', () => {
     expect(html).toContain(`<p>Dog: ${escapedPayload}</p>`);
     expect(html).toContain(`<p>Payment instructions: ${escapedPayload}</p>`);
     expect(html).toContain(`<p>Notes: ${escapedPayload}</p>`);
-    expect(html).toContain(`<img src="${escapedPayload}" alt="Business logo" style="height:48px; width:48px; object-fit:cover; border-radius:8px;" />`);
+    expect(html).toContain(
+      `<img src="${escapedPayload}" alt="Business logo" style="height:48px; width:48px; object-fit:cover; border-radius:8px;" />`,
+    );
   });
 
-  it('keeps credit, subtotal, and total aligned with markdown invoice generation', () => {
+  it('keeps credit, subtotal, and total aligned with receipt preview totals', () => {
     const input = {
       sitterName: 'Sitter',
       clientName: 'Client',
@@ -40,6 +46,8 @@ describe('invoiceTemplate', () => {
       subtotal: 120,
       creditAmount: 20,
       tipAmount: 15,
+      documentLabel: 'Receipt' as const,
+      isPaid: true,
     };
 
     const html = buildInvoiceHtml(input);
@@ -90,6 +98,37 @@ describe('invoiceTemplate', () => {
 
     expect(html).toContain('<h1 style="margin:0; font-size:20px;">Receipt</h1>');
     expect(html).toContain('<p style="margin:4px 0 0; font-weight:700; color:#2E7D32;">PAID</p>');
+  });
+
+  it('does not render tip row for invoice document preview', () => {
+    const html = buildInvoiceHtml({
+      sitterName: 'Sitter',
+      clientName: 'Client',
+      dogName: 'Dog',
+      startDate: '2026-01-01',
+      endDate: '2026-01-02',
+      subtotal: 100,
+      tipAmount: 20,
+      documentLabel: 'Invoice',
+    });
+
+    expect(html).not.toContain('<p>Tip:');
+  });
+
+  it('renders tip row for receipt document preview', () => {
+    const html = buildInvoiceHtml({
+      sitterName: 'Sitter',
+      clientName: 'Client',
+      dogName: 'Dog',
+      startDate: '2026-01-01',
+      endDate: '2026-01-02',
+      subtotal: 100,
+      tipAmount: 20,
+      documentLabel: 'Receipt',
+      isPaid: true,
+    });
+
+    expect(html).toContain('<p>Tip: $20.00</p>');
   });
 });
 

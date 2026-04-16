@@ -2,11 +2,9 @@ import { useContext, useMemo, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { ToastContext } from '@/components/ui/ToastContext';
 import { buildInvoiceHtml } from '@/lib/invoiceTemplate';
-import { buildInvoiceShareLink } from '@/lib/invoiceService';
 import type { InvoiceInput } from '@/lib/invoiceGenerator';
 
 interface InvoicePreviewProps {
-  bookingId: string;
   invoice: InvoiceInput & {
     logoUrl?: string | null;
     paymentInstructions?: string | null;
@@ -16,10 +14,9 @@ interface InvoicePreviewProps {
   downloadName?: string;
 }
 
-export function InvoicePreview({ bookingId, invoice, downloadName }: InvoicePreviewProps) {
+export function InvoicePreview({ invoice, downloadName }: InvoicePreviewProps) {
   const toast = useContext(ToastContext);
   const html = useMemo(() => buildInvoiceHtml(invoice), [invoice]);
-  const shareLink = useMemo(() => buildInvoiceShareLink(bookingId), [bookingId]);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const handleDownloadPng = async () => {
@@ -54,15 +51,9 @@ export function InvoicePreview({ bookingId, invoice, downloadName }: InvoicePrev
         dangerouslySetInnerHTML={{ __html: html }}
       />
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-sage" onClick={() => window.print()}>
-          Print
-        </button>
         <button type="button" className="btn-sage" onClick={() => void handleDownloadPng()}>
           Download PNG
         </button>
-        <a className="btn-sage" href={shareLink} target="_blank" rel="noreferrer">
-          Open Share Link
-        </a>
       </div>
     </section>
   );

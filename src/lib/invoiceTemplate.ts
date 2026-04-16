@@ -19,10 +19,15 @@ export function buildInvoiceHtml(
 ) {
   const { lineItems, hasLineItems, credit, subtotal, tip, total } = calculateInvoiceTotals(input);
   const documentLabel = input.documentLabel ?? 'Invoice';
+  const showTip = documentLabel === 'Receipt';
+  const displayedTip = showTip ? tip : 0;
+  const displayedTotal = showTip ? total : subtotal;
   const sitterName = escapeHtml(input.sitterName);
   const clientName = escapeHtml(input.clientName);
   const dogName = escapeHtml(input.dogName);
-  const paymentInstructions = input.paymentInstructions ? escapeHtml(input.paymentInstructions) : null;
+  const paymentInstructions = input.paymentInstructions
+    ? escapeHtml(input.paymentInstructions)
+    : null;
   const paymentNotes = input.paymentNotes ? escapeHtml(input.paymentNotes) : null;
   const logoUrl = input.logoUrl ? escapeHtml(input.logoUrl) : null;
   const lineItemsHtml = hasLineItems
@@ -52,8 +57,8 @@ export function buildInvoiceHtml(
       <p>Dog: ${dogName}</p>
       ${hasLineItems ? `<div style="margin: 12px 0;">${lineItemsHtml}${credit > 0 ? `<p style="margin:0 0 6px;">Credit: -$${credit.toFixed(2)}</p>` : ''}</div>` : ''}
       <p>Subtotal: $${subtotal.toFixed(2)}</p>
-      <p>Tip: $${tip.toFixed(2)}</p>
-      <p><strong>Total: $${total.toFixed(2)}</strong></p>
+      ${showTip ? `<p>Tip: $${displayedTip.toFixed(2)}</p>` : ''}
+      <p><strong>Total: $${displayedTotal.toFixed(2)}</strong></p>
       ${paymentInstructions ? `<p>Payment instructions: ${paymentInstructions}</p>` : ''}
       ${paymentNotes ? `<p>Notes: ${paymentNotes}</p>` : ''}
     </section>

@@ -38,11 +38,17 @@ export function BookingReceiptView() {
   return (
     <div className="min-h-dvh bg-warm-beige p-4">
       <div className="mb-3">
+        <button
+          type="button"
+          className="btn-secondary mb-3"
+          onClick={() => navigate(`/bookings/${booking.id}`)}
+        >
+          Back to Booking
+        </button>
         <h1 className="text-xl font-black text-bark">Receipt</h1>
         <p className="text-sm text-bark-light">PAID</p>
       </div>
       <InvoicePreview
-        bookingId={booking.id}
         invoice={{
           sitterName: 'Snapuppy Sitter',
           clientName: booking.dog?.owner_name ?? 'Client',
