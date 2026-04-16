@@ -110,6 +110,7 @@ export function useCreateBooking() {
       svcCreateBooking({ ...input, sitterId: user!.id }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
       logger.info('Booking created successfully, cache invalidated');
     },
     onError: async (_, variables) => {
@@ -131,6 +132,7 @@ export function useUpdateBookingStatus() {
     onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, variables.id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
     },
     onError: async (_, variables) => {
       await enqueueOfflineMutation({
@@ -151,6 +153,7 @@ export function useSaveBookingDays() {
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, updated.id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
     },
   });
 }
@@ -177,6 +180,7 @@ export function useCloseBooking() {
     onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, variables.id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
     },
   });
 }
