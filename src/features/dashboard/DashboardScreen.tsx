@@ -127,13 +127,13 @@ export function DashboardScreen() {
                             if (isArrived) return;
                             setArrivedIds((prev) => [...new Set([...prev, b.id])]);
                           }}
-                          className={`text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-full transition-all ${
+                          className={`text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md transition-all ${
                             isArrived
-                              ? 'bg-sage/20 text-sage cursor-default'
-                              : 'bg-sage/30 text-sage hover:bg-sage/40 active:scale-95'
+                              ? 'text-sage/70 bg-transparent'
+                              : 'text-sage bg-sage/10 hover:bg-sage/20 active:scale-95'
                           }`}
                         >
-                          {isArrived ? 'Arrived ✓' : 'Arrive'}
+                          {isArrived ? '✓' : 'tap'}
                         </button>
                       </div>
                     </button>
