@@ -1,9 +1,13 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import { supabase } from '@/lib/supabase';
 import { getMonthQueryRange, type CalendarBooking } from '@/features/calendar/calendarUtils';
 import {
   createBooking as svcCreateBooking,
+  autoAdvanceBookings as svcAutoAdvanceBookings,
+  checkInBooking as svcCheckInBooking,
+  checkOutBooking as svcCheckOutBooking,
   deleteBooking as svcDeleteBooking,
   closeBooking as svcCloseBooking,
   getBooking,
@@ -183,4 +187,56 @@ export function useCloseBooking() {
       void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
     },
   });
+}
+
+export function useCheckInBooking() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => svcCheckInBooking(id, user!.id),
+    onSuccess: (_, id) => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
+    },
+  });
+}
+
+export function useCheckOutBooking() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => svcCheckOutBooking(id, user!.id),
+    onSuccess: (_, id) => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, id] });
+      void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
+    },
+  });
+}
+
+export function useAutoAdvanceBookings() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let cancelled = false;
+    void svcAutoAdvanceBookings(user.id)
+      .then(() => {
+        if (cancelled) return;
+        void queryClient.invalidateQueries({ queryKey: ['bookings', user.id] });
+        void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user.id] });
+      })
+      .catch((error) => {
+        logger.warn('Auto-advance failed', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [queryClient, user?.id]);
 }

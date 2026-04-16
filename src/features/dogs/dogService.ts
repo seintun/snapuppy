@@ -157,7 +157,7 @@ export async function cancelDogBookings(dogId: string): Promise<void> {
     .from('bookings')
     .select('id')
     .eq('dog_id', dogId)
-    .in('status', ['active', 'pending']);
+    .in('status', ['upcoming', 'active', 'awaiting']);
 
   if (error) throw error;
   if (!data?.length) return;

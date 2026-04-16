@@ -6,7 +6,12 @@ import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { Badge } from '@/components/ui/Badge';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
-import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
+import {
+  useBooking,
+  useCheckInBooking,
+  useCheckOutBooking,
+  useUpdateBookingStatus,
+} from '@/hooks/useBookings';
 import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
 import { getStatusLabel, getStatusVariant } from './bookingUi';
@@ -20,6 +25,8 @@ export function BookingDetailScreen() {
 
   const { data: booking, isLoading, isError, error: queryError } = useBooking(id);
   const { mutateAsync: updateBookingStatusMutation } = useUpdateBookingStatus();
+  const { mutateAsync: checkInBooking } = useCheckInBooking();
+  const { mutateAsync: checkOutBooking } = useCheckOutBooking();
 
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [closeSheetOpen, setCloseSheetOpen] = useState(false);
@@ -175,8 +182,7 @@ export function BookingDetailScreen() {
           </div>
         </div>
 
-        {/* Cancel */}
-        {booking.status === 'active' && (
+        {booking.status !== 'cancelled' && (
           <div className="mt-2">
             {cancelConfirm ? (
               <div className="bg-blush rounded-[14px] p-4 border-[1.5px] border-terracotta">
@@ -211,21 +217,53 @@ export function BookingDetailScreen() {
         )}
 
         <div className="grid grid-cols-2 gap-2 mt-2">
-          <button
-            type="button"
-            className="btn-sage"
-            onClick={() => navigate(`/invoice/${booking.id}`)}
-          >
-            Generate Invoice
-          </button>
-          <button
-            type="button"
-            className="btn-danger"
-            onClick={() => setCloseSheetOpen(true)}
-            disabled={booking.status === 'cancelled' || booking.is_paid === true}
-          >
-            {booking.is_paid ? 'Already Paid' : 'Mark as Paid'}
-          </button>
+          {booking.status === 'upcoming' ? (
+            <button
+              type="button"
+              className="btn-sage"
+              onClick={() =>
+                void checkInBooking(booking.id).then(() => {
+                  addToast('Checked in', 'success');
+                })
+              }
+            >
+              Check In
+            </button>
+          ) : null}
+
+          {booking.status === 'active' ? (
+            <button
+              type="button"
+              className="btn-danger"
+              onClick={() =>
+                void checkOutBooking(booking.id).then(() => {
+                  addToast('Checked out', 'success');
+                })
+              }
+            >
+              Check Out
+            </button>
+          ) : null}
+
+          {booking.status === 'awaiting' ? (
+            <button
+              type="button"
+              className="btn-danger"
+              onClick={() => setCloseSheetOpen(true)}
+            >
+              Mark as Paid
+            </button>
+          ) : null}
+
+          {booking.status === 'awaiting' || booking.status === 'paid' ? (
+            <button
+              type="button"
+              className="btn-sage"
+              onClick={() => navigate(`/invoice/${booking.id}`)}
+            >
+              Generate Invoice
+            </button>
+          ) : null}
         </div>
 
         <div className="mt-3">

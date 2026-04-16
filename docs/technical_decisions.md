@@ -237,6 +237,41 @@ This document captures every architectural and design decision made during the p
 
 ---
 
+## 18. Booking Lifecycle Redesign (`upcoming -> active -> awaiting -> paid`)
+
+**Decision:** Replace legacy `pending | active | completed | cancelled` booking states with a sitter-focused lifecycle:
+
+- `upcoming` = confirmed future stay
+- `active` = in care
+- `awaiting` = checked out, payment pending
+- `paid` = closed and paid
+- `cancelled` = archived
+
+**Rationale:**
+
+- Separates operational state from payment-closure state.
+- Makes overdue payment follow-up visible (`awaiting`) without overloading `completed` semantics.
+- Better aligns with day-to-day sitter workflow and dashboard prompts.
+- Supports hybrid transitions (manual check-in/out + date-based auto-advance).
+
+**Trade-off:** Existing records may require status normalization (`pending -> upcoming`, `completed -> paid`) in read paths and/or DB migration scripts.
+
+---
+
+## 19. Client Portal Decommission (Phase 2+)
+
+**Decision:** Remove client portal routes and supporting modules (`/client/*`, client auth/session helpers, client request UI).
+
+**Rationale:**
+
+- Product focus is sitter-only mobile workflow in current phases.
+- Reduces route/auth complexity and maintenance overhead.
+- Avoids duplicate service paths and stale status logic tied to client-request flows.
+
+**Trade-off:** Client self-service request and token access are no longer available until explicitly re-scoped and reintroduced.
+
+---
+
 ## Decisions Deferred to Later Phases
 
 | Decision                            | Phase | Reason Deferred                           |

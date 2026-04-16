@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document describes the current Phase 1 architecture of the snapuppy SPA, focusing on data flow, auth boundaries, offline behavior, and module dependency rules.
+This document describes the current Phase 2+ architecture of the snapuppy SPA, focusing on data flow, auth boundaries, offline behavior, and module dependency rules.
 
 ## 1) End-to-End Data Flow
 
@@ -33,11 +33,19 @@ BookingsScreen / BookingDetailScreen
   -> Supabase tables (bookings, booking_days, dogs, profiles)
 ```
 
+### Booking status lifecycle
+
+- Primary flow: `upcoming -> active -> awaiting -> paid`.
+- Cancellation is supported from any non-cancelled state.
+- `useAutoAdvanceBookings` runs on bookings entry and applies date-based transitions:
+  - `upcoming -> active` when `start_date <= today`
+  - `active -> awaiting` when `end_date < today`
+
 ## 2) Auth Architecture
 
-The app has two independent auth models.
+The app currently uses a single auth model.
 
-### A) Sitter auth (primary app)
+### Sitter auth (primary app)
 
 - Provider chain: `AuthContext` -> `AuthProvider` -> `RequireAuth` route guard.
 - Session source: Supabase auth user/session.
@@ -47,19 +55,9 @@ The app has two independent auth models.
   - `src/features/auth/AuthProvider.tsx`
   - `src/features/auth/RequireAuth.tsx`
 
-### B) Client portal auth (token/session based)
-
-- Entry route: `/client/:token`.
-- Guard: `RequireClientAuth` checks browser-stored client session against route token.
-- Session source: client token validation + client session helpers.
-- Main files:
-  - `src/features/client/clientAuth.ts`
-  - `src/lib/clientToken.ts`
-  - `src/features/client/RequireClientAuth.tsx`
-
 ### Auth boundary note
 
-Sitter auth and client auth are intentionally separate; do not share context/session assumptions across them.
+All interactive app routes are sitter-auth only. The legacy client portal route family (`/client/*`) has been removed.
 
 ## 3) Offline Strategy
 
@@ -94,18 +92,17 @@ components -> minimal dependencies (presentation-first)
 - `auth`: sitter authentication lifecycle and route protection.
 - `bookings`: booking lifecycle management UIs and status transitions.
 - `calendar`: calendar rendering and date-scoped booking visibility.
-- `client`: client-facing portal with token/session access.
 - `dashboard`: today and metrics summary surfaces.
 - `dogs`: dog profiles and CRUD interactions.
 - `guest`: guest-specific service logic.
-- `invoice`: invoice rendering/print/share/client invoice view.
-- `profile`: sitter profile, rates, preferences, client link UI.
+- `invoice`: invoice rendering/print/share.
+- `profile`: sitter profile, rates, and preferences.
 - `recurring`: recurring availability and recurrence-related UI.
 - `reports`: reporting surfaces and report detail flows.
 
 ### Known boundary friction
 
-- Service ownership is split between `src/lib` and some feature folders (`client`, `dogs`, `profile`, `guest`).
+- Service ownership is split between `src/lib` and some feature folders (`dogs`, `profile`, `guest`).
 - This is tracked as tech debt in `docs/tech-debt.md`.
 
 ## 5) State Management Model
@@ -142,6 +139,6 @@ State is intentionally layered by lifetime and scope.
 
 1. Prefer feature-local UI logic, but keep cross-feature primitives in `src/components`.
 2. Keep network and persistence logic in service/hook layers, not screen components.
-3. Keep auth boundaries explicit: sitter routes and client routes should remain isolated.
+3. Keep route boundaries explicit: authenticated sitter routes remain under `RequireAuth`.
 4. Treat offline replay behavior as an explicit contract; avoid implicit queue side effects.
 5. Use `@/` imports and existing query-key patterns to avoid accidental cache fragmentation.

@@ -1,21 +1,21 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlass, Calendar, CaretRight, Sun, Moon } from '@phosphor-icons/react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { MagnifyingGlass } from '@phosphor-icons/react';
+import { format } from 'date-fns';
 import { Card } from '@/components/ui/Card';
-import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AddButton } from '@/components/ui/AddButton';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { Badge } from '@/components/ui/Badge';
-import { type BookingStatus, type BookingRecord } from '@/lib/bookingService';
-import { useBookings } from '@/hooks/useBookings';
+import {
+  useAutoAdvanceBookings,
+  useBookings,
+  useCheckInBooking,
+  useCheckOutBooking,
+  useCloseBooking,
+} from '@/hooks/useBookings';
+import { type BookingRecord, type BookingStatus } from '@/lib/bookingService';
 import { CreateBookingSheet } from './CreateBookingSheet';
-import { format } from 'date-fns';
-import { PendingRequestCard } from './PendingRequestCard';
-import { AcceptRequestModal } from './AcceptRequestModal';
-import { DeclineRequestModal } from './DeclineRequestModal';
-import { acceptClientRequest, declineClientRequest } from '@/lib/bookingService';
-import { useAuthContext } from '@/features/auth/useAuthContext';
 import {
   bookingStatusOptions,
   formatBookingRange,
@@ -25,107 +25,147 @@ import {
   getDurationText,
 } from './bookingUi';
 
-interface GroupedBookings {
-  [key: string]: BookingRecord[];
+const TABS: BookingStatus[] = bookingStatusOptions;
+
+function getBorderColor(status: BookingStatus): string {
+  if (status === 'upcoming') return 'border-amber';
+  if (status === 'active') return 'border-sky';
+  if (status === 'awaiting') return 'border-terracotta';
+  return 'border-sage';
+}
+
+function sortBookingsByTab(bookings: BookingRecord[], tab: BookingStatus): BookingRecord[] {
+  return [...bookings].sort((left, right) => {
+    if (tab === 'paid') {
+      const leftDate = new Date(left.paid_at ?? left.updated_at).getTime();
+      const rightDate = new Date(right.paid_at ?? right.updated_at).getTime();
+      return rightDate - leftDate;
+    }
+
+    if (tab === 'awaiting') {
+      return left.end_date.localeCompare(right.end_date);
+    }
+
+    return left.start_date.localeCompare(right.start_date);
+  });
 }
 
 export function BookingsScreen() {
   const navigate = useNavigate();
-  const { user } = useAuthContext();
+  const [searchParams, setSearchParams] = useSearchParams();
+  useAutoAdvanceBookings();
   const { data: bookings = [], isLoading, isError, error } = useBookings();
-  const [filter, setFilter] = useState<'all' | BookingStatus>('active');
+  const { mutateAsync: checkInBooking, isPending: checkingIn } = useCheckInBooking();
+  const { mutateAsync: checkOutBooking, isPending: checkingOut } = useCheckOutBooking();
+  const { mutateAsync: markPaid, isPending: markingPaid } = useCloseBooking();
+
+  const requestedTab = searchParams.get('tab');
+  const defaultTab = requestedTab && TABS.includes(requestedTab as BookingStatus)
+    ? (requestedTab as BookingStatus)
+    : 'upcoming';
+  const [activeTab, setActiveTab] = useState<BookingStatus>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [accepting, setAccepting] = useState<BookingRecord | null>(null);
-  const [declining, setDeclining] = useState<BookingRecord | null>(null);
+  const [showCancelled, setShowCancelled] = useState(false);
 
-  const filteredBookings = useMemo(() => {
-    let result =
-      filter === 'all' ? bookings : bookings.filter((booking) => booking.status === filter);
+  useEffect(() => {
+    if (!requestedTab) return;
+    if (!TABS.includes(requestedTab as BookingStatus)) return;
+    setActiveTab(requestedTab as BookingStatus);
+  }, [requestedTab]);
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (b) =>
-          b.dog?.name.toLowerCase().includes(query) ||
-          b.dog?.owner_name?.toLowerCase().includes(query),
-      );
+  const filteredBySearch = useMemo(() => {
+    if (!searchQuery.trim()) return bookings;
+    const query = searchQuery.toLowerCase();
+
+    return bookings.filter(
+      (booking) =>
+        booking.dog?.name.toLowerCase().includes(query) ||
+        booking.dog?.owner_name?.toLowerCase().includes(query),
+    );
+  }, [bookings, searchQuery]);
+
+  const tabBookings = useMemo(
+    () => sortBookingsByTab(filteredBySearch.filter((booking) => booking.status === activeTab), activeTab),
+    [activeTab, filteredBySearch],
+  );
+
+  const cancelledBookings = useMemo(
+    () =>
+      sortBookingsByTab(
+        filteredBySearch.filter((booking) => booking.status === 'cancelled'),
+        'paid',
+      ),
+    [filteredBySearch],
+  );
+
+  const awaitingCount = bookings.filter((booking) => booking.status === 'awaiting').length;
+
+  async function runPrimaryAction(booking: BookingRecord): Promise<void> {
+    if (booking.status === 'upcoming') {
+      await checkInBooking(booking.id);
+      return;
     }
 
-    return result;
-  }, [bookings, filter, searchQuery]);
+    if (booking.status === 'active') {
+      await checkOutBooking(booking.id);
+      return;
+    }
 
-  const groupedBookings = useMemo(() => {
-    const groups: GroupedBookings = {};
+    if (booking.status === 'awaiting') {
+      await markPaid({ id: booking.id, input: { tipAmount: 0, paymentNotes: '' } });
+    }
+  }
 
-    // Create a copy and sort internal items first
-    const sortedItems = [...filteredBookings].sort((a, b) => {
-      const dateA = new Date(a.start_date).getTime();
-      const dateB = new Date(b.start_date).getTime();
-      return filter === 'active' || filter === 'pending' ? dateA - dateB : dateB - dateA;
-    });
-
-    sortedItems.forEach((booking) => {
-      const date = new Date(`${booking.start_date}T00:00:00`);
-      const monthYear = format(date, 'MMMM yyyy');
-      if (!groups[monthYear]) {
-        groups[monthYear] = [];
-      }
-      groups[monthYear].push(booking);
-    });
-
-    return groups;
-  }, [filteredBookings, filter]);
-
-  const sortedMonthKeys = useMemo(() => {
-    return Object.keys(groupedBookings).sort((a, b) => {
-      const dateA = new Date(a);
-      const dateB = new Date(b);
-
-      if (filter === 'active' || filter === 'pending') {
-        return dateA.getTime() - dateB.getTime();
-      }
-      return dateB.getTime() - dateA.getTime();
-    });
-  }, [groupedBookings, filter]);
+  const ctaBusy = checkingIn || checkingOut || markingPaid;
 
   return (
-    <div className="flex flex-col h-full bg-transparent overflow-hidden relative">
-      {/* Ultra-Density Header */}
-      <div className="sticky top-0 z-20 bg-warm-beige/95 backdrop-blur-md pt-2 pb-3 -mx-4 px-4 border-b border-pebble/10">
-        <div className="flex flex-col gap-4 mb-4">
+    <div className="flex h-full flex-col overflow-hidden bg-transparent">
+      <div className="sticky top-0 z-20 -mx-4 border-b border-pebble/10 bg-warm-beige/95 px-4 pb-3 pt-2 backdrop-blur-md">
+        <div className="mb-4 flex flex-col gap-4">
           <div className="px-1 pt-2">
-            <h1 className="text-3xl font-black text-bark tracking-tight leading-none mb-1">
-              Bookings
-            </h1>
-            <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em]">
-              {(filter === 'all' ? 'All' : getStatusLabel(filter)) +
-                ` (${filteredBookings.length})`}
+            <h1 className="text-3xl font-black leading-none tracking-tight text-bark">Bookings</h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-bark-light/40">
+              {getStatusLabel(activeTab)} ({tabBookings.length})
             </p>
           </div>
 
-          {/* Scrollable Filter Bar for small screens */}
-          <div className="flex items-center overflow-x-auto scrollbar-none -mx-1 px-1 py-0.25">
-            <div className="inline-flex w-max rounded-full bg-pebble/10 px-1 py-0.5 shadow-sm border border-pebble/5">
-              {(['all', ...bookingStatusOptions] as const).map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  className={`py-1 px-3.5 rounded-full text-[8px] font-black transition-all cursor-pointer whitespace-nowrap ${
-                    filter === status
-                      ? 'bg-white text-sage shadow-md scale-[1.02]'
-                      : 'text-bark-light/40 hover:text-bark'
-                  }`}
-                  onClick={() => setFilter(status)}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              ))}
+          <div className="scrollbar-none -mx-1 flex items-center overflow-x-auto px-1 py-0.5">
+            <div className="inline-flex w-max rounded-full border border-pebble/5 bg-pebble/10 px-1 py-0.5 shadow-sm">
+              {TABS.map((status) => {
+                const isAwaiting = status === 'awaiting';
+                const isActive = activeTab === status;
+
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    className={`relative cursor-pointer whitespace-nowrap rounded-full px-3.5 py-1 text-[10px] font-black transition-all ${
+                      isActive ? 'bg-white text-sage shadow-md' : 'text-bark-light/50 hover:text-bark'
+                    }`}
+                    onClick={() => {
+                      setActiveTab(status);
+                      setSearchParams((current) => {
+                        const next = new URLSearchParams(current);
+                        next.set('tab', status);
+                        return next;
+                      });
+                    }}
+                  >
+                    {getStatusLabel(status)}
+                    {isAwaiting && awaitingCount > 0 ? (
+                      <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-terracotta px-1 text-[9px] text-white animate-pulse">
+                        {awaitingCount}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        <div className="relative group">
+        <div className="group relative">
           <MagnifyingGlass
             className="absolute left-3 top-1/2 -translate-y-1/2 text-bark-light/20 transition-colors group-focus-within:text-sage"
             size={12}
@@ -134,14 +174,14 @@ export function BookingsScreen() {
           <input
             type="text"
             placeholder="Search dog or owner..."
-            className="form-input !pl-8 !py-1.5 !text-[10px] !rounded-full !bg-white/80 border-pebble/5 focus:ring-sage/20 shadow-sm"
+            className="form-input !rounded-full !bg-white/80 !py-1.5 !pl-8 !text-[10px] border-pebble/5 shadow-sm focus:ring-sage/20"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(event) => setSearchQuery(event.target.value)}
           />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-none pt-4">
+      <div className="scrollbar-none flex-1 overflow-y-auto pt-4">
         {isLoading && !bookings.length ? (
           <div className="flex h-[40vh] items-center justify-center">
             <AppLoadingAnimation size="md" label="Syncing bookings..." />
@@ -149,130 +189,121 @@ export function BookingsScreen() {
         ) : null}
 
         {isError ? (
-          <div className="p-6 text-center text-terracotta text-sm font-black">
+          <div className="p-6 text-center text-sm font-black text-terracotta">
             {error instanceof Error ? error.message : 'Sync failed'}
           </div>
         ) : null}
 
         {!isLoading && !isError ? (
-          filteredBookings.length ? (
+          tabBookings.length ? (
             <div className="space-y-3 -mx-4 px-4 pb-20">
-              {sortedMonthKeys.map((monthYear) => (
-                <div key={monthYear}>
-                  <div className="flex items-center gap-1.5 px-1.5 mb-2 opacity-50">
-                    <Calendar size={11} weight="bold" className="text-bark-light" />
-                    <h2 className="text-[9px] font-black uppercase tracking-[0.2em] text-bark-light">
-                      {monthYear}
-                    </h2>
+              {tabBookings.map((booking) => (
+                <Card
+                  key={booking.id}
+                  className={`overflow-hidden border border-pebble/10 p-0 shadow-sm ${getBorderColor(booking.status)} border-l-4`}
+                  pressable
+                  onClick={() => navigate(`/bookings/${booking.id}`)}
+                >
+                  <div className="flex items-start justify-between gap-3 px-3 pb-2 pt-3">
+                    <div className="min-w-0">
+                      <h2 className="truncate text-sm font-black text-bark">{booking.dog?.name ?? 'Unknown Dog'}</h2>
+                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-bark-light/60">
+                        {formatBookingRange(booking)}
+                      </p>
+                      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-bark-light/60">
+                        {booking.dog?.owner_name ?? 'No owner listed'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black leading-none text-terracotta">
+                        {formatCurrency(booking.total_amount)}
+                      </p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-bark-light/50">
+                        {getDurationText(booking)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    {groupedBookings[monthYear].map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="relative pl-3 border-l-[1.5px] border-pebble/20 ml-2"
-                      >
-                        {/* Timeline Node Connector */}
-                        <div className="absolute -left-[5.5px] top-3.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-sage shadow-sm z-10" />
 
-                        {booking.status === 'pending' ? (
-                          <PendingRequestCard
-                            booking={booking}
-                            onAccept={() => setAccepting(booking)}
-                            onDecline={() => setDeclining(booking)}
-                          />
-                        ) : (
+                  <div className="flex items-center justify-between gap-2 border-t border-pebble/10 bg-cream/60 px-3 py-2">
+                    <Badge
+                      variant={getStatusVariant(booking.status)}
+                      className="px-2 py-0.5 text-[9px] uppercase tracking-wide"
+                    >
+                      {getStatusLabel(booking.status)}
+                    </Badge>
+                    {booking.status !== 'paid' ? (
+                      <button
+                        type="button"
+                        className={booking.status === 'awaiting' ? 'btn-danger !px-3 !py-1.5 !text-[10px]' : 'btn-sage !px-3 !py-1.5 !text-[10px]'}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void runPrimaryAction(booking);
+                        }}
+                        disabled={ctaBusy}
+                      >
+                        {booking.status === 'upcoming'
+                          ? 'Check In'
+                          : booking.status === 'active'
+                            ? 'Check Out'
+                            : 'Mark as Paid'}
+                      </button>
+                    ) : null}
+                  </div>
+                </Card>
+              ))}
+
+              {activeTab === 'paid' ? (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    className="w-full cursor-pointer rounded-xl border border-pebble/20 bg-cream/70 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-bark-light"
+                    onClick={() => setShowCancelled((value) => !value)}
+                  >
+                    {showCancelled ? 'Hide Cancelled' : 'Show Cancelled'}
+                  </button>
+
+                  {showCancelled ? (
+                    <div className="mt-2 space-y-2">
+                      {cancelledBookings.length ? (
+                        cancelledBookings.map((booking) => (
                           <Card
-                            className="p-0 border border-pebble/5 overflow-hidden flex flex-col mb-3 shadow-sm"
+                            key={booking.id}
+                            className="border border-pebble/10 border-l-4 border-l-pebble/40 p-3"
                             pressable
                             onClick={() => navigate(`/bookings/${booking.id}`)}
                           >
-                            {/* Timeline Date Header */}
-                            <div className="flex items-center justify-between px-3 py-1.5 bg-pebble/5">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-[10px] font-black text-bark uppercase tracking-tight truncate">
-                                  {formatBookingRange(booking)}
-                                </span>
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-black text-bark">
+                                  {booking.dog?.name ?? 'Unknown Dog'}
+                                </p>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-bark-light/60">
+                                  {format(new Date(`${booking.start_date}T00:00:00`), 'MMM d')} -{' '}
+                                  {format(new Date(`${booking.end_date}T00:00:00`), 'MMM d')}
+                                </p>
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-sage shadow-sm border border-sage/10">
-                                  <span className="text-[8px] font-black text-white leading-none uppercase tracking-tighter">
-                                    {getDurationText(booking)}
-                                  </span>
-                                </div>
-                                <Badge
-                                  variant={getStatusVariant(booking.status)}
-                                  className="text-[8px] px-2 py-0.5 uppercase tracking-wide"
-                                >
-                                  {getStatusLabel(booking.status)}
-                                </Badge>
-                              </div>
-                            </div>
-
-                            <div className="h-px bg-pebble/10 w-full" />
-
-                            {/* Info Body */}
-                            <div className="flex items-center gap-3 p-2.5 pt-1.5">
-                              <div className="relative shrink-0">
-                                <DogAvatar
-                                  name={booking.dog?.name ?? 'Dog'}
-                                  src={booking.dog?.photo_url}
-                                  size="md"
-                                />
-                                <div
-                                  className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm ${booking.type === 'daycare' ? 'bg-sky' : 'bg-sage'}`}
-                                >
-                                  {booking.type === 'daycare' ? (
-                                    <Sun size={10} weight="fill" className="text-white" />
-                                  ) : (
-                                    <Moon size={10} weight="fill" className="text-white" />
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  <h3 className="font-black text-bark truncate text-sm leading-tight">
-                                    {booking.dog?.name ?? 'Unknown'}
-                                  </h3>
-                                  <p className="text-[9px] font-black text-bark-light/40 uppercase tracking-widest mt-0.5">
-                                    {booking.dog?.owner_name || 'Individual'}
-                                  </p>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <p className="text-base font-black text-terracotta leading-none">
-                                    {formatCurrency(booking.total_amount)}
-                                  </p>
-                                  <p className="text-[9px] text-bark-light uppercase tracking-wide mt-0.5">
-                                    {booking.source ?? 'manual'}
-                                  </p>
-                                </div>
-                              </div>
-                              <CaretRight
-                                size={14}
-                                weight="bold"
-                                className="text-pebble/30 shrink-0 ml-1"
-                              />
+                              <Badge variant="terracotta" className="text-[9px] uppercase">
+                                Cancelled
+                              </Badge>
                             </div>
                           </Card>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                        ))
+                      ) : (
+                        <p className="py-2 text-center text-xs font-bold text-bark-light/50">
+                          No cancelled bookings.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
-              ))}
+              ) : null}
             </div>
           ) : (
             <div className="mt-8">
               <EmptyState
-                title={
-                  searchQuery
-                    ? 'No matches found'
-                    : `No ${(filter === 'all' ? 'all' : getStatusLabel(filter)).toLowerCase()} bookings`
-                }
+                title={searchQuery ? 'No matches found' : `No ${getStatusLabel(activeTab).toLowerCase()} bookings`}
                 description={
-                  searchQuery
-                    ? 'Try a different dog or owner name.'
-                    : 'Tap the + button to create a booking.'
+                  searchQuery ? 'Try a different dog or owner name.' : 'Tap the + button to create a booking.'
                 }
               />
             </div>
@@ -282,26 +313,6 @@ export function BookingsScreen() {
 
       <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
       <AddButton onClick={() => setIsCreateOpen(true)} variant="booking" isActive={isCreateOpen} />
-      <AcceptRequestModal
-        isOpen={Boolean(accepting)}
-        booking={accepting}
-        onClose={() => setAccepting(null)}
-        onConfirm={() => {
-          if (!accepting || !user?.id) return;
-          void acceptClientRequest(accepting.id, user.id).finally(() => setAccepting(null));
-        }}
-      />
-      <DeclineRequestModal
-        isOpen={Boolean(declining)}
-        booking={declining}
-        onClose={() => setDeclining(null)}
-        onConfirm={(reason) => {
-          if (!declining || !user?.id) return;
-          void declineClientRequest(declining.id, user.id, reason).finally(() =>
-            setDeclining(null),
-          );
-        }}
-      />
     </div>
   );
 }
