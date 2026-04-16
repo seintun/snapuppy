@@ -210,7 +210,7 @@ export function BookingsScreen() {
                       <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="sm" />
                       <div className="min-w-0">
                         <h2 className="truncate text-sm font-black text-bark">{booking.dog?.name ?? 'Unknown Dog'}</h2>
-                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-bark-light/60">
+                        <p className="mt-0.5 text-[11px] font-bold tracking-wide text-bark-light">
                           {formatBookingRange(booking)}
                         </p>
                         <div className="mt-1 flex items-center gap-1.5">
