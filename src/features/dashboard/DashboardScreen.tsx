@@ -1,10 +1,10 @@
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
+import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useCalendarBookings } from '@/hooks/useBookings';
-import { format, startOfToday, getHours } from 'date-fns';
+import { CheckCircle, Clock, Info, PawPrint } from '@phosphor-icons/react';
+import { format, getHours, startOfToday } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DogAvatar } from '@/components/ui/DogAvatar';
-import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
-import { PawPrint, CheckCircle, Clock, Info } from '@phosphor-icons/react';
 import { MetricsDashboard } from './MetricsDashboard';
 
 export function DashboardScreen() {
@@ -308,7 +308,7 @@ export function DashboardScreen() {
                           )
                         }
                       >
-                        {isDeparted ? '✓ Done' : 'Check Out'}
+                        {isDeparted ? '✓ Departed' : 'Check Out'}
                       </button>
                     </div>
                   );
