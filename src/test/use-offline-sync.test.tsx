@@ -1,4 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { PropsWithChildren } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -15,6 +17,11 @@ vi.mock('@/lib/sync', () => ({
 }));
 
 describe('useOfflineSync', () => {
+  const wrapper = ({ children }: PropsWithChildren) => {
+    const queryClient = new QueryClient();
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  };
+
   beforeEach(() => {
     onlineState.value = true;
     processOfflineQueueMock.mockReset();
@@ -23,7 +30,7 @@ describe('useOfflineSync', () => {
   it('processes queue once and returns to idle', async () => {
     processOfflineQueueMock.mockResolvedValue(0);
 
-    const { result } = renderHook(() => useOfflineSync());
+    const { result } = renderHook(() => useOfflineSync(), { wrapper });
 
     await waitFor(() => {
       expect(processOfflineQueueMock).toHaveBeenCalledTimes(1);
@@ -37,7 +44,7 @@ describe('useOfflineSync', () => {
   it('processes queue again after reconnecting', async () => {
     processOfflineQueueMock.mockResolvedValue(0);
 
-    const { rerender, result } = renderHook(() => useOfflineSync());
+    const { rerender, result } = renderHook(() => useOfflineSync(), { wrapper });
 
     await waitFor(() => {
       expect(processOfflineQueueMock).toHaveBeenCalledTimes(1);
