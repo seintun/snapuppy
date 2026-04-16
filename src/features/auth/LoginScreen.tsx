@@ -6,6 +6,7 @@ import { EmailSchema } from '@/lib/schemas';
 const PASSCODE_COOLDOWN_MS = 30_000;
 const PASSCODE_COOLDOWN_STORAGE_KEY = 'snapuppy.passcode_next_allowed_at';
 const REMEMBER_DEVICE_STORAGE_KEY = 'snapuppy.remember_device';
+const PASSCODE_LENGTH = 6;
 
 function DogIcon() {
   return (
@@ -67,21 +68,53 @@ function PasscodeInput({
   onResend: () => void;
 }) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const verifyButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    if (value.length === 6) {
-      inputRefs.current[5]?.focus();
-    } else if (value.length > 0) {
-      inputRefs.current[value.length - 1]?.focus();
-    }
-  }, [value]);
+    inputRefs.current[0]?.focus();
+  }, []);
 
   function handleDigitInput(index: number, digit: string) {
-    const newValue = value.slice(0, index) + digit + value.slice(index + 1);
-    onChange(newValue);
-    if (digit && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+    if (!digit) {
+      if (index === value.length - 1) {
+        onChange(value.slice(0, -1));
+      }
+      return;
     }
+
+    const newValue = value.slice(0, index) + digit + value.slice(index + 1);
+    const nextValue = newValue.slice(0, PASSCODE_LENGTH);
+    onChange(nextValue);
+
+    if (index < PASSCODE_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+      return;
+    }
+
+    if (nextValue.length === PASSCODE_LENGTH) {
+      verifyButtonRef.current?.focus();
+    }
+  }
+
+  function handleBulkInput(index: number, digits: string) {
+    if (!digits) {
+      return;
+    }
+
+    const sanitized = digits.replace(/\D/g, '').slice(0, PASSCODE_LENGTH);
+    if (!sanitized) {
+      return;
+    }
+
+    const nextValue =
+      index === 0 ? sanitized : (value.slice(0, index) + sanitized).slice(0, PASSCODE_LENGTH);
+    onChange(nextValue);
+    if (nextValue.length === PASSCODE_LENGTH) {
+      verifyButtonRef.current?.focus();
+      return;
+    }
+
+    inputRefs.current[Math.min(nextValue.length - 1, PASSCODE_LENGTH - 1)]?.focus();
   }
 
   function handleKeyDown(index: number, e: React.KeyboardEvent) {
@@ -90,15 +123,22 @@ function PasscodeInput({
     }
   }
 
+  function handlePaste(index: number, e: React.ClipboardEvent<HTMLInputElement>) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '');
+    handleBulkInput(index, pasted);
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
       <div className="text-center py-2">
         <p className="text-sm text-bark-light mb-1">We sent a code to</p>
         <p className="text-lg font-bold text-bark">{email}</p>
+        <p className="text-xs text-bark-light mt-1">Enter the 6-digit code</p>
       </div>
 
       <div className="flex justify-center gap-2">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
+        {Array.from({ length: PASSCODE_LENGTH }, (_, i) => i).map((i) => (
           <input
             key={i}
             ref={(el) => {
@@ -109,12 +149,25 @@ function PasscodeInput({
             maxLength={1}
             value={value[i] || ''}
             onChange={(e) => {
-              const digit = e.target.value.replace(/\D/g, '').slice(-1);
-              if (digit) handleDigitInput(i, digit);
+              const digits = e.target.value.replace(/\D/g, '');
+              if (!digits) {
+                handleDigitInput(i, '');
+                return;
+              }
+              if (digits.length > 1) {
+                handleBulkInput(i, digits);
+                return;
+              }
+              handleDigitInput(i, digits);
             }}
+            onPaste={(e) => handlePaste(i, e)}
             onKeyDown={(e) => {
               handleKeyDown(i, e);
-              if (e.key === 'Enter' && i === 5 && value.length === 6) {
+              if (
+                e.key === 'Enter' &&
+                i === PASSCODE_LENGTH - 1 &&
+                value.length === PASSCODE_LENGTH
+              ) {
                 e.preventDefault();
                 onSubmit(value);
               }
@@ -125,10 +178,11 @@ function PasscodeInput({
       </div>
 
       <button
+        ref={verifyButtonRef}
         type="button"
         className="btn-sage py-3 text-sm mt-2"
         onClick={() => onSubmit(value)}
-        disabled={value.length !== 6 || isVerifying}
+        disabled={value.length !== PASSCODE_LENGTH || isVerifying}
       >
         {isVerifying ? 'Verifying...' : 'Verify Code'}
       </button>
@@ -145,7 +199,11 @@ function PasscodeInput({
         <button
           type="button"
           className={`font-semibold ${isCoolingDown || isVerifying ? 'text-bark-light cursor-not-allowed' : 'text-sage hover:underline'}`}
-          onClick={onResend}
+          onClick={() => {
+            onChange('');
+            inputRefs.current[0]?.focus();
+            onResend();
+          }}
           disabled={isCoolingDown || isVerifying}
         >
           {isCoolingDown ? `Resend in ${cooldownSeconds}s` : 'Resend code'}
@@ -232,6 +290,11 @@ export function LoginScreen() {
   }
 
   async function handleVerify() {
+    if (passcode.length !== PASSCODE_LENGTH) {
+      setAuthError('Enter the 6-digit code');
+      return;
+    }
+
     setAuthError(null);
     setIsVerifying(true);
 
@@ -334,7 +397,11 @@ export function LoginScreen() {
               </div>
             )}
 
-            <button type="submit" className="btn-sage mt-3 py-4 text-base" disabled={isSending || !email}>
+            <button
+              type="submit"
+              className="btn-sage mt-3 py-4 text-base"
+              disabled={isSending || !email}
+            >
               {isSending ? 'Sending...' : isCoolingDown ? `Wait ${secondsLeft}s` : 'Send Code'}
             </button>
           </form>
