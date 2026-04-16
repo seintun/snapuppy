@@ -9,7 +9,8 @@ import {
   type ProfileRateSettings,
 } from '@/lib/rate-calculator';
 import { supabase } from '@/lib/supabase';
-import type { Tables, TablesInsert } from '@/types/database';
+import type { InvoiceOverrides } from '@/lib/invoiceGenerator';
+import type { Json, Tables, TablesInsert } from '@/types/database';
 import { logger } from './logger';
 import { DatabaseError } from './errors';
 
@@ -455,6 +456,30 @@ export async function saveBookingDays(input: SaveBookingDaysInput): Promise<Book
   };
 
   return updatedBooking;
+}
+
+export async function saveInvoiceOverrides(
+  bookingId: string,
+  sitterId: string,
+  overrides: InvoiceOverrides,
+): Promise<void> {
+  const supabase = await getSupabase();
+  const invoiceOverridesJson: Json = {
+    lineItems: overrides.lineItems.map((item) => ({
+      type: item.type,
+      isHoliday: item.isHoliday,
+      count: item.count,
+      rate: item.rate,
+    })),
+    creditAmount: overrides.creditAmount,
+  };
+  const { error } = await supabase
+    .from('bookings')
+    .update({ invoice_overrides: invoiceOverridesJson })
+    .eq('id', bookingId)
+    .eq('sitter_id', sitterId);
+
+  if (error) throw error;
 }
 
 export async function updateBookingStatus(

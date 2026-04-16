@@ -52,6 +52,7 @@ export type Database = {
           dog_id: string;
           end_date: string;
           id: string;
+          invoice_overrides: Json | null;
           is_holiday: boolean;
           is_paid: boolean | null;
           notes: string | null;
@@ -73,6 +74,7 @@ export type Database = {
           dog_id: string;
           end_date: string;
           id?: string;
+          invoice_overrides?: Json | null;
           is_holiday?: boolean;
           is_paid?: boolean | null;
           notes?: string | null;
@@ -94,6 +96,7 @@ export type Database = {
           dog_id?: string;
           end_date?: string;
           id?: string;
+          invoice_overrides?: Json | null;
           is_holiday?: boolean;
           is_paid?: boolean | null;
           notes?: string | null;

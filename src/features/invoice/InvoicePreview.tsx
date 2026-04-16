@@ -1,24 +1,64 @@
-import { useMemo } from 'react';
+import { useContext, useMemo, useRef } from 'react';
+import { toPng } from 'html-to-image';
+import { ToastContext } from '@/components/ui/ToastContext';
 import { buildInvoiceHtml } from '@/lib/invoiceTemplate';
 import { buildInvoiceShareLink } from '@/lib/invoiceService';
 import type { InvoiceInput } from '@/lib/invoiceGenerator';
 
 interface InvoicePreviewProps {
   bookingId: string;
-  invoice: InvoiceInput & { logoUrl?: string | null; paymentInstructions?: string | null; isPaid?: boolean };
+  invoice: InvoiceInput & {
+    logoUrl?: string | null;
+    paymentInstructions?: string | null;
+    documentLabel?: 'Invoice' | 'Receipt';
+    isPaid?: boolean;
+  };
+  downloadName?: string;
 }
 
-export function InvoicePreview({ bookingId, invoice }: InvoicePreviewProps) {
+export function InvoicePreview({ bookingId, invoice, downloadName }: InvoicePreviewProps) {
+  const toast = useContext(ToastContext);
   const html = useMemo(() => buildInvoiceHtml(invoice), [invoice]);
   const shareLink = useMemo(() => buildInvoiceShareLink(bookingId), [bookingId]);
+  const invoiceRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPng = async () => {
+    if (!invoiceRef.current) return;
+
+    try {
+      const dataUrl = await toPng(invoiceRef.current, { cacheBust: true });
+      const link = document.createElement('a');
+      link.download = downloadName ?? 'document.png';
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to download PNG';
+      if (toast?.addToast) {
+        toast.addToast(message, 'error');
+      } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert(message);
+      } else {
+        console.error(message, error);
+      }
+    }
+  };
+
+  const previewLabel = invoice.documentLabel === 'Receipt' ? 'Receipt Preview' : 'Invoice Preview';
 
   return (
     <section className="surface-card p-4 space-y-3">
-      <h2 className="text-sm font-black text-bark uppercase tracking-wide">Invoice Preview</h2>
-      <div className="rounded-lg border border-pebble/30 bg-white p-3" dangerouslySetInnerHTML={{ __html: html }} />
+      <h2 className="text-sm font-black text-bark uppercase tracking-wide">{previewLabel}</h2>
+      <div
+        ref={invoiceRef}
+        className="rounded-lg border border-pebble/30 bg-white p-3"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn-sage" onClick={() => window.print()}>
           Print
+        </button>
+        <button type="button" className="btn-sage" onClick={() => void handleDownloadPng()}>
+          Download PNG
         </button>
         <a className="btn-sage" href={shareLink} target="_blank" rel="noreferrer">
           Open Share Link
