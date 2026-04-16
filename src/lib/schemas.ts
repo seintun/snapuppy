@@ -113,24 +113,34 @@ const rateField = (label: string) =>
     .min(0, `${label} must be $0 or more`)
     .max(9999.99, `${label} cannot exceed $9,999.99`);
 
+const usPhoneRegex = /^\+?1?\d{10}$/;
+
+export const PaymentMethodSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('venmo'), handle: z.string().min(1, 'Handle is required') }),
+  z.object({ type: z.literal('cashapp'), handle: z.string().min(1, 'Handle is required') }),
+  z.object({
+    type: z.literal('zelle'),
+    handle: z.union([
+      z.string().email('Must be a valid email'),
+      z.string().regex(usPhoneRegex, 'Must be a valid US phone number'),
+    ], { errorMap: () => ({ message: 'Zelle requires a valid email or US phone number' }) }),
+  }),
+]);
+
+export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
+
 /**
  * Validates sitter profile settings.
- * businessName is optional to match the nullable DB column.
  */
 export const ProfileSchema = z.object({
-  businessName: z
+  displayName: z
     .string()
     .trim()
-    .max(100, 'Business name must be 100 characters or fewer')
+    .max(100, 'Display name must be 100 characters or fewer')
     .optional()
     .or(z.literal('')),
   businessLogoUrl: z.string().url('Logo must be a valid URL').optional().or(z.literal('')),
-  paymentInstructions: z
-    .string()
-    .trim()
-    .max(300, 'Payment instructions must be 300 characters or fewer')
-    .optional()
-    .or(z.literal('')),
+  paymentMethods: z.array(PaymentMethodSchema).max(3).optional(),
   nightlyRate: rateField('Nightly rate'),
   daycareRate: rateField('Daycare rate'),
   holidayBoardingRate: rateField('Holiday boarding rate'),

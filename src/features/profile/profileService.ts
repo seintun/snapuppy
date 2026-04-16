@@ -291,20 +291,24 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function updateProfile(userId: string, updates: ProfileUpdate): Promise<Profile> {
+  // Never write business_name going forward
+  const safeUpdates = { ...updates };
+  delete safeUpdates.business_name;
+
   // Try with all fields first
   const { data, error } = await supabase
     .from('profiles')
-    .upsert({ id: userId, ...updates, updated_at: new Date().toISOString() })
-    .select(PROFILE_SELECT_WITH_BUSINESS_NAME)
+    .upsert({ id: userId, ...safeUpdates, updated_at: new Date().toISOString() })
+    .select(PROFILE_SELECT_WITHOUT_BUSINESS_NAME)
     .single();
 
   if (!error) {
-    return data as Profile;
+    return { ...data, business_name: null } as Profile;
   }
 
   // Fallback for old schema before holiday-rate migration
   if (isMissingHolidayRateColumnsError(error)) {
-    const legacyUpdates = { ...updates } as Record<string, unknown>;
+    const legacyUpdates = { ...safeUpdates } as Record<string, unknown>;
     delete legacyUpdates.holiday_boarding_rate;
     delete legacyUpdates.holiday_daycare_rate;
 
@@ -325,7 +329,7 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
     const { data: legacyData, error: legacyError } = await supabase
       .from('profiles')
       .upsert({ id: userId, ...legacyUpdates, updated_at: new Date().toISOString() })
-      .select(PROFILE_SELECT_LEGACY_WITH_BUSINESS_NAME)
+      .select(PROFILE_SELECT_LEGACY_WITHOUT_BUSINESS_NAME)
       .single();
 
     if (!legacyError) {
@@ -337,40 +341,9 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
     throw legacyError;
   }
 
-  // Fallback: Strip business_name and try again
-  if (isMissingBusinessNameError(error) && !isMissingPaymentInstructionsError(error)) {
-    const cleanUpdates = { ...updates };
-    delete cleanUpdates.business_name;
-
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('profiles')
-      .upsert({ id: userId, ...cleanUpdates, updated_at: new Date().toISOString() })
-      .select(PROFILE_SELECT_WITHOUT_BUSINESS_NAME)
-      .single();
-
-    if (fallbackError) throw fallbackError;
-    return { ...fallbackData, business_name: null } as Profile;
-  }
-
   // Fallback: Strip payment_instructions and try again
-  if (isMissingPaymentInstructionsError(error) && !isMissingBusinessNameError(error)) {
-    const cleanUpdates = { ...updates };
-    delete cleanUpdates.payment_instructions;
-
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('profiles')
-      .upsert({ id: userId, ...cleanUpdates, updated_at: new Date().toISOString() })
-      .select(PROFILE_SELECT_FALLBACK)
-      .single();
-
-    if (fallbackError) throw fallbackError;
-    return { ...fallbackData, payment_instructions: null } as Profile;
-  }
-
-  // Fallback: Strip both optional columns and try again
-  if (isMissingBusinessNameError(error) && isMissingPaymentInstructionsError(error)) {
-    const cleanUpdates = { ...updates };
-    delete cleanUpdates.business_name;
+  if (isMissingPaymentInstructionsError(error)) {
+    const cleanUpdates = { ...safeUpdates };
     delete cleanUpdates.payment_instructions;
 
     const { data: fallbackData, error: fallbackError } = await supabase
