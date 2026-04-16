@@ -36,7 +36,7 @@ Use `@/` alias for all internal imports.
 | `dashboard/` | Today view + metrics cards/dashboard widgets |
 | `dogs/` | Dog CRUD, profile/detail views, add/edit surfaces |
 | `guest/` | Guest profile/service helpers |
-| `invoice/` | Invoice preview/render/download/client invoice view |
+| `invoice/` | Invoice preview/render/print/share/client invoice view |
 | `profile/` | Sitter business profile/preferences and client link modal |
 | `recurring/` | Recurring availability UI and recurrence support |
 | `reports/` | Report generation/list/detail sheet/modal surfaces |
@@ -53,7 +53,7 @@ Use `@/` alias for all internal imports.
 | Offline/cache | `persister.ts`, `offlineQueue.ts`, `sync.ts` |
 | Media/utilities | `image-utils.ts` |
 
-### `src/hooks` (14 files including barrel)
+### `src/hooks` (13 files including barrel)
 
 | Hook | Use |
 | --- | --- |
@@ -83,10 +83,10 @@ Use `@/` alias for all internal imports.
 
 | Pattern | Source of truth |
 | --- | --- |
-| RLS handles auth filtering; do not add manual `sitter_id = auth.uid()` filters | `src/lib/supabase.ts` + SQL policies |
+| RLS is the primary auth layer; many services also use explicit `sitter_id` scoping filters | `src/lib/bookingService.ts`, `src/features/dogs/dogService.ts` |
 | Zod schemas are centralized and consumed by forms via RHF resolvers | `src/lib/schemas.ts` |
 | Query cache is persisted to IndexedDB for offline-first behavior | `src/lib/persister.ts`, `src/main.tsx` |
-| Offline mutation pipeline: queue -> sync worker -> hook trigger | `src/lib/offlineQueue.ts`, `src/lib/sync.ts`, `src/hooks/useOfflineSync.ts` |
+| Offline queue plumbing exists (enqueue/drain/status); mutation replay handlers should be verified per path | `src/lib/offlineQueue.ts`, `src/lib/sync.ts`, `src/hooks/useOfflineSync.ts` |
 | Sitter auth ownership chain | `src/hooks/useAuth.ts` -> `src/features/auth/AuthContext.ts` -> `src/features/auth/AuthProvider.tsx` |
 | Client portal auth is separate from sitter auth | `src/features/client/clientAuth.ts`, `src/lib/clientToken.ts` |
 
