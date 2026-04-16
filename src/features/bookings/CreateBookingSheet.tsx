@@ -1,8 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CaretDown, CaretLeft, CaretRight, Check, CalendarBlank, PawPrint } from '@phosphor-icons/react';
-import { format, addMonths, subMonths, isSameDay, isToday, isAfter, isBefore, parseISO } from 'date-fns';
+import {
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  Check,
+  CalendarBlank,
+  PawPrint,
+} from '@phosphor-icons/react';
+import {
+  format,
+  addMonths,
+  subMonths,
+  isSameDay,
+  isToday,
+  isAfter,
+  isBefore,
+  parseISO,
+} from 'date-fns';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
@@ -21,6 +37,13 @@ export interface CreateBookingSheetProps {
 }
 
 const today = () => new Date().toISOString().split('T')[0];
+const DEFAULT_BOOKING_TIME = '11:00';
+
+function toBookingDateTime(date: string, time?: string): string | undefined {
+  const normalized = time?.trim();
+  if (!normalized) return undefined;
+  return `${date}T${normalized}:00`;
+}
 
 function DogDropdown({
   dogs,
@@ -170,7 +193,11 @@ function DateRangePicker({
   };
 
   const isHoverEnd = (date: Date) =>
-    selecting === 'end' && hoverDate && isSameDay(date, hoverDate) && startD && !isSameDay(date, startD);
+    selecting === 'end' &&
+    hoverDate &&
+    isSameDay(date, hoverDate) &&
+    startD &&
+    !isSameDay(date, startD);
 
   const handleDaySelect = (date: Date) => {
     const str = format(date, 'yyyy-MM-dd');
@@ -247,16 +274,14 @@ function DateRangePicker({
           type="button"
           onClick={() => openFor('end')}
           className={`${triggerBase} ${
-            isOpen && selecting === 'end'
-              ? triggerActive
-              : endError
-                ? triggerError
-                : triggerIdle
+            isOpen && selecting === 'end' ? triggerActive : endError ? triggerError : triggerIdle
           }`}
         >
           <span
             className={`flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors ${
-              isOpen && selecting === 'end' ? 'bg-terracotta text-white' : 'bg-blush/60 text-terracotta'
+              isOpen && selecting === 'end'
+                ? 'bg-terracotta text-white'
+                : 'bg-blush/60 text-terracotta'
             }`}
           >
             <CalendarBlank size={13} weight="bold" />
@@ -351,7 +376,8 @@ function DateRangePicker({
                   if (!date) return <div key={i} />;
                   const isStart = startD && isSameDay(date, startD);
                   // Show end highlight only if dates differ (boarding); same-day = daycare, show start only
-                  const isEnd = endD && isSameDay(date, endD) && !isSameDay(date, startD ?? new Date(0));
+                  const isEnd =
+                    endD && isSameDay(date, endD) && !isSameDay(date, startD ?? new Date(0));
                   const confirmedRange = isConfirmedRange(date);
                   const hoverRange = isHoverRange(date);
                   const hoverEnd = isHoverEnd(date);
@@ -396,7 +422,10 @@ function DateRangePicker({
             <div className="flex items-center justify-between px-4 py-2.5 border-t border-pebble/60 bg-warm-beige/40">
               <button
                 type="button"
-                onClick={() => { setIsOpen(false); setSelecting('start'); }}
+                onClick={() => {
+                  setIsOpen(false);
+                  setSelecting('start');
+                }}
                 className="text-xs font-bold text-bark-light hover:text-bark transition-colors px-2 py-1"
               >
                 Cancel
@@ -456,8 +485,8 @@ export function CreateBookingSheet({
       isHoliday: false,
       dogId: '',
       status: 'active',
-      pickupDateTime: '',
-      dropoffDateTime: '',
+      pickupDateTime: DEFAULT_BOOKING_TIME,
+      dropoffDateTime: DEFAULT_BOOKING_TIME,
       notes: '',
     },
   });
@@ -480,8 +509,8 @@ export function CreateBookingSheet({
         isHoliday: false,
         dogId: '',
         status: 'active',
-        pickupDateTime: '',
-        dropoffDateTime: '',
+        pickupDateTime: DEFAULT_BOOKING_TIME,
+        dropoffDateTime: DEFAULT_BOOKING_TIME,
         notes: '',
       });
     }
@@ -540,6 +569,8 @@ export function CreateBookingSheet({
         await createBookingMutation({
           ...data,
           dogId: nextDogId,
+          pickupDateTime: toBookingDateTime(data.startDate, data.pickupDateTime),
+          dropoffDateTime: toBookingDateTime(data.endDate, data.dropoffDateTime),
           source: quickAdd ? 'manual' : 'manual',
           holidayDates: data.isHoliday ? true : [],
         });
@@ -554,7 +585,9 @@ export function CreateBookingSheet({
     [user, createBookingMutation, createDogMutation, quickAdd, addToast, onSuccess, onClose],
   );
 
-  const ratesSet = options.profile && (options.profile.nightly_rate ?? 0) > 0;
+  const hasNightlyRate = (options.profile?.nightly_rate ?? 0) > 0;
+  const hasDaycareRate = (options.profile?.daycare_rate ?? 0) > 0;
+  const ratesSet = !!options.profile && hasNightlyRate && hasDaycareRate;
 
   return (
     <SlideUpSheet isOpen={isOpen} onClose={onClose} title="New Booking">
@@ -562,7 +595,11 @@ export function CreateBookingSheet({
         {/* Dog selector */}
         <label className="flex items-center justify-between rounded-xl border border-pebble p-3">
           <span className="text-sm font-bold text-bark">Quick Add</span>
-          <input type="checkbox" checked={quickAdd} onChange={(e) => setQuickAdd(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={quickAdd}
+            onChange={(e) => setQuickAdd(e.target.checked)}
+          />
         </label>
         {!quickAdd ? (
           <DogDropdown
@@ -572,14 +609,18 @@ export function CreateBookingSheet({
             error={errors.dogId?.message}
           />
         ) : (
-          <p className="text-xs text-bark-light">Quick Add will create a dog from basic prompt fields.</p>
+          <p className="text-xs text-bark-light">
+            Quick Add will create a dog from basic prompt fields.
+          </p>
         )}
 
         {/* Unified date-range picker */}
         <DateRangePicker
           startDate={startDate ?? today()}
           endDate={endDate ?? startDate ?? today()}
-          onStartChange={(v) => setValue('startDate', v, { shouldValidate: true, shouldDirty: true })}
+          onStartChange={(v) =>
+            setValue('startDate', v, { shouldValidate: true, shouldDirty: true })
+          }
           onEndChange={(v) => setValue('endDate', v, { shouldValidate: true, shouldDirty: true })}
           startError={errors.startDate?.message}
           endError={errors.endDate?.message}
@@ -625,7 +666,7 @@ export function CreateBookingSheet({
 
           {!ratesSet && (
             <p className="text-[11px] text-bark-light mb-2">
-              ⚠️ Set your rates in Profile for accurate estimates.
+              ⚠️ Set both Boarding and Daycare rates in Profile to confirm booking.
             </p>
           )}
 
@@ -642,7 +683,12 @@ export function CreateBookingSheet({
                     </span>
                   )}
                   <span className="text-bark-light font-medium ml-2">
-                    × {pricing.days.length} {pricing.type === 'boarding' ? (pricing.days.length === 1 ? 'night' : 'nights') : 'day'}
+                    × {pricing.days.length}{' '}
+                    {pricing.type === 'boarding'
+                      ? pricing.days.length === 1
+                        ? 'night'
+                        : 'nights'
+                      : 'day'}
                   </span>
                 </div>
                 <span className="text-bark-light font-semibold text-xs">
@@ -669,15 +715,15 @@ export function CreateBookingSheet({
           <div>
             <label className="form-label">Pickup Time</label>
             <TimePicker
-              value={(pickupDateTime || '11:00').slice(0, 5)}
-              onChange={(value) => setValue('pickupDateTime', `${startDate}T${value}:00`)}
+              value={pickupDateTime || DEFAULT_BOOKING_TIME}
+              onChange={(value) => setValue('pickupDateTime', value)}
             />
           </div>
           <div>
             <label className="form-label">Dropoff Time</label>
             <TimePicker
-              value={(dropoffDateTime || '11:00').slice(0, 5)}
-              onChange={(value) => setValue('dropoffDateTime', `${endDate}T${value}:00`)}
+              value={dropoffDateTime || DEFAULT_BOOKING_TIME}
+              onChange={(value) => setValue('dropoffDateTime', value)}
             />
           </div>
         </div>
@@ -685,10 +731,15 @@ export function CreateBookingSheet({
         <button
           type="submit"
           className="btn-sage mt-1"
-          disabled={submitting || (!selectedDogId && !quickAdd)}
+          disabled={submitting || (!selectedDogId && !quickAdd) || !ratesSet}
         >
           {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
         </button>
+        {!ratesSet && (
+          <p className="text-xs font-bold text-terracotta text-center mt-1">
+            Rate required: Set Boarding and Daycare pricing in Profile before confirming.
+          </p>
+        )}
       </form>
     </SlideUpSheet>
   );
