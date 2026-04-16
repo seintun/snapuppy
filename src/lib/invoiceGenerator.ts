@@ -183,12 +183,13 @@ export function calculateInvoiceTotals(input: InvoiceInput): InvoiceTotals {
       })
     : [];
 
-  if (!rawAdjustments && input.creditAmount) {
+  const normalizedCredit = normalizeCreditAmount(input.creditAmount);
+  if (!rawAdjustments && normalizedCredit > 0) {
     adjustments.push({
       id: 'legacy-credit',
       kind: 'discount',
       description: '',
-      amount: normalizeCreditAmount(input.creditAmount),
+      amount: normalizedCredit,
     });
   }
 

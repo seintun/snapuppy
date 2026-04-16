@@ -297,6 +297,17 @@ export function BookingDetailScreen() {
         bookingId={booking.id}
         initialLineItems={derivedLineItems}
         savedOverrides={parseInvoiceOverrides(booking.invoice_overrides)}
+        previewInvoice={{
+          sitterName: 'Snapuppy Sitter',
+          clientName: booking.dog?.owner_name ?? 'Client',
+          dogName: booking.dog?.name ?? 'Dog',
+          startDate: booking.start_date,
+          endDate: booking.end_date,
+          subtotal: booking.total_amount,
+          tipAmount: 0,
+          paymentNotes: booking.payment_notes,
+          isPaid: booking.is_paid ?? false,
+        }}
       />
     </div>
   );

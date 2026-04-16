@@ -133,9 +133,7 @@ function isMissingHolidayRateColumnsError(error: unknown): boolean {
   return message.includes('holiday_boarding_rate') || message.includes('holiday_daycare_rate');
 }
 
-function mapLegacyProfileToCurrent(
-  profile: LegacyBookingProfile | null,
-): ProfileRow | null {
+function mapLegacyProfileToCurrent(profile: LegacyBookingProfile | null): ProfileRow | null {
   if (!profile) return null;
 
   return {
@@ -472,6 +470,16 @@ export async function saveInvoiceOverrides(
       rate: item.rate,
     })),
     creditAmount: overrides.creditAmount,
+    ...(overrides.adjustments
+      ? {
+          adjustments: overrides.adjustments.map((adjustment) => ({
+            id: adjustment.id,
+            kind: adjustment.kind,
+            description: adjustment.description,
+            amount: adjustment.amount,
+          })),
+        }
+      : {}),
   };
   const { error } = await supabase
     .from('bookings')
