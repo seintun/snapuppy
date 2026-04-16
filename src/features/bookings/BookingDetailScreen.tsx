@@ -14,6 +14,8 @@ import {
 } from '@/hooks/useBookings';
 import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
+import { GenerateInvoiceSheet } from '@/features/invoice/GenerateInvoiceSheet';
+import { parseInvoiceOverrides, type InvoiceLineItem } from '@/lib/invoiceGenerator';
 import { getStatusLabel, getStatusVariant } from './bookingUi';
 import { BookingTypePill } from './BookingTypePill';
 import { CloseBookingSheet } from './CloseBookingSheet';
@@ -31,6 +33,7 @@ export function BookingDetailScreen() {
 
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [closeSheetOpen, setCloseSheetOpen] = useState(false);
+  const [generateSheetOpen, setGenerateSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleCancel = useCallback(async () => {
@@ -71,6 +74,25 @@ export function BookingDetailScreen() {
   }
 
   const dog = booking.dog;
+  const derivedLineItems = Object.values(
+    booking.days.reduce(
+      (acc, day) => {
+        const key = `${day.rate_type}-${day.is_holiday}-${day.amount}`;
+        if (!acc[key]) {
+          acc[key] = {
+            type: day.rate_type,
+            isHoliday: day.is_holiday,
+            count: 0,
+            rate: day.amount,
+          };
+        }
+        acc[key].count += 1;
+        return acc;
+      },
+      {} as Record<string, InvoiceLineItem>,
+    ),
+  );
+
   return (
     <div className="pb-24">
       {/* Header */}
@@ -124,33 +146,16 @@ export function BookingDetailScreen() {
               Invoice Breakdown
             </div>
             <div className="flex flex-col gap-3">
-              {Object.values(
-                booking.days.reduce(
-                  (acc, day) => {
-                    const key = `${day.rate_type}-${day.is_holiday}-${day.amount}`;
-                    if (!acc[key]) {
-                      acc[key] = {
-                        count: 0,
-                        amount: day.amount,
-                        type: day.rate_type,
-                        holiday: day.is_holiday,
-                        total: 0,
-                      };
-                    }
-                    acc[key].count++;
-                    acc[key].total += day.amount;
-                    return acc;
-                  },
-                  {} as Record<
-                    string,
-                    { count: number; amount: number; type: string; holiday: boolean; total: number }
-                  >,
-                ),
-              ).map((item, i) => (
-                <div key={i} className="flex justify-between items-center text-[13px] text-bark">
+              {derivedLineItems.map((item) => {
+                const itemTotal = item.count * item.rate;
+                return (
+                <div
+                  key={`${item.type}-${item.isHoliday}-${item.rate}`}
+                  className="flex justify-between items-center text-[13px] text-bark"
+                >
                   <div className="flex items-center flex-wrap gap-x-2">
                     <span className="font-bold capitalize">{item.type}</span>
-                    {item.holiday && (
+                    {item.isHoliday && (
                       <span className="text-[10px] font-black text-terracotta uppercase bg-white/60 border border-terracotta/20 px-1.5 py-[1px] rounded-md drop-shadow-sm">
                         Holiday
                       </span>
@@ -161,13 +166,14 @@ export function BookingDetailScreen() {
                     </span>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-[14px]">${item.total.toFixed(2)}</div>
+                    <div className="font-bold text-[14px]">${itemTotal.toFixed(2)}</div>
                     <div className="text-[10px] text-bark-light font-medium mt-0.5">
-                      ${item.amount.toFixed(2)}/each
+                      ${item.rate.toFixed(2)}/each
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex justify-between items-end mt-4 pt-4 border-t border-pebble/50">
@@ -256,9 +262,19 @@ export function BookingDetailScreen() {
             <button
               type="button"
               className="btn-sage"
-              onClick={() => navigate(`/invoice/${booking.id}`)}
+              onClick={() => setGenerateSheetOpen(true)}
             >
               Generate Invoice
+            </button>
+          ) : null}
+
+          {booking.status === 'paid' ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => navigate(`/receipt/${booking.id}`)}
+            >
+              View Receipt
             </button>
           ) : null}
         </div>
@@ -274,6 +290,13 @@ export function BookingDetailScreen() {
         isOpen={closeSheetOpen}
         onClose={() => setCloseSheetOpen(false)}
         bookingId={booking.id}
+      />
+      <GenerateInvoiceSheet
+        isOpen={generateSheetOpen}
+        onClose={() => setGenerateSheetOpen(false)}
+        bookingId={booking.id}
+        initialLineItems={derivedLineItems}
+        savedOverrides={parseInvoiceOverrides(booking.invoice_overrides)}
       />
     </div>
   );

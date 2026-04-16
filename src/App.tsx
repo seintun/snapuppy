@@ -28,6 +28,9 @@ const ProfileScreen = lazy(() =>
 const ClientInvoiceView = lazy(() =>
   import('@/features/invoice').then((m) => ({ default: m.ClientInvoiceView })),
 );
+const BookingReceiptView = lazy(() =>
+  import('@/features/invoice').then((m) => ({ default: m.BookingReceiptView })),
+);
 
 function LoadingFallback() {
   return (
@@ -114,6 +117,14 @@ export default function App() {
               element={
                 <Suspense fallback={<LoadingFallback />}>
                   <ProfileScreen />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/receipt/:bookingId"
+              element={
+                <Suspense fallback={<LoadingFallback />}>
+                  <BookingReceiptView />
                 </Suspense>
               }
             />

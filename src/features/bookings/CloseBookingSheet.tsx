@@ -1,5 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
+import { useToast } from '@/components/ui/useToast';
 import { useCloseBooking } from '@/hooks/useBookings';
 
 interface CloseBookingSheetProps {
@@ -15,6 +16,7 @@ interface CloseBookingValues {
 
 export function CloseBookingSheet({ isOpen, onClose, bookingId }: CloseBookingSheetProps) {
   const { mutateAsync: closeBooking, isPending } = useCloseBooking();
+  const { addToast } = useToast();
   const { register, handleSubmit, formState } = useForm<CloseBookingValues>({
     defaultValues: {
       tipAmount: 0,
@@ -30,6 +32,7 @@ export function CloseBookingSheet({ isOpen, onClose, bookingId }: CloseBookingSh
         paymentNotes: values.paymentNotes,
       },
     });
+    addToast('Booking marked as paid', 'success');
     onClose();
   });
 

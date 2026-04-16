@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuthContext } from '@/features/auth/useAuthContext';
+import type { InvoiceOverrides } from '@/lib/invoiceGenerator';
 import { supabase } from '@/lib/supabase';
 import { getMonthQueryRange, type CalendarBooking } from '@/features/calendar/calendarUtils';
 import {
@@ -14,6 +15,7 @@ import {
   getBookingFormOptions,
   getBookings,
   saveBookingDays as svcSaveBookingDays,
+  saveInvoiceOverrides as svcSaveInvoiceOverrides,
   updateBookingStatus as svcUpdateBookingStatus,
   type BookingRecord,
   type BookingStatus,
@@ -158,6 +160,20 @@ export function useSaveBookingDays() {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, updated.id] });
       void queryClient.invalidateQueries({ queryKey: ['calendar-bookings', user?.id] });
+    },
+  });
+}
+
+export function useSaveInvoiceOverrides() {
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bookingId, overrides }: { bookingId: string; overrides: InvoiceOverrides }) =>
+      svcSaveInvoiceOverrides(bookingId, user!.id, overrides),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, variables.bookingId] });
     },
   });
 }
