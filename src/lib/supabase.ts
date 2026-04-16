@@ -22,7 +22,14 @@ function requiredEnv(name: 'VITE_SUPABASE_URL' | 'VITE_SUPABASE_ANON_KEY'): stri
 const supabaseUrl = requiredEnv('VITE_SUPABASE_URL');
 const supabaseAnonKey = requiredEnv('VITE_SUPABASE_ANON_KEY');
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'snapuppy-auth',
+  },
+});
 
 export const sendPasscode = (email: string) =>
   supabase.auth.signInWithOtp({

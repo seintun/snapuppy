@@ -79,11 +79,16 @@ export function useAuth(): AuthState {
           if (!mounted) return;
 
           if (error) {
-            void supabase.auth.signOut({ scope: 'local' });
-            setUser(null);
-            setProfile(null);
-            setLoading(false);
-            return;
+            // Only force sign-out for definitive auth failures (invalid/expired token).
+            // Network or server errors must not log the user out — trust the stored session.
+            const isAuthError = error.status === 401 || error.status === 403;
+            if (isAuthError) {
+              void supabase.auth.signOut({ scope: 'local' });
+              setUser(null);
+              setProfile(null);
+              setLoading(false);
+              return;
+            }
           }
 
           setUser(currentUser);

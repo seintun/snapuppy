@@ -58,7 +58,7 @@ export function DogsScreen() {
         <div>
           <h1 className="text-3xl font-black text-bark tracking-tight leading-none">Dogs</h1>
           <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em] mt-1">
-            {dogs.length} Total Client{dogs.length !== 1 ? 's' : ''}
+            Total Client{dogs.length !== 1 ? 's' : ''} ({dogs.length})
           </p>
         </div>
       </div>
