@@ -85,30 +85,60 @@ export function DashboardScreen() {
             </div>
             {arriving.length > 0 ? (
               <div className="grid grid-cols-3 gap-3">
-                {arriving.map((b) => (
-                  <button
-                    key={b.id}
-                    onClick={() => navigate(`/bookings/${b.id}`)}
-                    className="flex flex-col items-center gap-1.5 group transition-all active:scale-95"
-                  >
-                    <div className="relative">
-                      <DogAvatar
-                        name={b.dogs?.name ?? ''}
-                        src={b.dogs?.photo_url}
-                        size="md"
-                        className="!w-14 !h-14 !border-2 !border-sage/50 !bg-cream p-0.5 group-hover:!border-sage transition-all shadow-sm"
-                      />
-                      <div className="absolute -bottom-0.5 -right-0.5 bg-sage text-white rounded-full p-0.5 border-2 border-cream shadow-sm">
-                        <PawPrint size={8} weight="fill" />
+                {arriving.map((b) => {
+                  const isArrived = arrivedIds.includes(b.id);
+                  return (
+                    <button
+                      key={b.id}
+                      aria-label={`View booking for ${b.dogs?.name ?? 'dog'}`}
+                      onClick={() => navigate(`/bookings/${b.id}`)}
+                      className="flex flex-col items-center gap-1 group transition-all active:scale-95"
+                    >
+                      <div className="relative">
+                        <DogAvatar
+                          name={b.dogs?.name ?? ''}
+                          src={b.dogs?.photo_url}
+                          size="md"
+                          className="!w-14 !h-14 !border-2 !border-sage/50 !bg-cream p-0.5 group-hover:!border-sage transition-all shadow-sm"
+                        />
+                        {isArrived ? (
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-sage text-white rounded-full p-0.5 border-2 border-cream shadow-sm">
+                            <CheckCircle size={8} weight="fill" />
+                          </div>
+                        ) : (
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-sage text-white rounded-full p-0.5 border-2 border-cream shadow-sm">
+                            <PawPrint size={8} weight="fill" />
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex flex-col items-center w-full px-0.5">
-                      <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">
-                        {b.dogs?.name}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex flex-col items-center w-full px-0.5 gap-1">
+                        <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">
+                          {b.dogs?.name}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={
+                            isArrived ? `${b.dogs?.name} arrived` : `Mark ${b.dogs?.name} arrived`
+                          }
+                          aria-pressed={isArrived}
+                          disabled={isArrived}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isArrived) return;
+                            setArrivedIds((prev) => [...new Set([...prev, b.id])]);
+                          }}
+                          className={`text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-full transition-all ${
+                            isArrived
+                              ? 'bg-sage/20 text-sage cursor-default'
+                              : 'bg-sage/30 text-sage hover:bg-sage/40 active:scale-95'
+                          }`}
+                        >
+                          {isArrived ? 'Arrived ✓' : 'Arrive'}
+                        </button>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-4 border-2 border-dashed border-pebble/40 rounded-[20px] bg-cream/20">
@@ -117,22 +147,6 @@ export function DashboardScreen() {
                 </p>
               </div>
             )}
-            {arriving.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {arriving.map((b) => (
-                  <button
-                    key={`${b.id}-arrived`}
-                    type="button"
-                    className="btn-sage !py-2 !px-3 !text-xs"
-                    onClick={() => setArrivedIds((prev) => [...new Set([...prev, b.id])])}
-                  >
-                    {arrivedIds.includes(b.id)
-                      ? `${b.dogs?.name} Arrived`
-                      : `Mark ${b.dogs?.name} Arrived`}
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="h-px bg-pebble/30 mx-2" />
