@@ -1,18 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const { fromMock } = vi.hoisted(() => ({
-  fromMock: vi.fn(),
-}));
-
-vi.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: fromMock,
-  },
-}));
+import { supabase } from '@/lib/supabase';
 
 import { updateProfile } from '@/features/profile/profileService';
 
 describe('updateProfile', () => {
+  const fromMock = vi.spyOn(supabase, 'from');
+
   beforeEach(() => {
     fromMock.mockReset();
   });

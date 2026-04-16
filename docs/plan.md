@@ -1,6 +1,8 @@
 # snapuppy.life — Phase 1 MVP Implementation Plan
 
-**Status:** Active | **Date:** 2026-04-02 | **Version:** 1.0
+**Status:** Archived (Phase 1 baseline completed) | **Date:** 2026-04-02 | **Version:** 1.0
+
+> Historical reference only. Current architecture and cleanup status are documented in `docs/architecture.md` and `docs/tech-debt.md`.
 
 ---
 

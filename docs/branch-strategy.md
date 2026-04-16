@@ -1,5 +1,7 @@
 # Snapuppy Phase 1 Branch Strategy
 
+> ARCHIVED: historical Phase 1 branching strategy retained for reference.
+
 This repo will use **one feature branch per implementation step** so work can run in parallel with other agents and merge incrementally.
 
 ## Rules

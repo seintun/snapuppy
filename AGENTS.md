@@ -1,7 +1,7 @@
 # snapuppy — AI Agent Instructions
 
 **Project:** snapuppy.life — Mobile-first PWA for independent dog sitters
-**Status:** Phase 1 MVP Active
+**Status:** Phase 2+ in progress (Phase 1 baseline complete)
 **Stack Docs:** `docs/technical_decisions.md` | **Plan:** `docs/plan.md`
 
 ---
@@ -28,14 +28,20 @@
 ```
 src/
   components/         # Shared UI components (no feature logic)
-    layout/           # AppLayout, BottomTabs, FAB, PwaStatus
+    layout/           # AppLayout, BottomTabs, PwaStatus
     ui/               # Badge, Card, DogAvatar, EmptyState, SlideUpSheet
   features/           # Feature modules — each has index.ts barrel export
     auth/
     bookings/
     calendar/
+    client/
+    dashboard/
     dogs/
+    guest/
+    invoice/
     profile/
+    recurring/
+    reports/
   hooks/              # Shared hooks (not feature-specific)
   lib/                # Service utilities (supabase.ts, rate-calculator.ts)
   types/              # database.ts (Supabase-generated) + index.ts
@@ -96,7 +102,7 @@ if (error) throw error;
 return data;
 ```
 
-Always use the typed client from `@/lib/supabase`. RLS handles `sitter_id` filtering automatically — do not add manual `sitter_id = auth.uid()` filters in queries.
+Always use the typed client from `@/lib/supabase`. RLS is the primary auth layer; explicit `sitter_id` filters are used in some services for query scoping.
 
 ### TypeScript / Supabase Types
 
@@ -140,9 +146,9 @@ Never manage auth or toast state directly in components.
 
 ## Testing
 
-- Unit tests: `src/test/*.test.ts` using Vitest
+- Unit tests: `src/test/*.test.{ts,tsx}` using Vitest
 - E2e tests: Playwright
-- Run: `bun test` / `bun run test:e2e`
+- Run: `bun run test` / `bun run test:e2e`
 - Setup file: `src/test/setup.ts`
 - Pattern: `describe`/`it` blocks, arrange → act → assert
 
@@ -151,9 +157,9 @@ Never manage auth or toast state directly in components.
 ## Commands
 
 ```bash
-bun dev               # Start Vite dev server
-bun build             # TypeScript check + Vite build
-bun test              # Run Vitest unit tests
+bun run dev           # Start Vite dev server
+bun run build         # TypeScript check + Vite build
+bun run test          # Run Vitest unit tests
 bun run test:ui       # Vitest UI
 bun run test:e2e      # Playwright e2e
 bun run lint          # ESLint
@@ -173,7 +179,7 @@ bun run format        # Prettier
 - **No generic AI aesthetics** — preserve the Sage & Earth design system
 - **No per-dog pricing** — rates are universal in the `profiles` table
 - **No external calendar sync** — calendar is app-owned for Phase 1
-- **No manual `sitter_id` filters** — RLS handles authorization automatically
+- **No `sitter_id = auth.uid()` copy-paste filters** — use established service query patterns
 
 ---
 
@@ -191,6 +197,7 @@ bun run format        # Prettier
 | `docs/plan.md`                | Phase 1 MVP implementation plan                                   |
 
 <!-- VERCEL BEST PRACTICES START -->
+
 ## Best practices for developing on Vercel
 
 These defaults are optimized for AI coding agents (and humans) working on apps that deploy to Vercel.

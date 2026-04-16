@@ -1,0 +1,8 @@
+[test]
+preload = ["./src/test/bun.setup.ts"]
+pathIgnorePatterns = [
+  "e2e/**",
+  ".worktrees/**",
+  "dist/**",
+  "node_modules/**"
+]

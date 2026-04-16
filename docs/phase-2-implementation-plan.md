@@ -1,6 +1,6 @@
 # Snapuppy Phase 2 - Implementation Plan
 
-> **Status**: Ready for Execution  
+> **Status**: Historical plan (partially implemented)  
 > **Created**: April 2026  
 > **Total Tasks**: 77 tasks across 7 phases (~37 days)
 
@@ -256,14 +256,14 @@ ALTER TABLE recurring_bookings ENABLE ROW LEVEL SECURITY;
 
 ## 3B. Sitter Recurring Availability (Day 2)
 
-| Task     | Description                                             | File Changes                                     |
-| -------- | ------------------------------------------------------- | ------------------------------------------------ |
-| **3B.1** | Create `src/lib/recurringService.ts` — CRUD             | NEW FILE                                         |
-| **3B.2** | Create `src/hooks/useRecurring.ts`                      | NEW FILE                                         |
-| **3B.3** | Create `src/features/profile/RecurringAvailability.tsx` | NEW FILE                                         |
-| **3B.4** | Add day-of-week checkboxes                              | `src/features/profile/RecurringAvailability.tsx` |
-| **3B.5** | Add time range inputs                                   | `src/features/profile/RecurringAvailability.tsx` |
-| **3B.6** | Save to database                                        | `src/features/profile/RecurringAvailability.tsx` |
+| Task     | Description                                               | File Changes                                       |
+| -------- | --------------------------------------------------------- | -------------------------------------------------- |
+| **3B.1** | Create `src/lib/recurringService.ts` — CRUD               | NEW FILE                                           |
+| **3B.2** | Create `src/hooks/useRecurring.ts`                        | NEW FILE                                           |
+| **3B.3** | Create `src/features/recurring/RecurringAvailability.tsx` | NEW FILE                                           |
+| **3B.4** | Add day-of-week checkboxes                                | `src/features/recurring/RecurringAvailability.tsx` |
+| **3B.5** | Add time range inputs                                     | `src/features/recurring/RecurringAvailability.tsx` |
+| **3B.6** | Save to database                                          | `src/features/recurring/RecurringAvailability.tsx` |
 
 ---
 

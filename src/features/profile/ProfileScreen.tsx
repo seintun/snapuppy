@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useToast } from '@/components/ui/useToast';
@@ -21,7 +21,7 @@ export function ProfileScreen() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors, isDirty },
   } = useForm<ProfileFormData>({
@@ -50,6 +50,8 @@ export function ProfileScreen() {
       });
     }
   }, [profile, reset]);
+
+  const cutoffTime = useWatch({ control, name: 'cutoffTime' });
 
   const onSave = useCallback(
     async (data: ProfileFormData) => {
@@ -257,7 +259,7 @@ export function ProfileScreen() {
                 </span>
                 <div className="flex-1">
                   <TimePicker
-                    value={watch('cutoffTime')}
+                    value={cutoffTime}
                     onChange={(v) =>
                       setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })
                     }

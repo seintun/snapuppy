@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useClientBooking } from '@/hooks/useClientBooking';
 import { useRecurringPreview } from '@/hooks/useRecurring';
@@ -21,7 +21,7 @@ interface ClientRequestValues {
 
 export function ClientRequestSheet({ isOpen, onClose, sitterId, dogId }: ClientRequestSheetProps) {
   const { mutateAsync: createBooking, isPending } = useClientBooking();
-  const { register, handleSubmit, reset, watch } = useForm<ClientRequestValues>({
+  const { register, handleSubmit, reset, control } = useForm<ClientRequestValues>({
     defaultValues: {
       startDate: new Date().toISOString().slice(0, 10),
       endDate: new Date().toISOString().slice(0, 10),
@@ -32,15 +32,16 @@ export function ClientRequestSheet({ isOpen, onClose, sitterId, dogId }: ClientR
     },
   });
 
-  const recurring = watch('recurring');
-  const repeatPattern = watch('repeatPattern');
-  const repeatDays = watch('repeatDays');
+  const recurring = useWatch({ control, name: 'recurring' });
+  const repeatPattern = useWatch({ control, name: 'repeatPattern' });
+  const repeatDays = useWatch({ control, name: 'repeatDays' });
+  const startDate = useWatch({ control, name: 'startDate' });
   const recurringPreview = useRecurringPreview(
     recurring
       ? {
-          startDate: watch('startDate'),
-          repeatPattern,
-          repeatDays: repeatDays
+          startDate,
+          repeatPattern: repeatPattern ?? 'weekly',
+          repeatDays: (repeatDays ?? '')
             .split(',')
             .map((value) => value.trim())
             .filter(Boolean) as Array<
@@ -67,11 +68,19 @@ export function ClientRequestSheet({ isOpen, onClose, sitterId, dogId }: ClientR
       <form onSubmit={submit} className="space-y-3">
         <label className="form-label">
           Start date
-          <input className="form-input mt-1" type="date" {...register('startDate', { required: true })} />
+          <input
+            className="form-input mt-1"
+            type="date"
+            {...register('startDate', { required: true })}
+          />
         </label>
         <label className="form-label">
           End date
-          <input className="form-input mt-1" type="date" {...register('endDate', { required: true })} />
+          <input
+            className="form-input mt-1"
+            type="date"
+            {...register('endDate', { required: true })}
+          />
         </label>
         <label className="form-label">
           Special requests
