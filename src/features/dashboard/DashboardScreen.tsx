@@ -131,16 +131,22 @@ export function DashboardScreen() {
                                 : [...new Set([...prev, b.id])],
                             );
                           }}
-                          className={`p-1 rounded-md transition-all active:scale-95 ${
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all active:scale-95 text-[9px] font-bold uppercase tracking-wider ${
                             isArrived
-                              ? 'text-sage/70 hover:text-sage'
-                              : 'text-sage hover:text-sage/80'
+                              ? 'bg-sage/20 text-sage hover:bg-sage/30'
+                              : 'bg-terracotta/20 text-terracotta hover:bg-terracotta/30'
                           }`}
                         >
                           {isArrived ? (
-                            <CheckCircle size={10} weight="fill" />
+                            <>
+                              <CheckCircle size={12} weight="fill" />
+                              Arrived
+                            </>
                           ) : (
-                            <PawPrint size={10} weight="fill" />
+                            <>
+                              <PawPrint size={12} weight="fill" />
+                              Mark Arrived
+                            </>
                           )}
                         </button>
                       </div>
