@@ -102,54 +102,26 @@ export function DashboardScreen() {
                           className="!w-14 !h-14 !border-2 !border-sage/50 !bg-cream p-0.5 group-hover:!border-sage transition-all shadow-sm"
                         />
                         {isArrived ? (
-                          <div className="absolute -bottom-0.5 -right-0.5 bg-sage text-white rounded-full p-0.5 border-2 border-cream shadow-sm">
-                            <CheckCircle size={8} weight="fill" />
+                          <div className="absolute -bottom-1 -right-1 bg-sage text-white rounded-full p-1 border-2 border-cream shadow-sm">
+                            <CheckCircle size={12} weight="fill" />
                           </div>
                         ) : (
-                          <div className="absolute -bottom-0.5 -right-0.5 bg-sage text-white rounded-full p-0.5 border-2 border-cream shadow-sm">
-                            <PawPrint size={8} weight="fill" />
-                          </div>
+                          <button
+                            type="button"
+                            aria-label={`Mark ${b.dogs?.name} arrived`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setArrivedIds((prev) => [...new Set([...prev, b.id])]);
+                            }}
+                            className="absolute -bottom-1 -right-1 bg-terracotta text-white rounded-full p-1 border-2 border-cream shadow-sm hover:bg-terracotta/80 active:scale-95"
+                          >
+                            <PawPrint size={12} weight="fill" />
+                          </button>
                         )}
                       </div>
-                      <div className="flex flex-col items-center w-full px-0.5 gap-1">
-                        <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">
-                          {b.dogs?.name}
-                        </span>
-                        <button
-                          type="button"
-                          aria-label={
-                            isArrived
-                              ? `Undo ${b.dogs?.name} arrival`
-                              : `Mark ${b.dogs?.name} arrived`
-                          }
-                          aria-pressed={isArrived}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setArrivedIds((prev) =>
-                              isArrived
-                                ? prev.filter((id) => id !== b.id)
-                                : [...new Set([...prev, b.id])],
-                            );
-                          }}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all active:scale-95 text-[9px] font-bold uppercase tracking-wider ${
-                            isArrived
-                              ? 'bg-sage/20 text-sage hover:bg-sage/30'
-                              : 'bg-terracotta/20 text-terracotta hover:bg-terracotta/30'
-                          }`}
-                        >
-                          {isArrived ? (
-                            <>
-                              <CheckCircle size={12} weight="fill" />
-                              Arrived
-                            </>
-                          ) : (
-                            <>
-                              <PawPrint size={12} weight="fill" />
-                              Mark Arrived
-                            </>
-                          )}
-                        </button>
-                      </div>
+                      <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">
+                        {b.dogs?.name}
+                      </span>
                     </button>
                   );
                 })}
