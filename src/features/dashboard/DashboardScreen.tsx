@@ -3,7 +3,7 @@ import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useCalendarBookings } from '@/hooks/useBookings';
 import { CheckCircle, Clock, Info, PawPrint } from '@phosphor-icons/react';
 import { format, getHours, startOfToday } from 'date-fns';
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MetricsDashboard } from './MetricsDashboard';
 
@@ -169,20 +169,22 @@ export function DashboardScreen() {
                       </span>
                       <button
                         type="button"
-                        className={`text-[6px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full transition-all active:scale-95 ${
-                          isArrived
-                            ? 'bg-sage/20 text-sage hover:bg-sage/30'
-                            : 'bg-terracotta/20 text-terracotta hover:bg-terracotta/30'
-                        }`}
-                        onClick={() =>
+                        aria-label={
+                          isArrived ? `Undo ${b.dogs?.name} check-in` : `Check in ${b.dogs?.name}`
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setArrivedIds((prev) =>
                             isArrived
                               ? prev.filter((id) => id !== b.id)
                               : [...new Set([...prev, b.id])],
-                          )
-                        }
+                          );
+                        }}
+                        className={`text-[5px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md transition-all active:scale-95 ${
+                          isArrived ? 'bg-sage/10 text-sage' : 'bg-terracotta/10 text-terracotta'
+                        }`}
                       >
-                        {isArrived ? '✓ Arrived' : 'Check In'}
+                        {isArrived ? '✓ Arrived' : 'Check-In'}
                       </button>
                     </div>
                   );
@@ -317,20 +319,24 @@ export function DashboardScreen() {
                       </span>
                       <button
                         type="button"
-                        className={`text-[6px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full transition-all active:scale-95 ${
+                        aria-label={
                           isDeparted
-                            ? 'bg-sage/20 text-sage hover:bg-sage/30'
-                            : 'bg-terracotta/20 text-terracotta hover:bg-terracotta/30'
-                        }`}
-                        onClick={() =>
+                            ? `Undo ${b.dogs?.name} check-out`
+                            : `Check out ${b.dogs?.name}`
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setDepartedIds((prev) =>
                             isDeparted
                               ? prev.filter((id) => id !== b.id)
                               : [...new Set([...prev, b.id])],
-                          )
-                        }
+                          );
+                        }}
+                        className={`text-[5px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md transition-all active:scale-95 ${
+                          isDeparted ? 'bg-sage/10 text-sage' : 'bg-terracotta/10 text-terracotta'
+                        }`}
                       >
-                        {isDeparted ? '✓ Departed' : 'Check Out'}
+                        {isDeparted ? '✓ Departed' : 'Check-Out'}
                       </button>
                     </div>
                   );
