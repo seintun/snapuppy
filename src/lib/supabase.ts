@@ -29,8 +29,6 @@ export const sendPasscode = (email: string) =>
     email,
     options: {
       shouldCreateUser: true,
-      // @ts-expect-error - emailRedirectTo: null forces numeric code
-      emailRedirectTo: null,
     },
   });
 
@@ -39,21 +37,6 @@ export const verifyPasscode = (email: string, code: string) =>
     email,
     token: code,
     type: 'email',
-  });
-
-export const signUpWithPassword = (email: string, password: string) =>
-  supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
-
-export const signInWithPassword = (email: string, password: string) =>
-  supabase.auth.signInWithPassword({
-    email,
-    password,
   });
 
 export const signOut = () => supabase.auth.signOut();
