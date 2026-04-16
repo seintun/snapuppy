@@ -75,26 +75,11 @@ export function useAuth(): AuthState {
       const currentUser = session?.user ?? null;
 
       if (currentUser && event === 'INITIAL_SESSION') {
-        supabase.auth.getUser().then(({ error }) => {
-          if (!mounted) return;
-
-          if (error) {
-            // Only force sign-out for definitive auth failures (invalid/expired token).
-            // Network or server errors must not log the user out — trust the stored session.
-            const isAuthError = error.status === 401 || error.status === 403;
-            if (isAuthError) {
-              void supabase.auth.signOut({ scope: 'local' });
-              setUser(null);
-              setProfile(null);
-              setLoading(false);
-              return;
-            }
-          }
-
-          setUser(currentUser);
-          hydrateProfile(currentUser).finally(() => {
-            if (mounted) setLoading(false);
-          });
+        // The SDK already validated and refreshed the session before firing this event.
+        // No need for a server-side getUser() round-trip — trust the stored session.
+        setUser(currentUser);
+        hydrateProfile(currentUser).finally(() => {
+          if (mounted) setLoading(false);
         });
         return;
       }

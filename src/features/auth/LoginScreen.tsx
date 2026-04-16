@@ -1,11 +1,10 @@
+import { EmailSchema } from '@/lib/schemas';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from './useAuthContext';
-import { EmailSchema } from '@/lib/schemas';
 
 const PASSCODE_COOLDOWN_MS = 30_000;
 const PASSCODE_COOLDOWN_STORAGE_KEY = 'snapuppy.passcode_next_allowed_at';
-const REMEMBER_DEVICE_STORAGE_KEY = 'snapuppy.remember_device';
 const PASSCODE_LENGTH = 6;
 
 function DogIcon() {
@@ -67,66 +66,26 @@ function PasscodeInput({
   isCoolingDown: boolean;
   onResend: () => void;
 }) {
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const verifyButtonRef = useRef<HTMLButtonElement | null>(null);
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    inputRefs.current[0]?.focus();
+    hiddenInputRef.current?.focus();
   }, []);
 
-  function handleDigitInput(index: number, digit: string) {
-    if (!digit) {
-      if (index === value.length - 1) {
-        onChange(value.slice(0, -1));
-      }
-      return;
-    }
-
-    const newValue = value.slice(0, index) + digit + value.slice(index + 1);
-    const nextValue = newValue.slice(0, PASSCODE_LENGTH);
-    onChange(nextValue);
-
-    if (index < PASSCODE_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-      return;
-    }
-
-    if (nextValue.length === PASSCODE_LENGTH) {
-      verifyButtonRef.current?.focus();
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, PASSCODE_LENGTH);
+    onChange(digits);
+    if (digits.length === PASSCODE_LENGTH) {
+      hiddenInputRef.current?.blur();
+      onSubmit(digits);
     }
   }
 
-  function handleBulkInput(index: number, digits: string) {
-    if (!digits) {
-      return;
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && value.length === PASSCODE_LENGTH) {
+      e.preventDefault();
+      onSubmit(value);
     }
-
-    const sanitized = digits.replace(/\D/g, '').slice(0, PASSCODE_LENGTH);
-    if (!sanitized) {
-      return;
-    }
-
-    const nextValue =
-      index === 0 ? sanitized : (value.slice(0, index) + sanitized).slice(0, PASSCODE_LENGTH);
-    onChange(nextValue);
-    if (nextValue.length === PASSCODE_LENGTH) {
-      verifyButtonRef.current?.focus();
-      return;
-    }
-
-    inputRefs.current[Math.min(nextValue.length - 1, PASSCODE_LENGTH - 1)]?.focus();
-  }
-
-  function handleKeyDown(index: number, e: React.KeyboardEvent) {
-    if (e.key === 'Backspace' && !value[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  }
-
-  function handlePaste(index: number, e: React.ClipboardEvent<HTMLInputElement>) {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '');
-    handleBulkInput(index, pasted);
   }
 
   return (
@@ -137,48 +96,37 @@ function PasscodeInput({
         <p className="text-xs text-bark-light mt-1">Enter the 6-digit code</p>
       </div>
 
-      <div className="flex justify-center gap-2">
-        {Array.from({ length: PASSCODE_LENGTH }, (_, i) => i).map((i) => (
-          <input
+      {/* Single hidden input captures full OTP including iOS/Android autofill */}
+      <div className="relative flex justify-center gap-2" onClick={() => hiddenInputRef.current?.focus()}>
+        <input
+          ref={hiddenInputRef}
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          maxLength={PASSCODE_LENGTH}
+          className="absolute opacity-0 w-full h-full top-0 left-0 cursor-default"
+          aria-label="Enter 6-digit verification code"
+        />
+        {Array.from({ length: PASSCODE_LENGTH }, (_, i) => (
+          <div
             key={i}
-            ref={(el) => {
-              inputRefs.current[i] = el;
-            }}
-            type="text"
-            inputMode="numeric"
-            maxLength={1}
-            value={value[i] || ''}
-            onChange={(e) => {
-              const digits = e.target.value.replace(/\D/g, '');
-              if (!digits) {
-                handleDigitInput(i, '');
-                return;
-              }
-              if (digits.length > 1) {
-                handleBulkInput(i, digits);
-                return;
-              }
-              handleDigitInput(i, digits);
-            }}
-            onPaste={(e) => handlePaste(i, e)}
-            onKeyDown={(e) => {
-              handleKeyDown(i, e);
-              if (
-                e.key === 'Enter' &&
-                i === PASSCODE_LENGTH - 1 &&
-                value.length === PASSCODE_LENGTH
-              ) {
-                e.preventDefault();
-                onSubmit(value);
-              }
-            }}
-            className="w-11 h-12 text-lg font-bold text-center bg-cream border-2 border-pebble rounded-xl focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all"
-          />
+            className={`w-11 h-12 flex items-center justify-center text-lg font-bold bg-cream border-2 rounded-xl transition-all select-none ${
+              value.length === i
+                ? 'border-sage ring-2 ring-sage/20'
+                : value[i]
+                  ? 'border-sage/40'
+                  : 'border-pebble'
+            }`}
+          >
+            {value[i] || ''}
+          </div>
         ))}
       </div>
 
       <button
-        ref={verifyButtonRef}
         type="button"
         className="btn-sage py-3 text-sm mt-2"
         onClick={() => onSubmit(value)}
@@ -201,7 +149,7 @@ function PasscodeInput({
           className={`font-semibold ${isCoolingDown || isVerifying ? 'text-bark-light cursor-not-allowed' : 'text-sage hover:underline'}`}
           onClick={() => {
             onChange('');
-            inputRefs.current[0]?.focus();
+            hiddenInputRef.current?.focus();
             onResend();
           }}
           disabled={isCoolingDown || isVerifying}
@@ -224,18 +172,12 @@ export function LoginScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [nextAllowedAt, setNextAllowedAt] = useState(0);
   const [now, setNow] = useState(Date.now());
-  const [rememberDevice, setRememberDevice] = useState(false);
-
   useEffect(() => {
     const stored = window.localStorage.getItem(PASSCODE_COOLDOWN_STORAGE_KEY);
     const parsed = stored ? Number(stored) : 0;
     if (Number.isFinite(parsed) && parsed > Date.now()) {
       setNextAllowedAt(parsed);
     }
-  }, []);
-
-  useEffect(() => {
-    setRememberDevice(window.localStorage.getItem(REMEMBER_DEVICE_STORAGE_KEY) === 'true');
   }, []);
 
   useEffect(() => {
@@ -289,8 +231,9 @@ export function LoginScreen() {
     }
   }
 
-  async function handleVerify() {
-    if (passcode.length !== PASSCODE_LENGTH) {
+  async function handleVerify(code?: string) {
+    const codeToVerify = code ?? passcode;
+    if (codeToVerify.length !== PASSCODE_LENGTH) {
       setAuthError('Enter the 6-digit code');
       return;
     }
@@ -299,12 +242,7 @@ export function LoginScreen() {
     setIsVerifying(true);
 
     try {
-      await verifyPasscode(email.trim(), passcode);
-      if (rememberDevice) {
-        window.localStorage.setItem(REMEMBER_DEVICE_STORAGE_KEY, 'true');
-      } else {
-        window.localStorage.removeItem(REMEMBER_DEVICE_STORAGE_KEY);
-      }
+      await verifyPasscode(email.trim(), codeToVerify);
     } catch (error) {
       const raw = error instanceof Error ? error.message : '';
       if (/invalid|incorrect/i.test(raw)) {
@@ -315,14 +253,6 @@ export function LoginScreen() {
     } finally {
       setIsVerifying(false);
     }
-  }
-
-  function handleBiometric() {
-    if (!window.PublicKeyCredential) {
-      setAuthError('Biometric auth is not available on this device.');
-      return;
-    }
-    setAuthError('Biometric unlock is available after the first successful login.');
   }
 
   return (
@@ -368,7 +298,7 @@ export function LoginScreen() {
               <label className="form-label text-xs uppercase tracking-wide">Email</label>
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="owner@petlover.com"
                 className="form-input disabled:opacity-50"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -377,19 +307,6 @@ export function LoginScreen() {
                 disabled={isSending || isCoolingDown}
               />
             </div>
-
-            <label className="flex items-center gap-2 text-xs text-bark-light">
-              <input
-                type="checkbox"
-                checked={rememberDevice}
-                onChange={(e) => setRememberDevice(e.target.checked)}
-              />
-              Remember device
-            </label>
-
-            <button type="button" className="btn-sage !py-2 text-xs" onClick={handleBiometric}>
-              Use Biometric
-            </button>
 
             {authError && (
               <div className="p-3 bg-blush/80 text-terracotta rounded-xl text-sm font-semibold text-center border border-blush">
