@@ -1,4 +1,5 @@
 import { AddButton } from '@/components/ui/AddButton';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { CreateBookingSheet } from '@/features/bookings/CreateBookingSheet';
@@ -309,8 +310,8 @@ export function CalendarMain() {
         }}
       >
         {isLoading && !bookings.length ? (
-          <div className="flex items-center justify-center text-bark-light font-black uppercase tracking-widest opacity-40 text-[9px]">
-            Syncing...
+          <div className="flex items-center justify-center py-4">
+            <AppLoadingAnimation size="sm" label="Syncing calendar..." />
           </div>
         ) : (
           weeks.map((week, wi) => (

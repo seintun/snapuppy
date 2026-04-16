@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useToast } from '@/components/ui/useToast';
 import { AddDogSheet } from './AddDogSheet';
 import { deleteDog, getDog } from './dogService';
@@ -49,7 +50,11 @@ export function DogDetailScreen() {
   }
 
   if (loading) {
-    return <p className="text-bark-light">Loading dog profile...</p>;
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <AppLoadingAnimation size="sm" label="Loading dog profile..." />
+      </div>
+    );
   }
 
   if (!dogId) {
@@ -85,9 +90,7 @@ export function DogDetailScreen() {
           <DogAvatar name={dog.name} src={dog.photo_url} size="lg" />
         </div>
         <h1 className="m-0 text-2xl font-extrabold">{dog.name}</h1>
-        <p className="m-0 mt-1 text-bark-light">
-          {dog.owner_name ?? 'Owner unknown'}
-        </p>
+        <p className="m-0 mt-1 text-bark-light">{dog.owner_name ?? 'Owner unknown'}</p>
       </div>
 
       <div className="mb-3">

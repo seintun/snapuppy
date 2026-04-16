@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthContext } from '@/features/auth/useAuthContext';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useToast } from '@/components/ui/useToast';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
@@ -75,8 +76,8 @@ export function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-sm text-bark-light">
-        Loading profile…
+      <div className="flex h-[60vh] items-center justify-center">
+        <AppLoadingAnimation size="md" label="Loading profile..." />
       </div>
     );
   }

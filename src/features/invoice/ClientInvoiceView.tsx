@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useBooking } from '@/hooks/useBookings';
 import { InvoicePreview } from './InvoicePreview';
 
@@ -6,7 +7,13 @@ export function ClientInvoiceView() {
   const { bookingId = '' } = useParams<{ bookingId: string }>();
   const { data: booking, isLoading } = useBooking(bookingId);
 
-  if (isLoading) return <p className="p-4 text-sm text-bark-light">Loading invoice…</p>;
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <AppLoadingAnimation size="md" label="Loading invoice..." />
+      </div>
+    );
+  }
   if (!booking) return <p className="p-4 text-sm text-terracotta">Invoice not found.</p>;
 
   return (

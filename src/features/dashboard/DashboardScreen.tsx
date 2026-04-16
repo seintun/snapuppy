@@ -3,6 +3,7 @@ import { format, startOfToday, getHours } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DogAvatar } from '@/components/ui/DogAvatar';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { PawPrint, CheckCircle, Clock, Info } from '@phosphor-icons/react';
 import { MetricsDashboard } from './MetricsDashboard';
 
@@ -23,22 +24,25 @@ export function DashboardScreen() {
   const { data: bookings = [], isLoading } = useCalendarBookings(today);
   const [arrivedIds, setArrivedIds] = useState<string[]>([]);
 
-  const arriving = useMemo(() => 
-    bookings.filter((b) => b.start_date === todayStr), 
-  [bookings, todayStr]);
-  
-  const departing = useMemo(() => 
-    bookings.filter((b) => b.end_date === todayStr), 
-  [bookings, todayStr]);
+  const arriving = useMemo(
+    () => bookings.filter((b) => b.start_date === todayStr),
+    [bookings, todayStr],
+  );
 
-  const staying = useMemo(() => 
-    bookings.filter((b) => b.start_date < todayStr && b.end_date > todayStr),
-  [bookings, todayStr]);
+  const departing = useMemo(
+    () => bookings.filter((b) => b.end_date === todayStr),
+    [bookings, todayStr],
+  );
+
+  const staying = useMemo(
+    () => bookings.filter((b) => b.start_date < todayStr && b.end_date > todayStr),
+    [bookings, todayStr],
+  );
 
   if (isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center font-black text-bark-light uppercase tracking-widest animate-pulse">
-        Initializing Dashboard...
+      <div className="flex h-[60vh] items-center justify-center">
+        <AppLoadingAnimation size="lg" label="Initializing dashboard..." />
       </div>
     );
   }
@@ -58,7 +62,9 @@ export function DashboardScreen() {
             <span className="text-[8px] font-black text-bark-light uppercase tracking-[0.2em] opacity-80 mb-0.5">
               Live Status
             </span>
-            <h2 className="text-lg font-black text-bark leading-none tracking-tight">Today's Pups</h2>
+            <h2 className="text-lg font-black text-bark leading-none tracking-tight">
+              Today's Pups
+            </h2>
           </div>
           <div className="flex items-center gap-1.5 bg-terracotta/10 text-terracotta px-2.5 py-1 rounded-full border border-terracotta/20">
             <div className="w-1 h-1 rounded-full bg-terracotta shadow-[0_0_8px_rgba(212,132,90,0.5)] animate-pulse" />
@@ -86,25 +92,29 @@ export function DashboardScreen() {
                     className="flex flex-col items-center gap-1.5 group transition-all active:scale-95"
                   >
                     <div className="relative">
-                      <DogAvatar 
-                        name={b.dogs?.name ?? ''} 
-                        src={b.dogs?.photo_url} 
-                        size="md" 
-                        className="!w-14 !h-14 !border-2 !border-sage/50 !bg-cream p-0.5 group-hover:!border-sage transition-all shadow-sm" 
+                      <DogAvatar
+                        name={b.dogs?.name ?? ''}
+                        src={b.dogs?.photo_url}
+                        size="md"
+                        className="!w-14 !h-14 !border-2 !border-sage/50 !bg-cream p-0.5 group-hover:!border-sage transition-all shadow-sm"
                       />
                       <div className="absolute -bottom-0.5 -right-0.5 bg-sage text-white rounded-full p-0.5 border-2 border-cream shadow-sm">
                         <PawPrint size={8} weight="fill" />
                       </div>
                     </div>
                     <div className="flex flex-col items-center w-full px-0.5">
-                      <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">{b.dogs?.name}</span>
+                      <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">
+                        {b.dogs?.name}
+                      </span>
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
               <div className="text-center py-4 border-2 border-dashed border-pebble/40 rounded-[20px] bg-cream/20">
-                <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">No arrivals</p>
+                <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">
+                  No arrivals
+                </p>
               </div>
             )}
             {arriving.length > 0 ? (
@@ -116,7 +126,9 @@ export function DashboardScreen() {
                     className="btn-sage !py-2 !px-3 !text-xs"
                     onClick={() => setArrivedIds((prev) => [...new Set([...prev, b.id])])}
                   >
-                    {arrivedIds.includes(b.id) ? `${b.dogs?.name} Arrived` : `Mark ${b.dogs?.name} Arrived`}
+                    {arrivedIds.includes(b.id)
+                      ? `${b.dogs?.name} Arrived`
+                      : `Mark ${b.dogs?.name} Arrived`}
                   </button>
                 ))}
               </div>
@@ -144,22 +156,26 @@ export function DashboardScreen() {
                     className="flex flex-col items-center gap-1.5 group transition-all active:scale-95"
                   >
                     <div className="relative">
-                      <DogAvatar 
-                        name={b.dogs?.name ?? ''} 
-                        src={b.dogs?.photo_url} 
-                        size="sm" 
-                        className="!w-10 !h-10 !border-[1.5px] !border-sky/50 !bg-cream p-0.5 group-hover:!border-sky transition-all shadow-sm" 
+                      <DogAvatar
+                        name={b.dogs?.name ?? ''}
+                        src={b.dogs?.photo_url}
+                        size="sm"
+                        className="!w-10 !h-10 !border-[1.5px] !border-sky/50 !bg-cream p-0.5 group-hover:!border-sky transition-all shadow-sm"
                       />
                     </div>
                     <div className="flex flex-col items-center w-full px-0.5">
-                      <span className="text-[9px] font-black text-bark leading-tight truncate w-full text-center">{b.dogs?.name}</span>
+                      <span className="text-[9px] font-black text-bark leading-tight truncate w-full text-center">
+                        {b.dogs?.name}
+                      </span>
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
               <div className="text-center py-4 border-2 border-dashed border-pebble/40 rounded-[20px] bg-cream/20">
-                <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">No pups staying</p>
+                <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">
+                  No pups staying
+                </p>
               </div>
             )}
             {staying.some((b) => b.dogs?.owner_phone) ? (
@@ -200,25 +216,29 @@ export function DashboardScreen() {
                     className="flex flex-col items-center gap-1.5 group transition-all active:scale-95"
                   >
                     <div className="relative">
-                      <DogAvatar 
-                        name={b.dogs?.name ?? ''} 
-                        src={b.dogs?.photo_url} 
-                        size="md" 
-                        className="!w-14 !h-14 !border-2 !border-terracotta/50 !bg-cream p-0.5 group-hover:!border-terracotta transition-all shadow-sm" 
+                      <DogAvatar
+                        name={b.dogs?.name ?? ''}
+                        src={b.dogs?.photo_url}
+                        size="md"
+                        className="!w-14 !h-14 !border-2 !border-terracotta/50 !bg-cream p-0.5 group-hover:!border-terracotta transition-all shadow-sm"
                       />
                       <div className="absolute -bottom-0.5 -right-0.5 bg-terracotta text-white rounded-full p-0.5 border-2 border-cream shadow-sm">
                         <CheckCircle size={8} weight="fill" />
                       </div>
                     </div>
                     <div className="flex flex-col items-center w-full px-0.5">
-                      <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">{b.dogs?.name}</span>
+                      <span className="text-[10px] font-black text-bark leading-tight truncate w-full text-center">
+                        {b.dogs?.name}
+                      </span>
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
               <div className="text-center py-4 border-2 border-dashed border-pebble/40 rounded-[20px] bg-cream/20">
-                <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">No departures</p>
+                <p className="text-[9px] font-black text-bark-light/50 uppercase tracking-wider">
+                  No departures
+                </p>
               </div>
             )}
           </div>
@@ -228,7 +248,9 @@ export function DashboardScreen() {
           <div className="w-8 h-8 rounded-xl bg-sage/10 text-sage flex items-center justify-center shrink-0 border border-sage/30 shadow-sm">
             <Info size={18} weight="fill" />
           </div>
-          <p className="text-[11px] font-bold text-bark-light leading-tight">Dogs have about 100 facial expressions, mostly involving their ears!</p>
+          <p className="text-[11px] font-bold text-bark-light leading-tight">
+            Dogs have about 100 facial expressions, mostly involving their ears!
+          </p>
         </div>
       </div>
       <MetricsDashboard />

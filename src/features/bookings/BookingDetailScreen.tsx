@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { ArrowLeft, Warning } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings';
 import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
@@ -41,8 +42,8 @@ export function BookingDetailScreen() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-sm text-bark-light">
-        Loading…
+      <div className="flex h-[60vh] items-center justify-center">
+        <AppLoadingAnimation size="md" label="Loading booking..." />
       </div>
     );
   }
@@ -232,7 +233,9 @@ export function BookingDetailScreen() {
         </div>
 
         <div className="mt-3">
-          <h2 className="text-sm font-black text-bark mb-2 uppercase tracking-wide">Daily Reports</h2>
+          <h2 className="text-sm font-black text-bark mb-2 uppercase tracking-wide">
+            Daily Reports
+          </h2>
           <ReportList bookingId={booking.id} />
         </div>
       </div>

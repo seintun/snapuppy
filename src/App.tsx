@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginScreen, RequireAuth } from '@/features/auth';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ErrorScreen } from '@/components/ui/ErrorScreen';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 
 const DashboardScreen = lazy(() =>
   import('@/features/dashboard').then((m) => ({ default: m.DashboardScreen })),
@@ -45,17 +46,8 @@ const ClientInvoiceView = lazy(() =>
 
 function LoadingFallback() {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '60vh',
-        color: 'var(--bark-light)',
-        fontSize: 14,
-      }}
-    >
-      Loading…
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <AppLoadingAnimation size="lg" label="Waking up the pack..." />
     </div>
   );
 }
@@ -186,7 +178,6 @@ export default function App() {
         </Route>
 
         <Route path="*" element={<ErrorScreen error={new Error('Page not found')} />} />
-
       </Routes>
     </ErrorBoundary>
   );

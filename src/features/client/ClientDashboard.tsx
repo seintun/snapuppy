@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { ClientBookingCard } from './ClientBookingCard';
 import { ClientRequestSheet } from './ClientRequestSheet';
 import { getClientSession } from './clientAuth';
@@ -8,17 +9,28 @@ import { useClientBookings } from './clientQueries';
 export function ClientDashboard() {
   const navigate = useNavigate();
   const session = getClientSession();
-  const { data: bookings = [], isLoading } = useClientBookings(session?.sitterId, session?.ownerPhone);
+  const { data: bookings = [], isLoading } = useClientBookings(
+    session?.sitterId,
+    session?.ownerPhone,
+  );
   const [requestOpen, setRequestOpen] = useState(false);
 
-  const upcoming = useMemo(() => bookings.filter((booking) => booking.status === 'active'), [bookings]);
+  const upcoming = useMemo(
+    () => bookings.filter((booking) => booking.status === 'active'),
+    [bookings],
+  );
   const past = useMemo(
-    () => bookings.filter((booking) => booking.status === 'completed' || booking.status === 'cancelled'),
+    () =>
+      bookings.filter(
+        (booking) => booking.status === 'completed' || booking.status === 'cancelled',
+      ),
     [bookings],
   );
 
   if (!session) {
-    return <p className="text-sm text-bark-light">Client session expired. Re-open your invite link.</p>;
+    return (
+      <p className="text-sm text-bark-light">Client session expired. Re-open your invite link.</p>
+    );
   }
 
   const defaultDogId = bookings[0]?.dog_id ?? '';
@@ -41,7 +53,11 @@ export function ClientDashboard() {
 
       <section className="space-y-2">
         <h3 className="text-xs font-black uppercase tracking-wide text-bark-light">Upcoming</h3>
-        {isLoading ? <p className="text-sm text-bark-light">Loading…</p> : null}
+        {isLoading ? (
+          <div className="flex justify-center py-2">
+            <AppLoadingAnimation size="sm" label="Loading bookings..." />
+          </div>
+        ) : null}
         {upcoming.length === 0 && !isLoading ? (
           <p className="text-sm text-bark-light">No upcoming bookings.</p>
         ) : null}

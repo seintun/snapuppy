@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AddButton } from '@/components/ui/AddButton';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useToast } from '@/components/ui/useToast';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useDogs, useDeleteDog } from '@/hooks/useDogs';
@@ -37,8 +38,8 @@ export function DogsScreen() {
 
   if (isLoading && !dogs.length) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-xs font-black text-bark-light/40 uppercase tracking-widest">
-        Syncing pups…
+      <div className="flex h-[60vh] items-center justify-center">
+        <AppLoadingAnimation size="md" label="Syncing pups..." />
       </div>
     );
   }
@@ -65,7 +66,10 @@ export function DogsScreen() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
         {dogs.length === 0 ? (
           <div className="mt-12 opacity-40">
-            <EmptyState title="No dogs yet" description="Add your first furry client to get started." />
+            <EmptyState
+              title="No dogs yet"
+              description="Add your first furry client to get started."
+            />
           </div>
         ) : (
           <div className="flex flex-col gap-2 px-1 pb-20">
@@ -96,7 +100,12 @@ export function DogsScreen() {
                       </div>
                       <div className="mt-1.5 pt-1.5 border-t border-pebble/5">
                         <p className="text-[10px] font-black text-bark/40 truncate uppercase tracking-tighter">
-                          OWNER: <span className={dog.owner_name ? 'text-bark opacity-80' : 'text-bark opacity-20'}>
+                          OWNER:{' '}
+                          <span
+                            className={
+                              dog.owner_name ? 'text-bark opacity-80' : 'text-bark opacity-20'
+                            }
+                          >
                             {dog.owner_name || 'NO OWNER'}
                           </span>
                         </p>

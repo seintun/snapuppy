@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Tables } from '@/types/database';
 import { useDeleteReport, useReports } from '@/hooks/useReports';
+import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { ReportCard } from './ReportCard';
 import { ReportSheet } from './ReportSheet';
 
@@ -37,7 +38,11 @@ export function ReportList({ bookingId, readOnly = false }: ReportListProps) {
         </button>
       ) : null}
 
-      {isLoading ? <p className="text-xs text-bark-light">Loading reports…</p> : null}
+      {isLoading ? (
+        <div className="flex justify-center py-2">
+          <AppLoadingAnimation size="sm" label="Loading reports..." />
+        </div>
+      ) : null}
 
       {sortedReports.length === 0 && !isLoading ? (
         <p className="text-sm text-bark-light">No reports yet.</p>
@@ -67,7 +72,11 @@ export function ReportList({ bookingId, readOnly = false }: ReportListProps) {
         />
       ) : null}
 
-      {isPending ? <p className="text-xs text-bark-light">Updating report…</p> : null}
+      {isPending ? (
+        <div className="flex justify-center py-1">
+          <AppLoadingAnimation size="sm" label="Updating report..." />
+        </div>
+      ) : null}
     </section>
   );
 }

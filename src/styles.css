@@ -322,6 +322,110 @@ input[type='date'].form-input {
   animation-fill-mode: both;
 }
 
+.app-loader {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--bark-light);
+}
+
+.app-loader--sm .app-loader__scene {
+  width: 84px;
+  height: 44px;
+}
+
+.app-loader--md .app-loader__scene {
+  width: 112px;
+  height: 58px;
+}
+
+.app-loader--lg .app-loader__scene {
+  width: 148px;
+  height: 76px;
+}
+
+.app-loader__shadow {
+  fill: rgba(74, 55, 40, 0.14);
+}
+
+.app-loader__dog,
+.app-loader__ball {
+  transform-origin: center;
+  will-change: transform;
+}
+
+.app-loader__dog {
+  animation: app-loader-dog-run 900ms ease-in-out infinite;
+}
+
+.app-loader__ball {
+  animation: app-loader-ball-hop 900ms ease-in-out infinite;
+}
+
+.app-loader[data-paused='true'] .app-loader__dog,
+.app-loader[data-paused='true'] .app-loader__ball {
+  animation-play-state: paused;
+}
+
+.app-loader__dog-body,
+.app-loader__dog-head,
+.app-loader__dog-leg,
+.app-loader__dog-tail,
+.app-loader__dog-ear {
+  fill: var(--sage);
+}
+
+.app-loader__dog-eye,
+.app-loader__dog-nose {
+  fill: var(--bark);
+}
+
+.app-loader__ball-fill {
+  fill: var(--terracotta);
+}
+
+.app-loader__ball-line {
+  fill: none;
+  stroke: var(--cream);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.app-loader__label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+@keyframes app-loader-dog-run {
+  0%,
+  100% {
+    transform: translateX(-2px) translateY(0);
+  }
+  50% {
+    transform: translateX(4px) translateY(-2px);
+  }
+}
+
+@keyframes app-loader-ball-hop {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+  50% {
+    transform: translateX(2px) translateY(-7px) scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loader__dog,
+  .app-loader__ball {
+    animation: none;
+  }
+}
+
 .fade-in {
   animation: fade-in 0.2s ease-out;
 }
