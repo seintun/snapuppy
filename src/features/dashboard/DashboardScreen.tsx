@@ -118,19 +118,23 @@ export function DashboardScreen() {
                         <button
                           type="button"
                           aria-label={
-                            isArrived ? `${b.dogs?.name} arrived` : `Mark ${b.dogs?.name} arrived`
+                            isArrived
+                              ? `Undo ${b.dogs?.name} arrival`
+                              : `Mark ${b.dogs?.name} arrived`
                           }
                           aria-pressed={isArrived}
-                          disabled={isArrived}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isArrived) return;
-                            setArrivedIds((prev) => [...new Set([...prev, b.id])]);
+                            setArrivedIds((prev) =>
+                              isArrived
+                                ? prev.filter((id) => id !== b.id)
+                                : [...new Set([...prev, b.id])],
+                            );
                           }}
-                          className={`text-[7px] font-bold uppercase tracking-wider px-1 py-0.5 rounded-md transition-all ${
+                          className={`p-1 rounded-md transition-all active:scale-95 ${
                             isArrived
-                              ? 'text-sage/70 bg-transparent'
-                              : 'text-sage bg-sage/10 hover:bg-sage/20 active:scale-95'
+                              ? 'text-sage/70 hover:text-sage'
+                              : 'text-sage hover:text-sage/80'
                           }`}
                         >
                           {isArrived ? (

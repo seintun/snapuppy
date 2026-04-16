@@ -32,16 +32,16 @@ describe('DashboardScreen arriving dogs', () => {
     mockNavigate.mockClear();
   });
 
-  it('renders inline arrive action per dog and no separate bottom action list', () => {
+  it('renders inline toggle button per dog', () => {
     render(<DashboardScreen />);
     expect(screen.getByRole('button', { name: /mark ice arrived/i })).toBeInTheDocument();
   });
 
-  it('marks a dog arrived from inline chip and shows arrived state', async () => {
+  it('toggles arrival state when button is clicked', async () => {
     render(<DashboardScreen />);
-    await fireEvent.click(screen.getByRole('button', { name: /mark ice arrived/i }));
-    expect(screen.getByRole('button', { name: /ice arrived/i })).toBeDisabled();
-    expect(screen.getByText(/arrived/i)).toBeInTheDocument();
+    const arriveBtn = screen.getByRole('button', { name: /mark ice arrived/i });
+    await fireEvent.click(arriveBtn);
+    expect(screen.getByRole('button', { name: /undo ice arrival/i })).toBeInTheDocument();
   });
 
   it('opens booking when avatar card is tapped', async () => {
@@ -51,10 +51,10 @@ describe('DashboardScreen arriving dogs', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/bookings/booking-1');
   });
 
-  it('marks arrived without navigating when arrive chip is tapped', async () => {
+  it('toggles arrival without navigating when toggle button is clicked', async () => {
     render(<DashboardScreen />);
     await fireEvent.click(screen.getByRole('button', { name: /mark ice arrived/i }));
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(screen.getByText(/arrived/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /undo ice arrival/i })).toBeInTheDocument();
   });
 });
