@@ -2,16 +2,185 @@ import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { useToast } from '@/components/ui/useToast';
 import { useAuthContext } from '@/features/auth/useAuthContext';
-import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
-import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
+import { uploadBusinessLogo } from '@/features/profile/logoUpload';
+import {
+  useProfile,
+  useUpdateProfile,
+  parsePaymentMethods,
+  isLegacyPaymentInstructions,
+  serializePaymentMethods,
+} from '@/hooks/useProfile';
+import { ProfileSchema, PaymentMethodSchema, type ProfileFormData, type PaymentMethod } from '@/lib/schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Buildings, Clock, CurrencyDollar, SignOut } from '@phosphor-icons/react';
-import { useCallback, useEffect } from 'react';
+import {
+  Clock,
+  CurrencyCircleDollar,
+  SignOut,
+  Camera,
+  X,
+  Plus,
+  Warning,
+} from '@phosphor-icons/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+
+const PAYMENT_TYPES = ['venmo', 'cashapp', 'zelle'] as const;
+type PaymentType = (typeof PAYMENT_TYPES)[number];
+
+const PAYMENT_LABELS: Record<PaymentType, string> = {
+  venmo: 'Venmo',
+  cashapp: 'Cash App',
+  zelle: 'Zelle',
+};
+
+const PAYMENT_PREFIX: Record<PaymentType, string> = {
+  venmo: '@',
+  cashapp: '$',
+  zelle: '',
+};
+
+function applyPrefix(type: PaymentType, handle: string): string {
+  const prefix = PAYMENT_PREFIX[type];
+  if (!prefix) return handle;
+  if (handle.startsWith(prefix)) return handle;
+  return prefix + handle;
+}
+
+// ── Identity Hero ─────────────────────────────────────────────────────────────
+
+interface LogoCircleProps {
+  logoUrl: string | null | undefined;
+  displayName: string;
+  uploading: boolean;
+  onPickFile: () => void;
+}
+
+function LogoCircle({ logoUrl, displayName, uploading, onPickFile }: LogoCircleProps) {
+  const initial = displayName.trim()[0]?.toUpperCase() ?? '?';
+
+  return (
+    <button
+      type="button"
+      onClick={onPickFile}
+      className="relative shrink-0 w-20 h-20 rounded-full overflow-hidden group focus:outline-none"
+      aria-label="Change logo"
+    >
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt="Business logo"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <span className="w-full h-full flex items-center justify-center bg-sage text-white text-3xl font-black">
+          {initial}
+        </span>
+      )}
+
+      {/* Overlay on hover/tap */}
+      <span className="absolute inset-0 bg-bark/30 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity flex items-center justify-center">
+        <Camera size={22} weight="bold" className="text-white" />
+      </span>
+
+      {/* Upload spinner */}
+      {uploading && (
+        <span className="absolute inset-0 bg-bark/50 flex items-center justify-center">
+          <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+// ── Payment Row ────────────────────────────────────────────────────────────────
+
+interface PaymentRowProps {
+  index: number;
+  method: PaymentMethod;
+  usedTypes: Set<PaymentType>;
+  onChange: (index: number, method: PaymentMethod) => void;
+  onRemove: (index: number) => void;
+  error?: string;
+}
+
+function PaymentRow({ index, method, usedTypes, onChange, onRemove, error }: PaymentRowProps) {
+  const handleTypeChange = (newType: PaymentType) => {
+    onChange(index, { type: newType, handle: '' } as PaymentMethod);
+  };
+
+  const handleHandleChange = (raw: string) => {
+    const prefixed = applyPrefix(method.type as PaymentType, raw);
+    onChange(index, { ...method, handle: prefixed } as PaymentMethod);
+  };
+
+  const placeholder =
+    method.type === 'zelle'
+      ? 'Email or phone number'
+      : `${PAYMENT_PREFIX[method.type as PaymentType]}username`;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        {/* Type pill selector */}
+        <div className="flex gap-1 shrink-0">
+          {PAYMENT_TYPES.map((t) => {
+            const isActive = method.type === t;
+            const isDisabledType = !isActive && usedTypes.has(t);
+            return (
+              <button
+                key={t}
+                type="button"
+                disabled={isDisabledType}
+                onClick={() => handleTypeChange(t)}
+                className={`text-[10px] font-bold px-2 py-1 rounded-full transition-colors ${
+                  isActive
+                    ? 'bg-sage text-white'
+                    : isDisabledType
+                      ? 'bg-pebble text-bark-light opacity-40 cursor-not-allowed'
+                      : 'bg-pebble text-bark-light hover:bg-sage-light active:scale-95'
+                }`}
+              >
+                {PAYMENT_LABELS[t]}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Remove */}
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="ml-auto p-1 text-bark-light hover:text-terracotta active:scale-95 transition-colors"
+          aria-label="Remove payment method"
+        >
+          <X size={16} weight="bold" />
+        </button>
+      </div>
+
+      {/* Handle input */}
+      <input
+        type={method.type === 'zelle' ? 'text' : 'text'}
+        value={method.handle}
+        onChange={(e) => handleHandleChange(e.target.value)}
+        placeholder={placeholder}
+        className={`form-input w-full text-sm py-2 ${error ? 'border-terracotta' : ''}`}
+      />
+      {error && <p className="text-[10px] text-terracotta">{error}</p>}
+    </div>
+  );
+}
+
+// ── ProfileScreen ──────────────────────────────────────────────────────────────
 
 export function ProfileScreen() {
   const { signOut, user } = useAuthContext();
   const { addToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentErrors, setPaymentErrors] = useState<Record<number, string>>({});
+  const [paymentDirty, setPaymentDirty] = useState(false);
+  const [legacyPayment, setLegacyPayment] = useState<string | null>(null);
 
   const { data: profile, isLoading } = useProfile();
   const { mutateAsync: updateProfileMutation, isPending: saving } = useUpdateProfile();
@@ -26,9 +195,9 @@ export function ProfileScreen() {
   } = useForm<ProfileFormData>({
     resolver: zodResolver(ProfileSchema),
     defaultValues: {
-      businessName: '',
+      displayName: '',
       businessLogoUrl: '',
-      paymentInstructions: '',
+      paymentMethods: [],
       nightlyRate: 0,
       daycareRate: 0,
       holidayBoardingRate: 0,
@@ -39,10 +208,19 @@ export function ProfileScreen() {
 
   useEffect(() => {
     if (profile) {
+      const rawPayment = profile.payment_instructions;
+      if (isLegacyPaymentInstructions(rawPayment)) {
+        setLegacyPayment(rawPayment ?? null);
+        setPaymentMethods([]);
+      } else {
+        setLegacyPayment(null);
+        setPaymentMethods(parsePaymentMethods(rawPayment));
+      }
+
       reset({
-        businessName: profile.business_name ?? '',
+        displayName: profile.display_name ?? '',
         businessLogoUrl: profile.business_logo_url ?? '',
-        paymentInstructions: profile.payment_instructions ?? '',
+        paymentMethods: parsePaymentMethods(rawPayment),
         nightlyRate: profile.nightly_rate,
         daycareRate: profile.daycare_rate,
         holidayBoardingRate: profile.holiday_boarding_rate,
@@ -57,30 +235,109 @@ export function ProfileScreen() {
   const daycareRate = useWatch({ control, name: 'daycareRate' });
   const holidayBoardingRate = useWatch({ control, name: 'holidayBoardingRate' });
   const holidayDaycareRate = useWatch({ control, name: 'holidayDaycareRate' });
+  const currentLogoUrl = useWatch({ control, name: 'businessLogoUrl' });
+  const currentDisplayName = useWatch({ control, name: 'displayName' });
 
   const showHolidayRateReminder =
     (nightlyRate > 0 && holidayBoardingRate === 0) || (daycareRate > 0 && holidayDaycareRate === 0);
 
+  const usedPaymentTypes = new Set(paymentMethods.map((m) => m.type as PaymentType));
+  const canAddPaymentMethod = paymentMethods.length < 3 && usedPaymentTypes.size < 3;
+
+  // ── Logo upload ──
+  const handleLogoFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !user?.id) return;
+      setLogoUploading(true);
+      try {
+        const url = await uploadBusinessLogo(user.id, file);
+        setValue('businessLogoUrl', url, { shouldDirty: true });
+      } catch (err) {
+        addToast(err instanceof Error ? err.message : 'Logo upload failed', 'error');
+      } finally {
+        setLogoUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    [user, setValue, addToast],
+  );
+
+  // ── Payment row handlers ──
+  const handlePaymentChange = useCallback((index: number, method: PaymentMethod) => {
+    setPaymentMethods((prev) => {
+      const next = [...prev];
+      next[index] = method;
+      return next;
+    });
+    setPaymentDirty(true);
+    setPaymentErrors((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  }, []);
+
+  const handlePaymentRemove = useCallback((index: number) => {
+    setPaymentMethods((prev) => prev.filter((_, i) => i !== index));
+    setPaymentDirty(true);
+    setPaymentErrors((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  }, []);
+
+  const handleAddPaymentMethod = useCallback(() => {
+    const used = new Set(paymentMethods.map((m) => m.type));
+    const next = PAYMENT_TYPES.find((t) => !used.has(t));
+    if (!next) return;
+    setPaymentMethods((prev) => [...prev, { type: next, handle: '' } as PaymentMethod]);
+    setPaymentDirty(true);
+  }, [paymentMethods]);
+
+  // ── Validate payment methods ──
+  const validatePaymentMethods = (): boolean => {
+    const errs: Record<number, string> = {};
+    let valid = true;
+    paymentMethods.forEach((m, i) => {
+      const result = PaymentMethodSchema.safeParse(m);
+      if (!result.success) {
+        errs[i] = result.error.issues[0]?.message ?? 'Invalid';
+        valid = false;
+      }
+    });
+    setPaymentErrors(errs);
+    return valid;
+  };
+
+  // ── Save ──
   const onSave = useCallback(
     async (data: ProfileFormData) => {
+      if (!validatePaymentMethods()) return;
+
       try {
         await updateProfileMutation({
-          business_name: data.businessName || null,
+          display_name: data.displayName || null,
           business_logo_url: data.businessLogoUrl || null,
-          payment_instructions: data.paymentInstructions || null,
+          payment_instructions: serializePaymentMethods(paymentMethods),
           nightly_rate: data.nightlyRate,
           daycare_rate: data.daycareRate,
           holiday_boarding_rate: data.holidayBoardingRate,
           holiday_daycare_rate: data.holidayDaycareRate,
           cutoff_time: data.cutoffTime,
         });
-        addToast('Profile saved 🐾', 'success');
+        setPaymentDirty(false);
+        setLegacyPayment(null);
+        addToast('Profile saved', 'success');
       } catch (err) {
         addToast(err instanceof Error ? err.message : 'Failed to save profile', 'error');
       }
     },
-    [updateProfileMutation, addToast],
+    [updateProfileMutation, addToast, paymentMethods],
   );
+
+  const isFormDirty = isDirty || paymentDirty;
 
   if (isLoading) {
     return (
@@ -92,72 +349,108 @@ export function ProfileScreen() {
 
   return (
     <div className="flex flex-col gap-3 pb-6">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-xl font-extrabold text-bark tracking-tight">Profile</h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void signOut()}
-            className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-xs font-bold text-terracotta bg-white border border-pebble rounded-lg px-3 py-1.5 shadow-sm active:scale-95 transition-transform"
-          >
-            <SignOut size={14} weight="bold" />
-            Sign Out
-          </button>
-        </div>
-      </div>
-
-      {/* Email chip */}
-      {user?.email && (
-        <div className="flex items-center gap-2 bg-sage-light/40 rounded-xl px-3 py-2">
-          <span className="w-6 h-6 rounded-full bg-sage text-white flex items-center justify-center text-xs font-black shrink-0">
-            {user.email[0].toUpperCase()}
-          </span>
-          <span className="text-xs text-bark font-semibold truncate">{user.email}</span>
-        </div>
-      )}
-
       <form onSubmit={(e) => void handleSubmit(onSave)(e)} className="flex flex-col gap-3">
-        {/* ── Business Info ── */}
+        {/* ── Identity Hero ── */}
+        <div className="surface-card !p-4">
+          <div className="flex items-start gap-4">
+            {/* Logo circle */}
+            <LogoCircle
+              logoUrl={currentLogoUrl}
+              displayName={currentDisplayName || 'S'}
+              uploading={logoUploading}
+              onPickFile={() => fileInputRef.current?.click()}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => void handleLogoFileChange(e)}
+            />
+
+            {/* Name + email */}
+            <div className="flex-1 min-w-0 flex flex-col gap-1 pt-1">
+              <input
+                type="text"
+                maxLength={100}
+                placeholder="Snapuppy Sitter"
+                className="text-base font-bold text-bark bg-transparent border-b border-transparent focus:border-sage focus:outline-none transition-colors w-full py-0.5"
+                {...register('displayName')}
+              />
+              {errors.displayName && (
+                <p className="text-[10px] text-terracotta">{errors.displayName.message}</p>
+              )}
+              {user?.email && (
+                <span className="text-xs text-bark-light truncate">{user.email}</span>
+              )}
+            </div>
+
+            {/* Sign out */}
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-terracotta bg-blush/40 border border-blush rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
+            >
+              <SignOut size={13} weight="bold" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        {/* ── Payment Methods ── */}
         <div className="surface-card !p-3">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Buildings size={14} weight="bold" className="text-sage" />
+          <div className="flex items-center gap-1.5 mb-3">
+            <CurrencyCircleDollar size={14} weight="bold" className="text-sage" />
             <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
-              Business
+              Payment
             </span>
           </div>
-          <div>
-            <input
-              id="business-name"
-              type="text"
-              maxLength={100}
-              className={`form-input w-full text-sm py-2.5 ${errors.businessName ? 'border-terracotta' : ''}`}
-              placeholder="Your business name (optional)"
-              {...register('businessName')}
-            />
-            {errors.businessName && (
-              <p className="text-[11px] text-terracotta mt-1">{errors.businessName.message}</p>
-            )}
-            <input
-              id="business-logo-url"
-              type="url"
-              className={`form-input w-full text-sm py-2.5 mt-2 ${errors.businessLogoUrl ? 'border-terracotta' : ''}`}
-              placeholder="Business logo URL"
-              {...register('businessLogoUrl')}
-            />
-            <textarea
-              id="payment-instructions"
-              className={`form-input w-full text-sm py-2.5 mt-2 ${errors.paymentInstructions ? 'border-terracotta' : ''}`}
-              placeholder="Payment instructions (Venmo/CashApp/Zelle)"
-              {...register('paymentInstructions')}
-            />
+
+          {/* Legacy payment instructions warning */}
+          {legacyPayment && (
+            <div className="flex items-start gap-2 mb-3 rounded-lg border border-sunshine/60 bg-sunshine/10 px-2.5 py-2">
+              <Warning size={14} weight="bold" className="text-bark-light shrink-0 mt-0.5" />
+              <p className="text-[11px] text-bark-light leading-snug">
+                You have old-style payment instructions. Save new methods below to replace them.
+              </p>
+            </div>
+          )}
+
+          {paymentMethods.length === 0 && !legacyPayment && (
+            <p className="text-[11px] text-bark-light mb-3">
+              No payment methods added. Clients won't see payment info.
+            </p>
+          )}
+
+          <div className="flex flex-col gap-3">
+            {paymentMethods.map((method, i) => (
+              <PaymentRow
+                key={i}
+                index={i}
+                method={method}
+                usedTypes={usedPaymentTypes}
+                onChange={handlePaymentChange}
+                onRemove={handlePaymentRemove}
+                error={paymentErrors[i]}
+              />
+            ))}
           </div>
+
+          {canAddPaymentMethod && (
+            <button
+              type="button"
+              onClick={handleAddPaymentMethod}
+              className="mt-3 flex items-center gap-1.5 text-[12px] font-bold text-sage active:scale-95 transition-transform"
+            >
+              <Plus size={14} weight="bold" />
+              Add payment method
+            </button>
+          )}
         </div>
 
-        {/* ── Rates — 2 × 2 compact grid ── */}
+        {/* ── Rates ── */}
         <div className="surface-card !p-3">
           <div className="flex items-center gap-1.5 mb-2.5">
-            <CurrencyDollar size={14} weight="bold" className="text-sage" />
             <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
               Rates
             </span>
@@ -170,7 +463,7 @@ export function ProfileScreen() {
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="nightly-rate"
               >
-                🌙 Boarding
+                🌙 Boarding / night
               </label>
               <div className="flex">
                 <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
@@ -199,7 +492,7 @@ export function ProfileScreen() {
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="daycare-rate"
               >
-                ☀️ Daycare
+                ☀️ Daycare / day
               </label>
               <div className="flex">
                 <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
@@ -222,7 +515,7 @@ export function ProfileScreen() {
               )}
             </div>
 
-            {/* Holiday boarding rate */}
+            {/* Holiday boarding */}
             <div>
               <label
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
@@ -253,7 +546,7 @@ export function ProfileScreen() {
               )}
             </div>
 
-            {/* Holiday daycare rate */}
+            {/* Holiday daycare */}
             <div>
               <label
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
@@ -314,24 +607,23 @@ export function ProfileScreen() {
             </div>
           </div>
 
-          {/* Cutoff hint */}
           <p className="text-[10px] text-bark-light mt-2 leading-snug">
             Pickups after cut-off time add a daycare charge on the final day.
           </p>
           {showHolidayRateReminder && (
             <div className="mt-2 rounded-lg border border-pebble/60 bg-cream px-2.5 py-2 text-[10px] font-medium text-bark-light">
-              Holiday rates are currently $0. Set them if you charge differently on holidays.
+              ⚠️ Holiday rates are $0. Set them if you charge differently on holidays.
             </div>
           )}
         </div>
 
-        {/* Save button */}
+        {/* Save */}
         <button
           type="submit"
           className="btn-sage sticky bottom-[calc(80px+env(safe-area-inset-bottom))] shadow-lg shadow-sage/20 z-10"
-          disabled={saving || !isDirty}
+          disabled={saving || !isFormDirty}
         >
-          {saving ? 'Saving…' : 'Save Changes 🐾'}
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </form>
     </div>

@@ -10,7 +10,7 @@ describe('updateProfile', () => {
     fromMock.mockReset();
   });
 
-  it('retries without business_name when schema cache is missing that column', async () => {
+  it('never writes business_name even when provided in updates', async () => {
     const updated = {
       id: 'user-1',
       email: 'sitter@example.com',
@@ -25,17 +25,7 @@ describe('updateProfile', () => {
       updated_at: '2026-01-02T00:00:00.000Z',
     };
 
-    const singleMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        data: null,
-        error: {
-          code: 'PGRST204',
-          message: "Could not find the 'business_name' column of 'profiles' in the schema cache",
-        },
-      })
-      .mockResolvedValueOnce({ data: updated, error: null });
-
+    const singleMock = vi.fn().mockResolvedValueOnce({ data: updated, error: null });
     const selectMock = vi.fn(() => ({ single: singleMock }));
     const upsertMock = vi.fn(() => ({ select: selectMock }));
 
@@ -50,16 +40,9 @@ describe('updateProfile', () => {
       cutoff_time: '11:00',
     });
 
-    expect(upsertMock).toHaveBeenCalledTimes(2);
-    expect(upsertMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ business_name: 'Happy Paws' }),
-    );
-
-    const secondPayload = (
-      upsertMock.mock.calls as unknown as Array<[Record<string, unknown>]>
-    )[1][0];
-    expect(secondPayload).not.toHaveProperty('business_name');
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const payload = (upsertMock.mock.calls as unknown as Array<[Record<string, unknown>]>)[0][0];
+    expect(payload).not.toHaveProperty('business_name');
   });
 });
 
