@@ -66,45 +66,46 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/auth/callback" element={<AuthCallbackScreen />} />
-        <Route
-          path="/client/:token"
-          element={
-            <Suspense fallback={<LoadingFallback />}>
-              <ClientAuthScreen />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/client/:token"
-          element={
-            <Suspense fallback={<LoadingFallback />}>
-              <RequireClientAuth />
-            </Suspense>
-          }
-        >
+        <Route path="/client/:token">
+          <Route
+            index
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <ClientAuthScreen />
+              </Suspense>
+            }
+          />
           <Route
             element={
               <Suspense fallback={<LoadingFallback />}>
-                <ClientLayout />
+                <RequireClientAuth />
               </Suspense>
             }
           >
             <Route
-              path="dashboard"
               element={
                 <Suspense fallback={<LoadingFallback />}>
-                  <ClientDashboard />
+                  <ClientLayout />
                 </Suspense>
               }
-            />
-            <Route
-              path="bookings/:bookingId"
-              element={
-                <Suspense fallback={<LoadingFallback />}>
-                  <ClientBookingDetail />
-                </Suspense>
-              }
-            />
+            >
+              <Route
+                path="dashboard"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <ClientDashboard />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="bookings/:bookingId"
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <ClientBookingDetail />
+                  </Suspense>
+                }
+              />
+            </Route>
           </Route>
         </Route>
         <Route
@@ -187,9 +188,6 @@ export default function App() {
 
         <Route path="*" element={<ErrorScreen error={new Error('Page not found')} />} />
 
-        <Route path="/client" element={<ClientAuthScreen />} />
-        <Route path="/client/:token" element={<ClientAuthScreen />} />
-        <Route path="/client/dashboard" element={<ClientDashboard />} />
       </Routes>
     </ErrorBoundary>
   );

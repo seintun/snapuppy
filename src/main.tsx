@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createPersister } from '@/lib/persister';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -47,16 +47,14 @@ createRoot(root).render(
       client={queryClient}
       persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}
     >
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <AuthProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </AuthProvider>
-        </ToastProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AuthProvider>
+      </ToastProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
     </PersistQueryClientProvider>
   </StrictMode>,
 );
