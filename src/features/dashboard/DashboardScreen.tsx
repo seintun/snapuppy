@@ -3,9 +3,21 @@ import { DogAvatar } from '@/components/ui/DogAvatar';
 import { useCalendarBookings } from '@/hooks/useBookings';
 import { CheckCircle, Clock, Info, PawPrint } from '@phosphor-icons/react';
 import { format, getHours, startOfToday } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MetricsDashboard } from './MetricsDashboard';
+
+const STORAGE_KEY_ARRIVED = 'snapuppy_arrived_ids';
+const STORAGE_KEY_DEPARTED = 'snapuppy_departed_ids';
+
+function getStoredIds(key: string): string[] {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
 
 export function DashboardScreen() {
   const today = startOfToday();
@@ -22,8 +34,18 @@ export function DashboardScreen() {
 
   // Fetch current month bookings to identify today's arrivals/departures
   const { data: bookings = [], isLoading } = useCalendarBookings(today);
-  const [arrivedIds, setArrivedIds] = useState<string[]>([]);
-  const [departedIds, setDepartedIds] = useState<string[]>([]);
+  const [arrivedIds, setArrivedIds] = useState<string[]>(() => getStoredIds(STORAGE_KEY_ARRIVED));
+  const [departedIds, setDepartedIds] = useState<string[]>(() =>
+    getStoredIds(STORAGE_KEY_DEPARTED),
+  );
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_ARRIVED, JSON.stringify(arrivedIds));
+  }, [arrivedIds]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_DEPARTED, JSON.stringify(departedIds));
+  }, [departedIds]);
 
   const arriving = useMemo(
     () => bookings.filter((b) => b.start_date === todayStr),
