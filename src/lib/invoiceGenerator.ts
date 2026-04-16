@@ -7,9 +7,19 @@ export interface InvoiceLineItem {
   rate: number;
 }
 
+export type InvoiceAdjustmentKind = 'discount' | 'charge';
+
+export interface InvoiceAdjustment {
+  id: string;
+  kind: InvoiceAdjustmentKind;
+  description: string;
+  amount: number;
+}
+
 export interface InvoiceOverrides {
   lineItems: InvoiceLineItem[];
   creditAmount: number;
+  adjustments?: InvoiceAdjustment[];
 }
 
 export interface InvoiceInput {
@@ -23,6 +33,7 @@ export interface InvoiceInput {
   paymentNotes?: string | null;
   lineItems?: InvoiceLineItem[];
   creditAmount?: number;
+  adjustments?: InvoiceAdjustment[];
 }
 
 function toFiniteNumber(value: unknown, fallback = 0): number {
@@ -54,6 +65,42 @@ function normalizeCreditAmount(value: unknown): number {
   return Math.max(0, toFiniteNumber(value, 0));
 }
 
+function normalizeAdjustment(value: unknown): InvoiceAdjustment | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.id !== 'string') return null;
+  if (value.kind !== 'discount' && value.kind !== 'charge') return null;
+  if (typeof value.description !== 'string') return null;
+
+  const amount = toFiniteNumber(value.amount, NaN);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+
+  return {
+    id: value.id,
+    kind: value.kind,
+    description: value.description,
+    amount,
+  };
+}
+
+function sumAdjustmentAmounts(adjustments: InvoiceAdjustment[]): {
+  charges: number;
+  discounts: number;
+} {
+  let charges = 0;
+  let discounts = 0;
+
+  for (const adjustment of adjustments) {
+    if (adjustment.kind === 'charge') {
+      charges += adjustment.amount;
+      continue;
+    }
+
+    discounts += adjustment.amount;
+  }
+
+  return { charges, discounts };
+}
+
 export function parseInvoiceOverrides(value: unknown): InvoiceOverrides | null {
   if (!isRecord(value)) return null;
   if (!Array.isArray(value.lineItems)) return null;
@@ -65,16 +112,42 @@ export function parseInvoiceOverrides(value: unknown): InvoiceOverrides | null {
     lineItems.push(normalized);
   }
 
+  const creditAmount = normalizeCreditAmount(value.creditAmount);
+  const hasAdjustmentsField = Object.hasOwn(value, 'adjustments');
+  let adjustments: InvoiceAdjustment[] | undefined;
+
+  if (hasAdjustmentsField) {
+    if (!Array.isArray(value.adjustments)) return null;
+
+    adjustments = [];
+    for (const item of value.adjustments) {
+      const normalized = normalizeAdjustment(item);
+      if (!normalized) return null;
+      adjustments.push(normalized);
+    }
+  } else if (creditAmount > 0) {
+    adjustments = [
+      { id: 'legacy-credit', kind: 'discount', description: '', amount: creditAmount },
+    ];
+  }
+
+  const adjustmentDiscounts = adjustments ? sumAdjustmentAmounts(adjustments).discounts : 0;
+
   return {
     lineItems,
-    creditAmount: normalizeCreditAmount(value.creditAmount),
+    creditAmount: adjustments ? adjustmentDiscounts : creditAmount,
+    adjustments,
   };
 }
 
 export interface InvoiceTotals {
   lineItems: InvoiceLineItem[];
+  adjustments: InvoiceAdjustment[];
   hasLineItems: boolean;
   baseSubtotal: number;
+  adjustmentCharges: number;
+  adjustmentDiscounts: number;
+  adjustmentNet: number;
   credit: number;
   subtotal: number;
   tip: number;
@@ -91,12 +164,56 @@ export function calculateInvoiceTotals(input: InvoiceInput): InvoiceTotals {
   const baseSubtotal = hasLineItems
     ? lineItems.reduce((sum, item) => sum + item.count * item.rate, 0)
     : Math.max(0, toFiniteNumber(input.subtotal, 0));
-  const credit = Math.min(baseSubtotal, normalizeCreditAmount(input.creditAmount));
-  const subtotal = Math.max(0, baseSubtotal - credit);
+
+  const rawAdjustments = input.adjustments;
+  const adjustments = Array.isArray(rawAdjustments)
+    ? rawAdjustments.flatMap((adjustment) => {
+        if (adjustment.kind !== 'charge' && adjustment.kind !== 'discount') {
+          return [];
+        }
+
+        return [
+          {
+            id: adjustment.id,
+            kind: adjustment.kind,
+            description: adjustment.description,
+            amount: Math.max(0, toFiniteNumber(adjustment.amount, 0)),
+          },
+        ];
+      })
+    : [];
+
+  if (!rawAdjustments && input.creditAmount) {
+    adjustments.push({
+      id: 'legacy-credit',
+      kind: 'discount',
+      description: '',
+      amount: normalizeCreditAmount(input.creditAmount),
+    });
+  }
+
+  const { charges: adjustmentCharges, discounts: rawDiscounts } = sumAdjustmentAmounts(adjustments);
+  const maxDiscount = Math.max(0, baseSubtotal + adjustmentCharges);
+  const adjustmentDiscounts = Math.min(maxDiscount, rawDiscounts);
+  const credit = adjustmentDiscounts;
+  const adjustmentNet = adjustmentCharges - adjustmentDiscounts;
+  const subtotal = Math.max(0, baseSubtotal + adjustmentNet);
   const tip = Math.max(0, toFiniteNumber(input.tipAmount, 0));
   const total = Math.max(0, subtotal + tip);
 
-  return { lineItems, hasLineItems, baseSubtotal, credit, subtotal, tip, total };
+  return {
+    lineItems,
+    adjustments,
+    hasLineItems,
+    baseSubtotal,
+    adjustmentCharges,
+    adjustmentDiscounts,
+    adjustmentNet,
+    credit,
+    subtotal,
+    tip,
+    total,
+  };
 }
 
 export function generateInvoiceMarkdown(input: InvoiceInput): string {

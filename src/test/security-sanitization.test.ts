@@ -142,6 +142,39 @@ describe('parseInvoiceOverrides', () => {
     expect(parsed).toEqual({
       lineItems: [{ type: 'boarding', isHoliday: false, count: 2, rate: 45 }],
       creditAmount: 10,
+      adjustments: [{ id: 'legacy-credit', kind: 'discount', description: '', amount: 10 }],
+    });
+  });
+
+  it('parses valid adjustments when provided', () => {
+    const parsed = parseInvoiceOverrides({
+      lineItems: [{ type: 'boarding', isHoliday: false, count: 2, rate: 45 }],
+      adjustments: [
+        { id: 'adj-1', kind: 'discount', description: 'Loyalty', amount: 5 },
+        { id: 'adj-2', kind: 'charge', description: 'Holiday surcharge', amount: 12 },
+      ],
+    });
+
+    expect(parsed).toEqual({
+      lineItems: [{ type: 'boarding', isHoliday: false, count: 2, rate: 45 }],
+      creditAmount: 5,
+      adjustments: [
+        { id: 'adj-1', kind: 'discount', description: 'Loyalty', amount: 5 },
+        { id: 'adj-2', kind: 'charge', description: 'Holiday surcharge', amount: 12 },
+      ],
+    });
+  });
+
+  it('maps legacy creditAmount to a single discount adjustment when adjustments are absent', () => {
+    const parsed = parseInvoiceOverrides({
+      lineItems: [{ type: 'boarding', isHoliday: false, count: 1, rate: 80 }],
+      creditAmount: 10,
+    });
+
+    expect(parsed).toEqual({
+      lineItems: [{ type: 'boarding', isHoliday: false, count: 1, rate: 80 }],
+      creditAmount: 10,
+      adjustments: [{ id: 'legacy-credit', kind: 'discount', description: '', amount: 10 }],
     });
   });
 
@@ -154,5 +187,43 @@ describe('parseInvoiceOverrides', () => {
         creditAmount: 10,
       }),
     ).toBeNull();
+
+    expect(
+      parseInvoiceOverrides({
+        lineItems: [{ type: 'boarding', isHoliday: false, count: 2, rate: 45 }],
+        adjustments: [{ id: 'adj-1', kind: 'rebate', description: 'Bad', amount: 4 }],
+      }),
+    ).toBeNull();
+
+    expect(
+      parseInvoiceOverrides({
+        lineItems: [{ type: 'boarding', isHoliday: false, count: 2, rate: 45 }],
+        adjustments: [{ id: 'adj-1', kind: 'discount', description: 'Bad', amount: -4 }],
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('calculateInvoiceTotals adjustments', () => {
+  it('computes subtotal as base subtotal plus charges minus discounts', () => {
+    const totals = calculateInvoiceTotals({
+      sitterName: 'Sitter',
+      clientName: 'Client',
+      dogName: 'Dog',
+      startDate: '2026-01-01',
+      endDate: '2026-01-02',
+      subtotal: 100,
+      adjustments: [
+        { id: 'adj-1', kind: 'charge', description: 'After hours', amount: 15 },
+        { id: 'adj-2', kind: 'discount', description: 'Promo', amount: 20 },
+      ],
+    });
+
+    expect(totals.baseSubtotal).toBe(100);
+    expect(totals.adjustmentCharges).toBe(15);
+    expect(totals.adjustmentDiscounts).toBe(20);
+    expect(totals.adjustmentNet).toBe(-5);
+    expect(totals.subtotal).toBe(95);
+    expect(totals.total).toBe(95);
   });
 });
