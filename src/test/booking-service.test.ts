@@ -114,7 +114,7 @@ describe('calculateBookingRevenue', () => {
 });
 
 describe('buildPaymentCloseUpdate', () => {
-  it('normalizes close-out fields for completed paid bookings', () => {
+  it('normalizes close-out fields for paid bookings', () => {
     expect(
       buildPaymentCloseUpdate({
         tipAmount: 14.239,
@@ -122,7 +122,7 @@ describe('buildPaymentCloseUpdate', () => {
         paidAt: '2026-07-05T18:30:00.000Z',
       }),
     ).toEqual({
-      status: 'completed',
+      status: 'paid',
       is_paid: true,
       tip_amount: 14.24,
       payment_notes: 'Paid via Venmo',

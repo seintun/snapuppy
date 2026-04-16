@@ -41,8 +41,8 @@ export function computeDashboardMetrics(input: ComputeDashboardMetricsInput): Da
       booking.start_date.startsWith(monthPrefix) || booking.end_date.startsWith(monthPrefix),
   );
 
-  const completedBookings = monthBookings.filter((booking) => booking.status === 'completed');
-  const pendingBookings = monthBookings.filter((booking) => booking.status === 'pending');
+  const completedBookings = monthBookings.filter((booking) => booking.status === 'paid');
+  const pendingBookings = monthBookings.filter((booking) => booking.status === 'awaiting');
 
   const monthlyRevenue = round(
     completedBookings.reduce(

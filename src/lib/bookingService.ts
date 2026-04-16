@@ -18,8 +18,8 @@ type BookingDayRow = Tables<'booking_days'>;
 type DogRow = Tables<'dogs'>;
 type ProfileRow = Tables<'profiles'>;
 
-export type BookingStatus = 'active' | 'completed' | 'cancelled' | 'pending';
-export type BookingSource = 'manual' | 'client_request';
+export type BookingStatus = 'upcoming' | 'active' | 'awaiting' | 'paid' | 'cancelled';
+export type BookingSource = 'manual';
 
 export interface EditableBookingDay extends Omit<BookingDayRow, 'rate_type'> {
   rate_type: BookingRateType;
@@ -330,7 +330,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     dog_id: input.dogId,
     start_date: input.startDate,
     end_date: input.endDate,
-    status: input.status ?? 'active',
+    status: input.status ?? 'upcoming',
     source: input.source ?? 'manual',
     notes: input.notes ?? null,
     pickup_time: normalizeOptionalTimestamp(input.pickupDateTime),
@@ -473,6 +473,38 @@ export async function updateBookingStatus(
   if (error) throw error;
 }
 
+export async function checkInBooking(bookingId: string, sitterId: string): Promise<void> {
+  await updateBookingStatus(bookingId, sitterId, 'active');
+}
+
+export async function checkOutBooking(bookingId: string, sitterId: string): Promise<void> {
+  await updateBookingStatus(bookingId, sitterId, 'awaiting');
+}
+
+export async function autoAdvanceBookings(sitterId: string): Promise<void> {
+  const supabase = await getSupabase();
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+
+  const { error: checkInError } = await supabase
+    .from('bookings')
+    .update({ status: 'active', updated_at: now })
+    .eq('sitter_id', sitterId)
+    .eq('status', 'upcoming')
+    .lte('start_date', today);
+
+  if (checkInError) throw checkInError;
+
+  const { error: checkOutError } = await supabase
+    .from('bookings')
+    .update({ status: 'awaiting', updated_at: now })
+    .eq('sitter_id', sitterId)
+    .eq('status', 'active')
+    .lt('end_date', today);
+
+  if (checkOutError) throw checkOutError;
+}
+
 export async function deleteBooking(bookingId: string, sitterId: string): Promise<void> {
   const supabase = await getSupabase();
 
@@ -491,47 +523,6 @@ export async function deleteBooking(bookingId: string, sitterId: string): Promis
   if (error) throw error;
 }
 
-export async function createClientRequest(input: {
-  sitterId: string;
-  dogId: string;
-  startDate: string;
-  endDate: string;
-  notes?: string | null;
-}) {
-  return createBooking({
-    sitterId: input.sitterId,
-    dogId: input.dogId,
-    startDate: input.startDate,
-    endDate: input.endDate,
-    status: 'pending',
-    source: 'client_request',
-    notes: input.notes ?? null,
-  });
-}
-
-export async function acceptClientRequest(bookingId: string, sitterId: string): Promise<void> {
-  await updateBookingStatus(bookingId, sitterId, 'active');
-}
-
-export async function declineClientRequest(
-  bookingId: string,
-  sitterId: string,
-  reason?: string,
-): Promise<void> {
-  const supabase = await getSupabase();
-  const { error } = await supabase
-    .from('bookings')
-    .update({
-      status: 'cancelled',
-      payment_notes: reason ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', bookingId)
-    .eq('sitter_id', sitterId);
-
-  if (error) throw error;
-}
-
 export async function closeBooking(bookingId: string, sitterId: string, input: PaymentCloseInput) {
   const supabase = await getSupabase();
   const payload = buildPaymentCloseUpdate(input);
@@ -539,7 +530,8 @@ export async function closeBooking(bookingId: string, sitterId: string, input: P
     .from('bookings')
     .update(payload)
     .eq('id', bookingId)
-    .eq('sitter_id', sitterId);
+    .eq('sitter_id', sitterId)
+    .eq('status', 'awaiting');
   if (error) throw error;
 }
 
@@ -566,10 +558,18 @@ function normalizeBookingDays(days: ReadonlyArray<BookingDayRow>): EditableBooki
 }
 
 function normalizeStatus(status: string): BookingStatus {
-  if (status === 'completed' || status === 'cancelled' || status === 'pending') {
+  if (
+    status === 'upcoming' ||
+    status === 'active' ||
+    status === 'awaiting' ||
+    status === 'paid' ||
+    status === 'cancelled'
+  ) {
     return status;
   }
-  return 'active';
+  if (status === 'completed') return 'paid';
+  if (status === 'pending') return 'upcoming';
+  return 'upcoming';
 }
 
 function normalizeType(type: string): BookingType {
@@ -657,7 +657,7 @@ export function calculateBookingRevenue(totalAmount: number, tipAmount?: number)
 }
 
 export function buildPaymentCloseUpdate(input: PaymentCloseInput): {
-  status: 'completed';
+  status: 'paid';
   is_paid: true;
   tip_amount: number;
   payment_notes: string | null;
@@ -666,7 +666,7 @@ export function buildPaymentCloseUpdate(input: PaymentCloseInput): {
 } {
   const paidAt = input.paidAt ?? new Date().toISOString();
   return {
-    status: 'completed',
+    status: 'paid',
     is_paid: true,
     tip_amount: toCurrencyAmount(Math.max(0, input.tipAmount ?? 0)),
     payment_notes: input.paymentNotes?.trim() || null,

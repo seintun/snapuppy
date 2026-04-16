@@ -8,4 +8,3 @@ export * from './useReports';
 export * from './useRecurring';
 export * from './useOnlineStatus';
 export * from './useOfflineSync';
-export * from './useClientBooking';

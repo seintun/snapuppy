@@ -2,10 +2,10 @@ import { format } from 'date-fns';
 import type { BookingRecord, BookingStatus } from '@/lib/bookingService';
 
 export const bookingStatusOptions: BookingStatus[] = [
+  'upcoming',
   'active',
-  'pending',
-  'completed',
-  'cancelled',
+  'awaiting',
+  'paid',
 ];
 
 export function formatCurrency(amount: number): string {
@@ -43,15 +43,17 @@ export function getDurationText(booking: Pick<BookingRecord, 'days' | 'type'>): 
 }
 
 export function getStatusLabel(status: BookingStatus): string {
-  if (status === 'pending') return 'Pending';
-  if (status === 'completed') return 'Completed';
+  if (status === 'upcoming') return 'Upcoming';
+  if (status === 'awaiting') return 'Awaiting Payment';
+  if (status === 'paid') return 'Paid';
   if (status === 'cancelled') return 'Cancelled';
   return 'Active';
 }
 
 export function getStatusVariant(status: BookingStatus): 'sage' | 'sky' | 'terracotta' | 'amber' {
-  if (status === 'pending') return 'amber';
-  if (status === 'completed') return 'sage';
+  if (status === 'upcoming') return 'amber';
+  if (status === 'awaiting') return 'terracotta';
+  if (status === 'paid') return 'sage';
   if (status === 'cancelled') return 'terracotta';
   return 'sky';
 }

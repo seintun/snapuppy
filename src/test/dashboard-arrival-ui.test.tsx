@@ -21,6 +21,9 @@ vi.mock('@/hooks/useBookings', () => ({
       },
     ],
   }),
+  useBookings: () => ({
+    data: [],
+  }),
 }));
 
 vi.mock('@/features/dashboard/MetricsDashboard', () => ({

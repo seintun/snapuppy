@@ -1,6 +1,6 @@
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { DogAvatar } from '@/components/ui/DogAvatar';
-import { useCalendarBookings } from '@/hooks/useBookings';
+import { useBookings, useCalendarBookings } from '@/hooks/useBookings';
 import { CheckCircle, Clock, Info, PawPrint } from '@phosphor-icons/react';
 import { format, getHours, startOfToday } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
@@ -12,10 +12,20 @@ const STORAGE_KEY_DEPARTED = 'snapuppy_departed_ids';
 
 function getStoredIds(key: string): string[] {
   try {
+    if (typeof localStorage?.getItem !== 'function') return [];
     const stored = localStorage.getItem(key);
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
+  }
+}
+
+function setStoredIds(key: string, values: string[]): void {
+  try {
+    if (typeof localStorage?.setItem !== 'function') return;
+    localStorage.setItem(key, JSON.stringify(values));
+  } catch {
+    return;
   }
 }
 
@@ -34,17 +44,18 @@ export function DashboardScreen() {
 
   // Fetch current month bookings to identify today's arrivals/departures
   const { data: bookings = [], isLoading } = useCalendarBookings(today);
+  const { data: allBookings = [] } = useBookings();
   const [arrivedIds, setArrivedIds] = useState<string[]>(() => getStoredIds(STORAGE_KEY_ARRIVED));
   const [departedIds, setDepartedIds] = useState<string[]>(() =>
     getStoredIds(STORAGE_KEY_DEPARTED),
   );
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_ARRIVED, JSON.stringify(arrivedIds));
+    setStoredIds(STORAGE_KEY_ARRIVED, arrivedIds);
   }, [arrivedIds]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_DEPARTED, JSON.stringify(departedIds));
+    setStoredIds(STORAGE_KEY_DEPARTED, departedIds);
   }, [departedIds]);
 
   const arriving = useMemo(
@@ -62,6 +73,8 @@ export function DashboardScreen() {
     [bookings, todayStr],
   );
 
+  const awaitingCount = allBookings.filter((booking) => booking.status === 'awaiting').length;
+
   if (isLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -78,6 +91,21 @@ export function DashboardScreen() {
           {format(today, 'EEEE, MMMM do')}
         </p>
       </div>
+
+      {awaitingCount > 0 ? (
+        <button
+          type="button"
+          className="w-full rounded-2xl border border-terracotta/30 bg-terracotta/15 px-4 py-3 text-left"
+          onClick={() => navigate('/bookings?tab=awaiting')}
+        >
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-terracotta">
+            Awaiting Payment
+          </p>
+          <p className="mt-1 text-sm font-black text-bark">
+            {awaitingCount} booking{awaitingCount === 1 ? '' : 's'} need payment follow-up
+          </p>
+        </button>
+      ) : null}
 
       <div className="glass-card rounded-[32px] border border-pebble/60 flush-shadow overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="px-5 py-3 border-b border-pebble/40 flex justify-between items-center bg-gradient-to-r from-cream/30 to-transparent">

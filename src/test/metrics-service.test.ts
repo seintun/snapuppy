@@ -14,7 +14,7 @@ describe('computeDashboardMetrics', () => {
           end_date: '2026-04-05',
           total_amount: 200,
           tip_amount: 20,
-          status: 'completed',
+          status: 'paid',
         },
         {
           id: 'booking-2',
@@ -32,7 +32,7 @@ describe('computeDashboardMetrics', () => {
           end_date: '2026-04-19',
           total_amount: 160,
           tip_amount: 0,
-          status: 'pending',
+          status: 'awaiting',
         },
         {
           id: 'booking-4',

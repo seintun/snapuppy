@@ -26,15 +26,15 @@ export function CloseBookingSheet({ isOpen, onClose, bookingId }: CloseBookingSh
     await closeBooking({
       id: bookingId,
       input: {
-      tipAmount: values.tipAmount,
-      paymentNotes: values.paymentNotes,
+        tipAmount: values.tipAmount,
+        paymentNotes: values.paymentNotes,
       },
     });
     onClose();
   });
 
   return (
-    <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Close Booking">
+    <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Mark as Paid">
       <form className="space-y-3" onSubmit={submit}>
         <label className="form-label">
           Tip amount
@@ -45,7 +45,7 @@ export function CloseBookingSheet({ isOpen, onClose, bookingId }: CloseBookingSh
           <textarea className="form-input mt-1" {...register('paymentNotes')} />
         </label>
         <button className="btn-sage w-full" type="submit" disabled={formState.isSubmitting || isPending}>
-          {formState.isSubmitting || isPending ? 'Closing…' : 'Mark as Paid'}
+          {formState.isSubmitting || isPending ? 'Saving…' : 'Mark as Paid'}
         </button>
       </form>
     </SlideUpSheet>

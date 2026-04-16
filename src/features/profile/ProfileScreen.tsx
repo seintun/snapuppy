@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthContext } from '@/features/auth/useAuthContext';
@@ -8,10 +8,8 @@ import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
 import { SignOut, Buildings, CurrencyDollar, Clock } from '@phosphor-icons/react';
 import { TimePicker } from '@/components/ui/TimePicker';
-import { ClientLinkModal } from './ClientLinkModal';
 
 export function ProfileScreen() {
-  const [clientModalOpen, setClientModalOpen] = useState(false);
   const { signOut, user } = useAuthContext();
   const { addToast } = useToast();
 
@@ -99,13 +97,6 @@ export function ProfileScreen() {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-xl font-extrabold text-bark tracking-tight">Profile</h1>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="btn-sage !px-3 !py-1.5 !text-xs"
-            onClick={() => setClientModalOpen(true)}
-          >
-            Share
-          </button>
           <button
             type="button"
             onClick={() => void signOut()}
@@ -344,7 +335,6 @@ export function ProfileScreen() {
           {saving ? 'Saving…' : 'Save Changes 🐾'}
         </button>
       </form>
-      <ClientLinkModal isOpen={clientModalOpen} onClose={() => setClientModalOpen(false)} />
     </div>
   );
 }

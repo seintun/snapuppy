@@ -33,7 +33,7 @@ export const CreateBookingSchema = z
     startDate: dateStr,
     endDate: dateStr,
     isHoliday: z.boolean().default(false),
-    status: z.enum(['active', 'pending', 'completed', 'cancelled']).default('active'),
+    status: z.enum(['upcoming', 'active', 'awaiting', 'paid', 'cancelled']).default('upcoming'),
     pickupDateTime: z.string().optional(),
     dropoffDateTime: z.string().optional(),
     notes: z.string().max(500).optional(),
