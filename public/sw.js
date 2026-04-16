@@ -38,7 +38,12 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           return response;
         })
-        .catch(() => caches.match('/index.html'));
+        .catch(() => {
+            if (event.request.mode === 'navigate') {
+              return caches.match('/index.html');
+            }
+            return new Response(null, { status: 503, statusText: 'Offline' });
+          });
     }),
   );
 });
