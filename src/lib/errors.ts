@@ -17,13 +17,6 @@ export class AuthError extends AppError {
   }
 }
 
-export class CalendarError extends AppError {
-  constructor(message: string, details?: unknown, originalError?: unknown) {
-    super(message, 'CALENDAR_ERROR', details, originalError);
-    this.name = 'CalendarError';
-  }
-}
-
 export class DatabaseError extends AppError {
   constructor(message: string, details?: unknown, originalError?: unknown) {
     super(message, 'DATABASE_ERROR', details, originalError);
