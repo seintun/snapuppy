@@ -99,7 +99,8 @@ export function BookingsScreen() {
               Bookings
             </h1>
             <p className="text-[10px] font-black text-bark-light/40 uppercase tracking-[0.2em]">
-              {filteredBookings.length} {filter === 'all' ? 'All' : getStatusLabel(filter)}
+              {(filter === 'all' ? 'All' : getStatusLabel(filter)) +
+                ` (${filteredBookings.length})`}
             </p>
           </div>
 
