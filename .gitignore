@@ -42,3 +42,4 @@ supabase/.temp/
 # Misc
 gitchanges/
 .vercel
+.worktrees/
