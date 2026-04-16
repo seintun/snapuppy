@@ -18,9 +18,10 @@ import {
   SignOut,
   Camera,
   X,
-  Plus,
   Warning,
   PencilSimple,
+  Check,
+  Trash,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -93,80 +94,235 @@ function LogoCircle({ logoUrl, displayName, uploading, onPickFile }: LogoCircleP
   );
 }
 
-// ── Payment Row ────────────────────────────────────────────────────────────────
+// ── Payment Methods Panel ──────────────────────────────────────────────────────
 
-interface PaymentRowProps {
-  index: number;
-  method: PaymentMethod;
-  usedTypes: Set<PaymentType>;
-  onChange: (index: number, method: PaymentMethod) => void;
-  onRemove: (index: number) => void;
-  error?: string;
+interface PaymentPanelProps {
+  initialMethods: PaymentMethod[];
+  legacyText: string | null;
+  onSave: (methods: PaymentMethod[]) => Promise<void>;
+  saving: boolean;
 }
 
-function PaymentRow({ index, method, usedTypes, onChange, onRemove, error }: PaymentRowProps) {
-  const handleTypeChange = (newType: PaymentType) => {
-    onChange(index, { type: newType, handle: '' } as PaymentMethod);
+// Brand icon badges for each payment type
+const PAYMENT_ICON: Record<PaymentType, { bg: string; text: string; label: string }> = {
+  venmo:   { bg: 'bg-[#008cff]/10', text: 'text-[#008cff]', label: 'V' },
+  cashapp: { bg: 'bg-[#00d64f]/10', text: 'text-[#00a843]', label: '$' },
+  zelle:   { bg: 'bg-[#6e24c8]/10', text: 'text-[#6e24c8]', label: 'Z' },
+};
+
+function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: PaymentPanelProps) {
+  const [methods, setMethods] = useState<PaymentMethod[]>(initialMethods);
+  const [addingType, setAddingType] = useState<PaymentType | null>(null);
+  const [addHandle, setAddHandle] = useState('');
+  const [addError, setAddError] = useState('');
+  const [pendingSave, setPendingSave] = useState(false);
+  const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
+
+  useEffect(() => { setMethods(initialMethods); }, [initialMethods]);
+
+  const usedTypes = new Set(methods.map((m) => m.type as PaymentType));
+  const isBusy = saving || pendingSave;
+
+  const validateHandle = (type: PaymentType, handle: string): string => {
+    const stripped = handle.replace(/^[@$]/, '').trim();
+    if (!stripped) return 'Handle is required';
+    const result = PaymentMethodSchema.safeParse({ type, handle });
+    if (!result.success) {
+      if (type === 'zelle') {
+        return 'Enter a valid email (e.g. name@email.com) or 10-digit US phone (e.g. 2125551234)';
+      }
+      return result.error.issues[0]?.message ?? 'Handle is required';
+    }
+    return '';
   };
 
-  const handleHandleChange = (raw: string) => {
-    const prefixed = applyPrefix(method.type as PaymentType, raw);
-    onChange(index, { ...method, handle: prefixed } as PaymentMethod);
+  // ── Add ──
+  const handleSelectAddType = (type: PaymentType) => {
+    setAddingType(type);
+    setAddHandle(PAYMENT_PREFIX[type]);
+    setAddError('');
   };
 
-  const placeholder =
-    method.type === 'zelle'
-      ? 'Email or phone number'
-      : `${PAYMENT_PREFIX[method.type as PaymentType]}username`;
+  const handleConfirmAdd = async () => {
+    const err = validateHandle(addingType!, addHandle);
+    if (err) { setAddError(err); return; }
+    const next = [...methods, { type: addingType!, handle: addHandle } as PaymentMethod];
+    setPendingSave(true);
+    try {
+      await onSave(next);
+      setMethods(next);
+      setAddingType(null);
+      setAddHandle('');
+    } finally {
+      setPendingSave(false);
+    }
+  };
+
+  // ── Delete ──
+  const handleDeleteConfirm = async (index: number) => {
+    const next = methods.filter((_, i) => i !== index);
+    setPendingSave(true);
+    try {
+      await onSave(next);
+      setMethods(next);
+      setConfirmDeleteIndex(null);
+    } finally {
+      setPendingSave(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        {/* Type pill selector */}
-        <div className="flex gap-1 shrink-0">
-          {PAYMENT_TYPES.map((t) => {
-            const isActive = method.type === t;
-            const isDisabledType = !isActive && usedTypes.has(t);
+    <div className="surface-card !p-3">
+      <div className="flex items-center gap-1.5 mb-3">
+        <CurrencyCircleDollar size={14} weight="bold" className="text-sage" />
+        <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
+          Payment
+        </span>
+      </div>
+
+      {legacyText && (
+        <div className="flex items-start gap-2 mb-3 rounded-lg border border-sunshine/60 bg-sunshine/10 px-2.5 py-2">
+          <Warning size={14} weight="bold" className="text-bark-light shrink-0 mt-0.5" />
+          <p className="text-[11px] text-bark-light leading-snug">
+            You have old-style payment instructions. Add new methods below to replace them.
+          </p>
+        </div>
+      )}
+
+      {/* Saved rows */}
+      {methods.length > 0 && (
+        <div className="flex flex-col divide-y divide-pebble mb-3 border border-pebble rounded-xl overflow-hidden">
+          {methods.map((m, i) => {
+            const type = m.type as PaymentType;
+            const icon = PAYMENT_ICON[type];
+
+            if (confirmDeleteIndex === i) {
+              return (
+                <div key={i} className="flex items-center gap-2 px-3 py-2.5 bg-blush/20">
+                  <span className="text-xs font-semibold text-bark flex-1">
+                    Remove {PAYMENT_LABELS[type]}?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteIndex(null)}
+                    className="text-[11px] font-bold text-bark-light px-2 py-1 rounded-lg border border-pebble bg-cream active:scale-95 transition-transform"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteConfirm(i)}
+                    disabled={isBusy}
+                    className="text-[11px] font-bold text-white bg-terracotta px-2 py-1 rounded-lg active:scale-95 transition-transform disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
+            }
+
             return (
-              <button
-                key={t}
-                type="button"
-                disabled={isDisabledType}
-                onClick={() => handleTypeChange(t)}
-                className={`text-[10px] font-bold px-2 py-1 rounded-full transition-colors ${
-                  isActive
-                    ? 'bg-sage text-white'
-                    : isDisabledType
-                      ? 'bg-pebble text-bark-light opacity-40 cursor-not-allowed'
-                      : 'bg-pebble text-bark-light hover:bg-sage-light active:scale-95'
-                }`}
-              >
-                {PAYMENT_LABELS[t]}
-              </button>
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                {/* Brand icon badge */}
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[11px] shrink-0 ${icon.bg} ${icon.text}`}>
+                  {icon.label}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-bold text-bark-light uppercase tracking-wide leading-none mb-0.5">
+                    {PAYMENT_LABELS[type]}
+                  </p>
+                  <p className="text-sm text-bark truncate">{m.handle}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteIndex(i)}
+                  disabled={isBusy}
+                  className="p-1.5 text-bark-light hover:text-terracotta active:scale-95 transition-colors disabled:opacity-40"
+                  aria-label="Remove"
+                >
+                  <Trash size={15} weight="bold" />
+                </button>
+              </div>
             );
           })}
         </div>
+      )}
 
-        {/* Remove */}
-        <button
-          type="button"
-          onClick={() => onRemove(index)}
-          className="ml-auto p-1 text-bark-light hover:text-terracotta active:scale-95 transition-colors"
-          aria-label="Remove payment method"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
+      {methods.length === 0 && !legacyText && !addingType && (
+        <p className="text-[11px] text-bark-light mb-3">
+          No payment methods. Clients won't see payment info.
+        </p>
+      )}
 
-      {/* Handle input */}
-      <input
-        type={method.type === 'zelle' ? 'text' : 'text'}
-        value={method.handle}
-        onChange={(e) => handleHandleChange(e.target.value)}
-        placeholder={placeholder}
-        className={`form-input w-full text-sm py-2 ${error ? 'border-terracotta' : ''}`}
-      />
-      {error && <p className="text-[10px] text-terracotta">{error}</p>}
+      {/* Add form */}
+      {addingType ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[11px] ${PAYMENT_ICON[addingType].bg} ${PAYMENT_ICON[addingType].text}`}>
+              {PAYMENT_ICON[addingType].label}
+            </span>
+            <span className="text-[11px] font-extrabold text-bark uppercase tracking-wide">
+              {PAYMENT_LABELS[addingType]}
+            </span>
+            <button
+              type="button"
+              onClick={() => { setAddingType(null); setAddHandle(''); setAddError(''); }}
+              className="ml-auto text-bark-light active:scale-95 transition-transform"
+              aria-label="Cancel"
+            >
+              <X size={15} weight="bold" />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={addHandle}
+              autoFocus
+              onChange={(e) => { setAddHandle(applyPrefix(addingType, e.target.value)); setAddError(''); }}
+              placeholder={
+                addingType === 'zelle' ? 'Email or phone number' :
+                addingType === 'cashapp' ? '$cashtag' :
+                '@venmo-username'
+              }
+              className={`form-input flex-1 text-sm py-1.5 ${addError ? 'border-terracotta' : ''}`}
+            />
+            <button
+              type="button"
+              onClick={() => void handleConfirmAdd()}
+              disabled={isBusy}
+              className="shrink-0 w-9 self-stretch flex items-center justify-center bg-sage text-white rounded-lg active:scale-95 transition-transform disabled:opacity-50"
+              aria-label="Save"
+            >
+              {isBusy ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Check size={16} weight="bold" />
+              )}
+            </button>
+          </div>
+          {addError && <p className="text-[10px] text-terracotta">{addError}</p>}
+        </div>
+      ) : (
+        usedTypes.size < 3 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-bark-light font-semibold">Add:</span>
+            {PAYMENT_TYPES.filter((t) => !usedTypes.has(t)).map((t) => {
+              const icon = PAYMENT_ICON[t];
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => handleSelectAddType(t)}
+                  className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border active:scale-95 transition-transform ${icon.bg} ${icon.text} border-current/20`}
+                >
+                  <span className="font-black text-[10px]">{icon.label}</span>
+                  {PAYMENT_LABELS[t]}
+                </button>
+              );
+            })}
+          </div>
+        )
+      )}
     </div>
   );
 }
@@ -179,9 +335,7 @@ export function ProfileScreen() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [paymentErrors, setPaymentErrors] = useState<Record<number, string>>({});
-  const [paymentDirty, setPaymentDirty] = useState(false);
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState<PaymentMethod[]>([]);
   const [legacyPayment, setLegacyPayment] = useState<string | null>(null);
 
   const { data: profile, isLoading } = useProfile();
@@ -213,16 +367,16 @@ export function ProfileScreen() {
       const rawPayment = profile.payment_instructions;
       if (isLegacyPaymentInstructions(rawPayment)) {
         setLegacyPayment(rawPayment ?? null);
-        setPaymentMethods([]);
+        setSavedPaymentMethods([]);
       } else {
         setLegacyPayment(null);
-        setPaymentMethods(parsePaymentMethods(rawPayment));
+        setSavedPaymentMethods(parsePaymentMethods(rawPayment));
       }
 
       reset({
         displayName: profile.display_name ?? '',
         businessLogoUrl: profile.business_logo_url ?? '',
-        paymentMethods: parsePaymentMethods(rawPayment),
+        paymentMethods: [],
         nightlyRate: profile.nightly_rate,
         daycareRate: profile.daycare_rate,
         holidayBoardingRate: profile.holiday_boarding_rate,
@@ -243,9 +397,6 @@ export function ProfileScreen() {
   const showHolidayRateReminder =
     (nightlyRate > 0 && holidayBoardingRate === 0) || (daycareRate > 0 && holidayDaycareRate === 0);
 
-  const usedPaymentTypes = new Set(paymentMethods.map((m) => m.type as PaymentType));
-  const canAddPaymentMethod = paymentMethods.length < 3 && usedPaymentTypes.size < 3;
-
   // ── Logo upload ──
   const handleLogoFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,81 +416,37 @@ export function ProfileScreen() {
     [user, setValue, addToast],
   );
 
-  // ── Payment row handlers ──
-  const handlePaymentChange = useCallback((index: number, method: PaymentMethod) => {
-    setPaymentMethods((prev) => {
-      const next = [...prev];
-      next[index] = method;
-      return next;
-    });
-    setPaymentDirty(true);
-    setPaymentErrors((prev) => {
-      const next = { ...prev };
-      delete next[index];
-      return next;
-    });
-  }, []);
+  // ── Payment inline save ──
+  const handleSavePaymentMethods = useCallback(
+    async (methods: PaymentMethod[]) => {
+      await updateProfileMutation({
+        payment_instructions: serializePaymentMethods(methods),
+      });
+      setLegacyPayment(null);
+    },
+    [updateProfileMutation],
+  );
 
-  const handlePaymentRemove = useCallback((index: number) => {
-    setPaymentMethods((prev) => prev.filter((_, i) => i !== index));
-    setPaymentDirty(true);
-    setPaymentErrors((prev) => {
-      const next = { ...prev };
-      delete next[index];
-      return next;
-    });
-  }, []);
-
-  const handleAddPaymentMethod = useCallback(() => {
-    const used = new Set(paymentMethods.map((m) => m.type));
-    const next = PAYMENT_TYPES.find((t) => !used.has(t));
-    if (!next) return;
-    setPaymentMethods((prev) => [...prev, { type: next, handle: '' } as PaymentMethod]);
-    setPaymentDirty(true);
-  }, [paymentMethods]);
-
-  // ── Validate payment methods ──
-  const validatePaymentMethods = (): boolean => {
-    const errs: Record<number, string> = {};
-    let valid = true;
-    paymentMethods.forEach((m, i) => {
-      const result = PaymentMethodSchema.safeParse(m);
-      if (!result.success) {
-        errs[i] = result.error.issues[0]?.message ?? 'Invalid';
-        valid = false;
-      }
-    });
-    setPaymentErrors(errs);
-    return valid;
-  };
-
-  // ── Save ──
+  // ── Save (identity + rates only) ──
   const onSave = useCallback(
     async (data: ProfileFormData) => {
-      if (!validatePaymentMethods()) return;
-
       try {
         await updateProfileMutation({
           display_name: data.displayName || null,
           business_logo_url: data.businessLogoUrl || null,
-          payment_instructions: serializePaymentMethods(paymentMethods),
           nightly_rate: data.nightlyRate,
           daycare_rate: data.daycareRate,
           holiday_boarding_rate: data.holidayBoardingRate,
           holiday_daycare_rate: data.holidayDaycareRate,
           cutoff_time: data.cutoffTime,
         });
-        setPaymentDirty(false);
-        setLegacyPayment(null);
         addToast('Profile saved', 'success');
       } catch (err) {
         addToast(err instanceof Error ? err.message : 'Failed to save profile', 'error');
       }
     },
-    [updateProfileMutation, addToast, paymentMethods],
+    [updateProfileMutation, addToast],
   );
-
-  const isFormDirty = isDirty || paymentDirty;
 
   if (isLoading) {
     return (
@@ -397,55 +504,12 @@ export function ProfileScreen() {
         </div>
 
         {/* ── Payment Methods ── */}
-        <div className="surface-card !p-3">
-          <div className="flex items-center gap-1.5 mb-3">
-            <CurrencyCircleDollar size={14} weight="bold" className="text-sage" />
-            <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
-              Payment
-            </span>
-          </div>
-
-          {/* Legacy payment instructions warning */}
-          {legacyPayment && (
-            <div className="flex items-start gap-2 mb-3 rounded-lg border border-sunshine/60 bg-sunshine/10 px-2.5 py-2">
-              <Warning size={14} weight="bold" className="text-bark-light shrink-0 mt-0.5" />
-              <p className="text-[11px] text-bark-light leading-snug">
-                You have old-style payment instructions. Save new methods below to replace them.
-              </p>
-            </div>
-          )}
-
-          {paymentMethods.length === 0 && !legacyPayment && (
-            <p className="text-[11px] text-bark-light mb-3">
-              No payment methods added. Clients won't see payment info.
-            </p>
-          )}
-
-          <div className="flex flex-col gap-3">
-            {paymentMethods.map((method, i) => (
-              <PaymentRow
-                key={i}
-                index={i}
-                method={method}
-                usedTypes={usedPaymentTypes}
-                onChange={handlePaymentChange}
-                onRemove={handlePaymentRemove}
-                error={paymentErrors[i]}
-              />
-            ))}
-          </div>
-
-          {canAddPaymentMethod && (
-            <button
-              type="button"
-              onClick={handleAddPaymentMethod}
-              className="mt-3 flex items-center gap-1.5 text-[12px] font-bold text-sage active:scale-95 transition-transform"
-            >
-              <Plus size={14} weight="bold" />
-              Add payment method
-            </button>
-          )}
-        </div>
+        <PaymentMethodsPanel
+          initialMethods={savedPaymentMethods}
+          legacyText={legacyPayment}
+          onSave={handleSavePaymentMethods}
+          saving={saving}
+        />
 
         {/* ── Rates ── */}
         <div className="surface-card !p-3">
@@ -620,7 +684,7 @@ export function ProfileScreen() {
         <button
           type="submit"
           className="btn-sage sticky bottom-[calc(80px+env(safe-area-inset-bottom))] shadow-lg shadow-sage/20 z-10"
-          disabled={saving || !isFormDirty}
+          disabled={saving || !isDirty}
         >
           {saving ? 'Saving…' : 'Save Changes'}
         </button>

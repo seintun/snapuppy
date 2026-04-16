@@ -114,15 +114,31 @@ const rateField = (label: string) =>
     .max(9999.99, `${label} cannot exceed $9,999.99`);
 
 const usPhoneRegex = /^\+?1?\d{10}$/;
+// Venmo: @-prefixed, 5–30 chars, only letters/digits/hyphen/underscore after @
+const venmoHandleRegex = /^@[a-zA-Z0-9_-]{5,30}$/;
+// CashApp: $-prefixed, 1–20 chars, must contain at least one letter
+const cashappHandleRegex = /^\$(?=.*[a-zA-Z])[a-zA-Z0-9_-]{1,20}$/;
 
 export const PaymentMethodSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('venmo'), handle: z.string().min(1, 'Handle is required') }),
-  z.object({ type: z.literal('cashapp'), handle: z.string().min(1, 'Handle is required') }),
+  z.object({
+    type: z.literal('venmo'),
+    handle: z
+      .string()
+      .min(1, 'Handle is required')
+      .regex(venmoHandleRegex, 'Must be 5–30 characters, letters/numbers/- and _ only (e.g. @your-name)'),
+  }),
+  z.object({
+    type: z.literal('cashapp'),
+    handle: z
+      .string()
+      .min(1, 'Handle is required')
+      .regex(cashappHandleRegex, 'Must include at least 1 letter and be up to 20 characters (e.g. $YourName)'),
+  }),
   z.object({
     type: z.literal('zelle'),
     handle: z.union([
-      z.string().email('Must be a valid email'),
-      z.string().regex(usPhoneRegex, 'Must be a valid US phone number'),
+      z.string().email('Must be a valid email address (e.g. name@email.com)'),
+      z.string().regex(usPhoneRegex, 'Must be a 10-digit US phone number (e.g. 2125551234)'),
     ]),
   }),
 ]);
