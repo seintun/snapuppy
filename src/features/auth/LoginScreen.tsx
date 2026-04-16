@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from './useAuthContext';
-import { EmailSchema, PasswordSchema } from '@/lib/schemas';
+import { EmailSchema } from '@/lib/schemas';
 
 const PASSCODE_COOLDOWN_MS = 30_000;
 const PASSCODE_COOLDOWN_STORAGE_KEY = 'snapuppy.passcode_next_allowed_at';
@@ -44,8 +44,6 @@ function DogIcon() {
     </svg>
   );
 }
-
-type AuthAction = 'sign-in' | 'sign-up';
 
 function PasscodeInput({
   value,
@@ -142,7 +140,7 @@ function PasscodeInput({
           onClick={onChangeEmail}
           disabled={isVerifying}
         >
-          ← Change email
+          Change email
         </button>
         <button
           type="button"
@@ -160,10 +158,7 @@ function PasscodeInput({
 export function LoginScreen() {
   const { user, loading, sendPasscode, verifyPasscode } = useAuthContext();
 
-  const [action, setAction] = useState<AuthAction>('sign-in');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [passcode, setPasscode] = useState('');
   const [step, setStep] = useState<'credentials' | 'verify'>('credentials');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -214,22 +209,9 @@ export function LoginScreen() {
       return;
     }
 
-    if (action === 'sign-up') {
-      const pwResult = PasswordSchema.safeParse({ password });
-      if (!pwResult.success) {
-        setAuthError(pwResult.error.issues[0]?.message);
-        setIsSending(false);
-        return;
-      }
-      if (password !== confirmPassword) {
-        setAuthError('Passwords do not match');
-        setIsSending(false);
-        return;
-      }
-    }
-
     try {
       await sendPasscode(emailResult.data.email);
+      setEmail(emailResult.data.email);
       setStep('verify');
       const nextTime = Date.now() + PASSCODE_COOLDOWN_MS;
       setNextAllowedAt(nextTime);
@@ -291,33 +273,6 @@ export function LoginScreen() {
       </div>
 
       <div className="surface-card w-full max-w-[360px] p-6 rounded-2xl shadow-lg animate-fade-in">
-        <div className="flex bg-pebble/40 rounded-2xl p-1.5 mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setAction('sign-in');
-              setStep('credentials');
-              setAuthError(null);
-              setConfirmPassword('');
-            }}
-            className={`flex-1 py-3.5 text-base font-bold rounded-xl transition-all ${action === 'sign-in' ? 'bg-sage text-white shadow-md' : 'text-bark-light hover:text-bark'}`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAction('sign-up');
-              setStep('credentials');
-              setAuthError(null);
-              setConfirmPassword('');
-            }}
-            className={`flex-1 py-3 text-base font-bold rounded-xl transition-all ${action === 'sign-up' ? 'bg-sage text-white shadow-md' : 'text-bark-light hover:text-bark'}`}
-          >
-            Sign Up
-          </button>
-        </div>
-
         {step === 'verify' ? (
           <PasscodeInput
             value={passcode}
@@ -338,9 +293,14 @@ export function LoginScreen() {
             className="flex flex-col gap-4"
             onSubmit={(e) => {
               e.preventDefault();
-              handleSendCode();
+              void handleSendCode();
             }}
           >
+            <div className="text-center pb-1">
+              <h2 className="text-xl font-extrabold text-bark m-0">Sign in with email code</h2>
+              <p className="text-sm text-bark-light mt-2">No password needed.</p>
+            </div>
+
             <div className="form-field">
               <label className="form-label text-xs uppercase tracking-wide">Email</label>
               <input
@@ -350,61 +310,10 @@ export function LoginScreen() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                autoFocus
                 disabled={isSending || isCoolingDown}
               />
             </div>
-
-            <div className="form-field">
-              <label className="form-label text-xs uppercase tracking-wide">Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="form-input disabled:opacity-50"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={action === 'sign-up' ? 'new-password' : 'current-password'}
-                disabled={isSending || isCoolingDown}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (
-                      email &&
-                      password &&
-                      (action === 'sign-in' || confirmPassword) &&
-                      !isSending &&
-                      !isCoolingDown
-                    ) {
-                      handleSendCode();
-                    }
-                  }
-                }}
-              />
-            </div>
-
-            {action === 'sign-up' && (
-              <div className="form-field animate-fade-in">
-                <label className="form-label text-xs uppercase tracking-wide">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="form-input disabled:opacity-50"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                  disabled={isSending || isCoolingDown}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (email && password && confirmPassword && !isSending && !isCoolingDown) {
-                        handleSendCode();
-                      }
-                    }
-                  }}
-                />
-              </div>
-            )}
 
             <label className="flex items-center gap-2 text-xs text-bark-light">
               <input
@@ -425,16 +334,16 @@ export function LoginScreen() {
               </div>
             )}
 
-            <button
-              type="submit"
-              className="btn-sage mt-3 py-4 text-base"
-              disabled={
-                isSending || !email || !password || (action === 'sign-up' && !confirmPassword)
-              }
-            >
+            <button type="submit" className="btn-sage mt-3 py-4 text-base" disabled={isSending || !email}>
               {isSending ? 'Sending...' : isCoolingDown ? `Wait ${secondsLeft}s` : 'Send Code'}
             </button>
           </form>
+        )}
+
+        {step === 'verify' && authError && (
+          <div className="mt-4 p-3 bg-blush/80 text-terracotta rounded-xl text-sm font-semibold text-center border border-blush">
+            {authError}
+          </div>
         )}
       </div>
 

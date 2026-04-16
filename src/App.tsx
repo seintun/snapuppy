@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { AuthCallbackScreen, LoginScreen, RequireAuth } from '@/features/auth';
+import { LoginScreen, RequireAuth } from '@/features/auth';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ErrorScreen } from '@/components/ui/ErrorScreen';
 
@@ -65,7 +65,6 @@ export default function App() {
     <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<LoginScreen />} />
-        <Route path="/auth/callback" element={<AuthCallbackScreen />} />
         <Route path="/client/:token">
           <Route
             index
