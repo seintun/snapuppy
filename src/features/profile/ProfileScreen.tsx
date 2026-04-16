@@ -1,13 +1,13 @@
-import { useCallback, useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuthContext } from '@/features/auth/useAuthContext';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
+import { TimePicker } from '@/components/ui/TimePicker';
 import { useToast } from '@/components/ui/useToast';
+import { useAuthContext } from '@/features/auth/useAuthContext';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { ProfileSchema, type ProfileFormData } from '@/lib/schemas';
-import { SignOut, Buildings, CurrencyDollar, Clock } from '@phosphor-icons/react';
-import { TimePicker } from '@/components/ui/TimePicker';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Buildings, Clock, CurrencyDollar, SignOut } from '@phosphor-icons/react';
+import { useCallback, useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 
 export function ProfileScreen() {
   const { signOut, user } = useAuthContext();
@@ -59,8 +59,7 @@ export function ProfileScreen() {
   const holidayDaycareRate = useWatch({ control, name: 'holidayDaycareRate' });
 
   const showHolidayRateReminder =
-    (nightlyRate > 0 && holidayBoardingRate === 0) ||
-    (daycareRate > 0 && holidayDaycareRate === 0);
+    (nightlyRate > 0 && holidayBoardingRate === 0) || (daycareRate > 0 && holidayDaycareRate === 0);
 
   const onSave = useCallback(
     async (data: ProfileFormData) => {
@@ -171,7 +170,7 @@ export function ProfileScreen() {
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="nightly-rate"
               >
-                🌙 Boarding / night
+                🌙 Boarding
               </label>
               <div className="flex">
                 <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
@@ -200,7 +199,7 @@ export function ProfileScreen() {
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="daycare-rate"
               >
-                ☀️ Daycare / day
+                ☀️ Daycare
               </label>
               <div className="flex">
                 <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
@@ -229,7 +228,7 @@ export function ProfileScreen() {
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="holiday-boarding-rate"
               >
-                🎄 Holiday boarding / night
+                🎄 Holiday boarding
               </label>
               <div className="flex">
                 <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
@@ -260,7 +259,7 @@ export function ProfileScreen() {
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="holiday-daycare-rate"
               >
-                🎄 Holiday daycare / day
+                🎄 Holiday daycare
               </label>
               <div className="flex">
                 <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
