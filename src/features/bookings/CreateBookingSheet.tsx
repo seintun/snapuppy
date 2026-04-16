@@ -598,9 +598,14 @@ export function CreateBookingSheet({
     [user, createBookingMutation, addToast, onSuccess, onClose],
   );
 
-  const hasNightlyRate = (options.profile?.nightly_rate ?? 0) > 0;
-  const hasDaycareRate = (options.profile?.daycare_rate ?? 0) > 0;
-  const ratesSet = !!options.profile && hasNightlyRate && hasDaycareRate;
+  const ratesSet =
+    !!options.profile &&
+    [
+      options.profile.nightly_rate,
+      options.profile.daycare_rate,
+      options.profile.holiday_boarding_rate,
+      options.profile.holiday_daycare_rate,
+    ].every((rate) => typeof rate === 'number' && Number.isFinite(rate) && rate >= 0);
 
   const handleAddDogSuccess = useCallback(
     (dog?: Dog) => {
@@ -673,11 +678,11 @@ export function CreateBookingSheet({
               </span>
             </div>
 
-            {!ratesSet && (
-              <p className="text-[11px] text-bark-light mb-2">
-                ⚠️ Set both Boarding and Daycare rates in Profile to confirm booking.
-              </p>
-            )}
+              {!ratesSet && (
+                <p className="text-[11px] text-bark-light mb-2">
+                  ⚠️ Set valid profile rates before confirming booking.
+                </p>
+              )}
 
             {pricing && pricing.days.length > 0 && (
               <div className="flex flex-col pb-2">
@@ -745,11 +750,11 @@ export function CreateBookingSheet({
           >
             {submitting ? 'Confirming…' : 'Confirm Booking 🐾'}
           </button>
-          {!ratesSet && (
-            <p className="text-xs font-bold text-terracotta text-center mt-1">
-              Rate required: Set Boarding and Daycare pricing in Profile before confirming.
-            </p>
-          )}
+        {!ratesSet && (
+          <p className="text-xs font-bold text-terracotta text-center mt-1">
+            Profile rates required: set each rate to $0 or more before confirming.
+          </p>
+        )}
         </form>
       </SlideUpSheet>
       <AddDogSheet

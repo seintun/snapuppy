@@ -80,8 +80,73 @@ interface BookingQueryRow extends BookingRow {
   days?: BookingDayRow[] | null;
 }
 
+interface LegacyBookingProfile {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  nightly_rate: number;
+  daycare_rate: number;
+  holiday_surcharge: number;
+  cutoff_time: string;
+  is_guest: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+const BOOKING_PROFILE_SELECT = `
+  id,
+  email,
+  display_name,
+  nightly_rate,
+  daycare_rate,
+  holiday_boarding_rate,
+  holiday_daycare_rate,
+  cutoff_time,
+  is_guest,
+  created_at,
+  updated_at
+`;
+
+const BOOKING_PROFILE_SELECT_LEGACY = `
+  id,
+  email,
+  display_name,
+  nightly_rate,
+  daycare_rate,
+  holiday_surcharge,
+  cutoff_time,
+  is_guest,
+  created_at,
+  updated_at
+`;
+
 async function getSupabase() {
   return supabase;
+}
+
+function isMissingHolidayRateColumnsError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const maybeError = error as { code?: string; message?: string };
+  if (maybeError.code !== 'PGRST204') return false;
+  const message = (maybeError.message ?? '').toLowerCase();
+  return message.includes('holiday_boarding_rate') || message.includes('holiday_daycare_rate');
+}
+
+function mapLegacyProfileToCurrent(
+  profile: LegacyBookingProfile | null,
+): ProfileRow | null {
+  if (!profile) return null;
+
+  return {
+    ...profile,
+    business_logo_url: null,
+    business_name: null,
+    client_token: null,
+    client_token_expires: null,
+    payment_instructions: null,
+    holiday_boarding_rate: toCurrencyAmount(profile.nightly_rate + profile.holiday_surcharge),
+    holiday_daycare_rate: toCurrencyAmount(profile.daycare_rate + profile.holiday_surcharge),
+  };
 }
 
 export function buildBookingPricing(input: {
@@ -153,49 +218,49 @@ export function repriceBookingDays(
 export async function getBookingFormOptions(sitterId: string): Promise<BookingFormOptions> {
   const supabase = await getSupabase();
 
-  const [{ data: dogs, error: dogsError }, { data: profile, error: profileError }] =
-    await Promise.all([
-      supabase
-        .from('dogs')
-        .select(
-          `
-          id,
-          name,
-          owner_name,
-          owner_phone,
-          photo_url,
-          notes,
-          sitter_id,
-          created_at,
-          updated_at
-        `,
-        )
-        .eq('sitter_id', sitterId)
-        .is('archived_at', null)
-        .order('name'),
-      supabase
-        .from('profiles')
-        .select(
-          `
-          id,
-          email,
-          display_name,
-          nightly_rate,
-          daycare_rate,
-          holiday_boarding_rate,
-          holiday_daycare_rate,
-          cutoff_time,
-          is_guest,
-          created_at,
-          updated_at
-        `,
-        )
-        .eq('id', sitterId)
-        .maybeSingle(),
-    ]);
+  const { data: dogs, error: dogsError } = await supabase
+    .from('dogs')
+    .select(
+      `
+      id,
+      name,
+      owner_name,
+      owner_phone,
+      photo_url,
+      notes,
+      sitter_id,
+      created_at,
+      updated_at
+    `,
+    )
+    .eq('sitter_id', sitterId)
+    .is('archived_at', null)
+    .order('name');
 
   if (dogsError) throw dogsError;
-  if (profileError) throw profileError;
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select(BOOKING_PROFILE_SELECT)
+    .eq('id', sitterId)
+    .maybeSingle();
+
+  if (profileError) {
+    if (!isMissingHolidayRateColumnsError(profileError)) throw profileError;
+
+    const { data: legacyProfile, error: legacyError } = await supabase
+      .from('profiles')
+      .select(BOOKING_PROFILE_SELECT_LEGACY)
+      .eq('id', sitterId)
+      .maybeSingle();
+
+    if (legacyError) throw legacyError;
+
+    return {
+      dogs: (dogs ?? []).map((dog) => ({ ...dog, breed: null }) as DogRow),
+      profile: mapLegacyProfileToCurrent(legacyProfile as unknown as LegacyBookingProfile | null),
+    };
+  }
 
   return {
     dogs: (dogs ?? []).map((dog) => ({ ...dog, breed: null }) as DogRow),
@@ -543,9 +608,17 @@ function toRateSettings(profile: ProfileRow): ProfileRateSettings {
 }
 
 export function hasRequiredBookingRates(
-  profile: Pick<ProfileRow, 'nightly_rate' | 'daycare_rate'>,
+  profile: Pick<
+    ProfileRow,
+    'nightly_rate' | 'daycare_rate' | 'holiday_boarding_rate' | 'holiday_daycare_rate'
+  >,
 ): boolean {
-  return profile.nightly_rate > 0 && profile.daycare_rate > 0;
+  return [
+    profile.nightly_rate,
+    profile.daycare_rate,
+    profile.holiday_boarding_rate,
+    profile.holiday_daycare_rate,
+  ].every((rate) => Number.isFinite(rate) && rate >= 0);
 }
 
 async function getDogForSitter(sitterId: string, dogId: string): Promise<DogRow> {
