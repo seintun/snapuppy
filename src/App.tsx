@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginScreen, RequireAuth } from '@/features/auth';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -25,9 +25,6 @@ const DogDetailScreen = lazy(() =>
 const ProfileScreen = lazy(() =>
   import('@/features/profile').then((m) => ({ default: m.ProfileScreen })),
 );
-const ClientInvoiceView = lazy(() =>
-  import('@/features/invoice').then((m) => ({ default: m.ClientInvoiceView })),
-);
 const BookingReceiptView = lazy(() =>
   import('@/features/invoice').then((m) => ({ default: m.BookingReceiptView })),
 );
@@ -40,19 +37,17 @@ function LoadingFallback() {
   );
 }
 
+export function LegacyInvoiceRedirect() {
+  const { bookingId = '' } = useParams<{ bookingId: string }>();
+
+  return <Navigate to={bookingId ? `/bookings/${bookingId}` : '/bookings'} replace />;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<LoginScreen />} />
-        <Route
-          path="/invoice/:bookingId"
-          element={
-            <Suspense fallback={<LoadingFallback />}>
-              <ClientInvoiceView />
-            </Suspense>
-          }
-        />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
@@ -96,6 +91,7 @@ export default function App() {
                 </Suspense>
               }
             />
+            <Route path="/invoice/:bookingId" element={<LegacyInvoiceRedirect />} />
             <Route
               path="/dogs"
               element={

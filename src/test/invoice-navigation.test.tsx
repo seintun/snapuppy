@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookingReceiptView } from '@/features/invoice/BookingReceiptView';
-import { ClientInvoiceView } from '@/features/invoice/ClientInvoiceView';
 
 const mockNavigate = vi.fn();
 
@@ -38,12 +37,6 @@ vi.mock('@/features/invoice/InvoicePreview', () => ({
 describe('invoice and receipt navigation', () => {
   beforeEach(() => {
     mockNavigate.mockClear();
-  });
-
-  it('shows a back button on invoice view', async () => {
-    render(<ClientInvoiceView />);
-    await fireEvent.click(screen.getByRole('button', { name: /back to booking/i }));
-    expect(mockNavigate).toHaveBeenCalledWith('/bookings/booking-1');
   });
 
   it('shows a back button on receipt view', async () => {

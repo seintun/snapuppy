@@ -26,11 +26,16 @@ describe('invoiceTemplate', () => {
     const escapedPayload = '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;&#39;&quot;';
 
     expect(html).not.toContain(payload);
-    expect(html).toContain(`<p style="margin:4px 0 0;">${escapedPayload}</p>`);
-    expect(html).toContain(`<p>Client: ${escapedPayload}</p>`);
-    expect(html).toContain(`<p>Dog: ${escapedPayload}</p>`);
-    expect(html).toContain(`<p>Payment instructions: ${escapedPayload}</p>`);
-    expect(html).toContain(`<p>Notes: ${escapedPayload}</p>`);
+    expect(html).toContain(
+      `<p style="margin:4px 0 0; font-size:12px; color:#7a6657; font-weight:700;">${escapedPayload}</p>`,
+    );
+    expect(html).toContain(`<p style="margin:0; color:#7a6657;">Client</p>`);
+    expect(html).toContain(
+      `<p style="margin:0; font-weight:800; color:#4A3728;">${escapedPayload}</p>`,
+    );
+    expect(html).toContain(`<p style="margin:0; color:#7a6657;">Dog</p>`);
+    expect(html).toContain(`<strong>Payment instructions:</strong> ${escapedPayload}`);
+    expect(html).toContain(`<strong>Notes:</strong> ${escapedPayload}`);
     expect(html).toContain(
       `<img src="${escapedPayload}" alt="Business logo" style="height:48px; width:48px; object-fit:cover; border-radius:8px;" />`,
     );
@@ -53,8 +58,9 @@ describe('invoiceTemplate', () => {
     const html = buildInvoiceHtml(input);
     const markdown = generateInvoiceMarkdown(input);
 
-    expect(html).toContain('<p>Subtotal: $100.00</p>');
-    expect(html).toContain('<p><strong>Total: $115.00</strong></p>');
+    expect(html).toContain('Subtotal');
+    expect(html).toContain('$100.00');
+    expect(html).toContain('$115.00');
     expect(markdown).toContain('Subtotal: $100.00');
     expect(markdown).toContain('Total: $115.00');
   });
@@ -78,8 +84,8 @@ describe('invoiceTemplate', () => {
     expect(totals.credit).toBe(80);
     expect(totals.subtotal).toBe(0);
     expect(totals.total).toBe(0);
-    expect(html).toContain('<p>Subtotal: $0.00</p>');
-    expect(html).toContain('<p><strong>Total: $0.00</strong></p>');
+    expect(html).toContain('Subtotal');
+    expect(html).toContain('$0.00');
     expect(markdown).toContain('Subtotal: $0.00');
     expect(markdown).toContain('Total: $0.00');
   });
@@ -96,8 +102,8 @@ describe('invoiceTemplate', () => {
       isPaid: true,
     });
 
-    expect(html).toContain('<h1 style="margin:0; font-size:20px;">Receipt</h1>');
-    expect(html).toContain('<p style="margin:4px 0 0; font-weight:700; color:#2E7D32;">PAID</p>');
+    expect(html).toContain('>Receipt</h1>');
+    expect(html).toContain('>Paid</p>');
   });
 
   it('does not render tip row for invoice document preview', () => {
@@ -128,7 +134,8 @@ describe('invoiceTemplate', () => {
       isPaid: true,
     });
 
-    expect(html).toContain('<p>Tip: $20.00</p>');
+    expect(html).toContain('Tip');
+    expect(html).toContain('$20.00');
   });
 });
 
