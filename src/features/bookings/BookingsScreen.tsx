@@ -202,17 +202,19 @@ export function BookingsScreen() {
               {tabBookings.map((booking) => (
                 <Card
                   key={booking.id}
-                  className={`overflow-hidden border border-pebble/10 p-0 shadow-sm ${getBorderColor(booking.status)} border-l-4`}
+                  className={`relative overflow-hidden border border-pebble/10 p-0 shadow-sm ${getBorderColor(booking.status)} border-l-4`}
                   pressable
                   onClick={() => navigate(`/bookings/${booking.id}`)}
                 >
-                  <div className="flex items-start justify-between gap-3 px-3 pb-2 pt-3">
+                  <div className="absolute left-2.5 top-2 z-10">
+                    <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
+                  </div>
+                  <div className="flex items-start justify-between gap-3 px-3 pb-2 pt-9">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="sm" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <h2 className="truncate text-sm font-black text-bark leading-none">{booking.dog?.name ?? 'Unknown Dog'}</h2>
-                          <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
                         </div>
                         <p className="mt-0.5 text-[11px] font-bold tracking-wide text-bark-light">
                           {formatBookingRange(booking)}

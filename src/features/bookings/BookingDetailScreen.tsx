@@ -115,6 +115,7 @@ export function BookingDetailScreen() {
             >
               {getStatusLabel(booking.status)}
             </Badge>
+            <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
           </div>
         </div>
 
@@ -126,15 +127,11 @@ export function BookingDetailScreen() {
               🐾
             </div>
           )}
-
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2.5 mb-0.5 min-w-0">
+            <div className="flex items-center gap-2.5 mb-2 min-w-0">
               <h1 className="m-0 text-[32px] font-black text-bark tracking-tight leading-none truncate">
                 {dog?.name ?? 'Unknown Dog'}
               </h1>
-              <div className="shrink-0 translate-y-0.5">
-                <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
-              </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="text-[13px] text-bark-light font-bold flex flex-col gap-0.5">
