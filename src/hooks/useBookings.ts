@@ -42,7 +42,7 @@ export function useCalendarBookings(month: Date) {
       const { data, error } = await supabase
         .from('bookings')
         .select(
-          'id, start_date, end_date, type, is_holiday, status, dog_id, dogs(name, photo_url, owner_phone, notes)',
+          'id, start_date, end_date, type, is_holiday, status, dog_id, dropoff_time, pickup_time, dogs(name, photo_url, owner_phone, notes)',
         )
         .lte('start_date', rangeEnd)
         .gte('end_date', rangeStart)

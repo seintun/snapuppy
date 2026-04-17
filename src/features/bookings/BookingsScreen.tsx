@@ -25,6 +25,7 @@ import {
   getStatusLabel,
   getStatusVariant,
   getDurationText,
+  formatTime,
 } from './bookingUi';
 
 const TABS: BookingStatus[] = bookingStatusOptions;
@@ -62,7 +63,7 @@ export function BookingsScreen() {
   const requestedTab = searchParams.get('tab');
   const defaultTab = requestedTab && TABS.includes(requestedTab as BookingStatus)
     ? (requestedTab as BookingStatus)
-    : 'upcoming';
+    : 'active';
   const [activeTab, setActiveTab] = useState<BookingStatus>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -122,7 +123,7 @@ export function BookingsScreen() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-transparent">
-      <div className="sticky top-0 z-20 -mx-4 border-b border-pebble/10 bg-warm-beige/95 px-4 pb-3 pt-2 backdrop-blur-md">
+      <div className="sticky top-0 z-20 border-b border-pebble/10 bg-warm-beige/95 pb-3 pt-2 backdrop-blur-md">
         <div className="mb-4 flex flex-col gap-4">
           <div className="px-1 pt-2">
             <h1 className="text-3xl font-black leading-none tracking-tight text-bark">Bookings</h1>
@@ -131,8 +132,8 @@ export function BookingsScreen() {
             </p>
           </div>
 
-          <div className="scrollbar-none -mx-1 flex items-center overflow-x-auto px-1 py-0.5">
-            <div className="inline-flex w-max rounded-full border border-pebble/5 bg-pebble/10 px-1 py-0.5 shadow-sm">
+          <div className="py-0.5">
+            <div className="flex w-full rounded-full border border-pebble/5 bg-pebble/10 p-0.5 shadow-sm">
               {TABS.map((status) => {
                 const isAwaiting = status === 'awaiting';
                 const isActive = activeTab === status;
@@ -141,7 +142,7 @@ export function BookingsScreen() {
                   <button
                     key={status}
                     type="button"
-                    className={`relative cursor-pointer whitespace-nowrap rounded-full px-3.5 py-1 text-[10px] font-black transition-all ${
+                    className={`relative flex-1 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap rounded-full py-1.5 text-[10px] font-black transition-all ${
                       isActive ? 'bg-white text-sage shadow-md' : 'text-bark-light/50 hover:text-bark'
                     }`}
                     onClick={() => {
@@ -155,7 +156,7 @@ export function BookingsScreen() {
                   >
                     {getStatusLabel(status)}
                     {isAwaiting && awaitingCount > 0 ? (
-                      <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-terracotta px-1 text-[9px] text-white animate-pulse">
+                      <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-terracotta px-1 text-[9px] leading-none text-white animate-pulse translate-y-[0.5px]">
                         {awaitingCount}
                       </span>
                     ) : null}
@@ -197,7 +198,7 @@ export function BookingsScreen() {
 
         {!isLoading && !isError ? (
           tabBookings.length ? (
-            <div className="space-y-3 -mx-4 px-4 pb-20">
+            <div className="space-y-3 pb-20">
               {tabBookings.map((booking) => (
                 <Card
                   key={booking.id}
@@ -209,13 +210,28 @@ export function BookingsScreen() {
                     <div className="flex min-w-0 items-center gap-2.5">
                       <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="sm" />
                       <div className="min-w-0">
-                        <h2 className="truncate text-sm font-black text-bark">{booking.dog?.name ?? 'Unknown Dog'}</h2>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <h2 className="truncate text-sm font-black text-bark leading-none">{booking.dog?.name ?? 'Unknown Dog'}</h2>
+                          <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
+                        </div>
                         <p className="mt-0.5 text-[11px] font-bold tracking-wide text-bark-light">
                           {formatBookingRange(booking)}
                         </p>
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
-                        </div>
+                        {(booking.dropoff_time || booking.pickup_time) && (
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-black uppercase tracking-wider">
+                            {booking.dropoff_time && (
+                              <span className="flex items-center gap-1 whitespace-nowrap text-sage">
+                                <span className="text-[8px] opacity-60">IN:</span> {formatTime(booking.dropoff_time)}
+                              </span>
+                            )}
+                            {booking.pickup_time && (
+                              <span className="flex items-center gap-1 whitespace-nowrap text-terracotta">
+                                <span className="text-[8px] opacity-60">OUT:</span> {formatTime(booking.pickup_time)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">

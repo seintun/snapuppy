@@ -44,7 +44,7 @@ export function getDurationText(booking: Pick<BookingRecord, 'days' | 'type'>): 
 
 export function getStatusLabel(status: BookingStatus): string {
   if (status === 'upcoming') return 'Upcoming';
-  if (status === 'awaiting') return 'Awaiting Payment';
+  if (status === 'awaiting') return 'Unpaid';
   if (status === 'paid') return 'Paid';
   if (status === 'cancelled') return 'Cancelled';
   return 'Active';
@@ -56,4 +56,12 @@ export function getStatusVariant(status: BookingStatus): 'sage' | 'sky' | 'terra
   if (status === 'paid') return 'sage';
   if (status === 'cancelled') return 'terracotta';
   return 'sky';
+}
+export function formatTime(time: string | null): string {
+  if (!time) return '';
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayH = h % 12 || 12;
+  return `${displayH}:${minutes} ${ampm}`;
 }

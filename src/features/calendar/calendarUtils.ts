@@ -22,6 +22,8 @@ export type CalendarBooking = {
   is_holiday: boolean;
   status: string;
   dog_id: string;
+  dropoff_time?: string | null;
+  pickup_time?: string | null;
   dogs: { name: string; photo_url: string | null; owner_phone?: string | null; notes?: string | null } | null;
 };
 

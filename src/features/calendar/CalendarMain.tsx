@@ -16,6 +16,7 @@ import {
   type BookingLaneMap,
   type CalendarBooking,
 } from './calendarUtils';
+import { formatTime } from '@/features/bookings/bookingUi';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_VISIBLE_LANES = 4;
@@ -408,6 +409,16 @@ export function CalendarMain() {
                                   {format(new Date(b.start_date + 'T00:00:00'), 'MMM d')} —{' '}
                                   {format(new Date(b.end_date + 'T00:00:00'), 'MMM d')}
                                 </p>
+                                {(b.dropoff_time || b.pickup_time) && (
+                                  <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-wider mt-0.5">
+                                    {b.dropoff_time && (
+                                      <span className="text-sage">In: {formatTime(b.dropoff_time)}</span>
+                                    )}
+                                    {b.pickup_time && (
+                                      <span className="text-terracotta">Out: {formatTime(b.pickup_time)}</span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap flex-1 justify-end mr-1">
                                 <span className="text-[8px] font-black bg-pebble/10 text-bark-light px-1.5 py-0.5 rounded uppercase tracking-tighter border border-pebble/5">

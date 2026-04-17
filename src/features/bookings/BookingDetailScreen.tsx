@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Warning } from '@phosphor-icons/react';
+import { ArrowLeft, Warning, CurrencyCircleDollar, CheckSquare, Receipt } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { Badge } from '@/components/ui/Badge';
@@ -18,7 +18,7 @@ import { GenerateInvoiceSheet } from '@/features/invoice/GenerateInvoiceSheet';
 import { parseInvoiceOverrides, type InvoiceLineItem } from '@/lib/invoiceGenerator';
 import { useProfile } from '@/hooks/useProfile';
 import { buildBookingInvoiceInput } from '@/features/invoice/invoiceHelpers';
-import { getStatusLabel, getStatusVariant } from './bookingUi';
+import { getStatusLabel, getStatusVariant, formatTime } from './bookingUi';
 import { BookingTypePill } from './BookingTypePill';
 import { CloseBookingSheet } from './CloseBookingSheet';
 
@@ -99,148 +99,137 @@ export function BookingDetailScreen() {
   return (
     <div className="pb-24">
       {/* Header */}
-      <div className="bg-cream px-4 pt-2 pb-4 border-b border-pebble/60 shadow-[0_2px_8px_rgba(74,55,40,0.04)]">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-bark-light hover:text-bark font-semibold text-sm bg-transparent border-none cursor-pointer py-1 mb-3 transition-colors"
-        >
-          <ArrowLeft size={16} weight="bold" />
-          Back
-        </button>
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            {dog ? (
-              <DogAvatar name={dog.name} src={dog.photo_url} size="md" />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center text-xl">
-                🐾
-              </div>
-            )}
-
-            <div className="min-w-0">
-              <h1 className="m-0 text-[30px] font-black text-bark tracking-tight leading-none truncate">
-                {dog?.name ?? 'Unknown Dog'}
-              </h1>
-              <div className="mt-1.5 text-xs text-bark-light font-semibold tracking-[0.01em] whitespace-nowrap truncate">
-                {format(parseISO(booking.start_date), 'MMM d')} -{' '}
-                {format(parseISO(booking.end_date), 'MMM d, yyyy')}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
+      <div className="bg-cream px-4 pt-2 pb-5 border-b border-pebble/60 shadow-sm relative z-20">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1 text-bark-light hover:text-bark font-bold text-[11px] uppercase tracking-wider bg-transparent border-none cursor-pointer py-1 transition-colors"
+          >
+            <ArrowLeft size={14} weight="bold" />
+            Back
+          </button>
+          <div className="flex items-center gap-2">
             <Badge
               variant={getStatusVariant(booking.status)}
-              className="text-[10px] px-2 py-0.5 uppercase tracking-[0.08em]"
+              className="text-[9px] px-2 py-0.5 uppercase tracking-widest font-black"
             >
               {getStatusLabel(booking.status)}
             </Badge>
-            <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {dog ? (
+            <DogAvatar name={dog.name} src={dog.photo_url} size="lg" className="ring-2 ring-pebble ring-offset-2 ring-offset-cream" />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-2xl">
+              🐾
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5 mb-0.5 min-w-0">
+              <h1 className="m-0 text-[32px] font-black text-bark tracking-tight leading-none truncate">
+                {dog?.name ?? 'Unknown Dog'}
+              </h1>
+              <div className="shrink-0 translate-y-0.5">
+                <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-[13px] text-bark-light font-bold flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  {format(parseISO(booking.start_date), 'MMM d')} -{' '}
+                  {format(parseISO(booking.end_date), 'MMM d, yyyy')}
+                </div>
+                {(booking.dropoff_time || booking.pickup_time) && (
+                  <div className="text-[11px] font-black uppercase tracking-wider flex items-center gap-3">
+                    {booking.dropoff_time && (
+                      <span className="flex items-center gap-1 text-sage">
+                        <span className="opacity-50 text-[9px] font-bold">In:</span> {formatTime(booking.dropoff_time)}
+                      </span>
+                    )}
+                    {booking.pickup_time && (
+                      <span className="flex items-center gap-1 text-terracotta">
+                        <span className="opacity-50 text-[9px] font-bold">Out:</span> {formatTime(booking.pickup_time)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="px-4 pt-4 flex flex-col gap-3">
-        {/* Reservation Summary */}
-        <div className="bg-cream rounded-[14px] shadow-[0_2px_8px_rgba(74,55,40,0.08)] overflow-hidden">
-          <div className="p-4 bg-[linear-gradient(to_bottom,var(--color-sage-light)_0%,transparent_150%)]">
-            <div className="text-[10px] font-bold text-bark-light uppercase tracking-wider mb-3">
-              Invoice Breakdown
+        {/* Invoice Summary */}
+        <div className="surface-card !p-0 overflow-hidden">
+          <div className="p-4">
+            <div className="flex items-center gap-1.5 mb-4">
+              <CurrencyCircleDollar size={14} weight="bold" className="text-sage" />
+              <span className="text-[11px] font-extrabold text-bark-light uppercase tracking-widest">
+                Invoice Breakdown
+              </span>
             </div>
-            <div className="flex flex-col gap-3">
+
+            <div className="flex flex-col gap-3.5">
               {derivedLineItems.map((item) => {
                 const itemTotal = item.count * item.rate;
                 return (
                   <div
                     key={`${item.type}-${item.isHoliday}-${item.rate}`}
-                    className="flex justify-between items-center text-[13px] text-bark"
+                    className="flex justify-between items-start"
                   >
-                    <div className="flex items-center flex-wrap gap-x-2">
-                      <span className="font-bold capitalize">{item.type}</span>
-                      {item.isHoliday && (
-                        <span className="text-[10px] font-black text-terracotta uppercase bg-white/60 border border-terracotta/20 px-1.5 py-[1px] rounded-md drop-shadow-sm">
-                          Holiday
-                        </span>
-                      )}
-                      <span className="text-bark-light font-medium ml-1">
-                        × {item.count}{' '}
-                        {item.type === 'boarding' ? (item.count === 1 ? 'night' : 'nights') : 'day'}
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-bark capitalize">{item.type}</span>
+                        {item.isHoliday && (
+                          <span className="text-[9px] font-black text-white bg-terracotta px-1.5 py-[1px] rounded uppercase tracking-wider">
+                            Holiday
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-bark-light font-medium">
+                        {item.count}{' '}
+                        {item.type === 'boarding' ? (item.count === 1 ? 'night' : 'nights') : (item.count === 1 ? 'day' : 'days')}
+                        {' '}@ ${item.rate.toFixed(0)}
                       </span>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-[14px]">${itemTotal.toFixed(2)}</div>
-                      <div className="text-[10px] text-bark-light font-medium mt-0.5">
-                        ${item.rate.toFixed(2)}/each
-                      </div>
-                    </div>
+                    <div className="text-sm font-black text-bark pt-0.5">${itemTotal.toFixed(2)}</div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex justify-between items-end mt-4 pt-4 border-t border-pebble/50">
-              <span className="font-bold text-bark text-sm pb-1">Total</span>
-              <span className="text-[28px] leading-none font-black text-terracotta tracking-tight">
+            <div className="flex justify-between items-center mt-5 pt-4 border-t border-pebble/60">
+              <span className="text-xs font-bold text-bark-light uppercase tracking-widest">Total Amount</span>
+              <span className="text-[26px] font-black text-bark tracking-tight leading-none">
                 ${booking.total_amount.toFixed(2)}
               </span>
             </div>
           </div>
         </div>
 
-        {booking.status !== 'cancelled' && (
-          <div className="mt-2">
-            {cancelConfirm ? (
-              <div className="bg-blush rounded-[14px] p-4 border-[1.5px] border-terracotta">
-                <p className="m-0 mb-3 font-bold text-terracotta text-sm">
-                  Cancel this booking? This cannot be undone.
-                </p>
-                <div className="flex gap-2.5">
-                  <button
-                    onClick={() => void handleCancel()}
-                    disabled={saving}
-                    className="flex-1 min-h-[44px] bg-terracotta text-white border-none rounded-lg font-bold text-sm cursor-pointer"
-                  >
-                    {saving ? 'Cancelling…' : 'Yes, cancel'}
-                  </button>
-                  <button
-                    onClick={() => setCancelConfirm(false)}
-                    className="flex-1 min-h-[44px] bg-cream text-bark border-[1.5px] border-pebble rounded-lg font-bold text-sm cursor-pointer"
-                  >
-                    Keep booking
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setCancelConfirm(true)}
-                className="w-full min-h-[48px] bg-transparent text-terracotta border-[1.5px] border-terracotta rounded-[14px] font-bold text-sm cursor-pointer"
-              >
-                Cancel booking
-              </button>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          {booking.status === 'upcoming' ? (
+        {/* Primary Actions */}
+        <div className="flex flex-col gap-2.5 mt-2">
+          {booking.status === 'upcoming' && (
             <button
               type="button"
-              className="btn-sage"
+              className="btn-sage w-full min-h-[54px] text-[17px] shadow-lg shadow-sage/20"
               onClick={() =>
                 void checkInBooking(booking.id).then(() => {
                   addToast('Checked in', 'success');
                 })
               }
             >
-              Check In
+              Check In {dog?.name}
             </button>
-          ) : null}
+          )}
 
-          {booking.status === 'active' ? (
+          {booking.status === 'active' && (
             <button
               type="button"
-              className="btn-danger"
+              className="btn-danger w-full min-h-[54px] text-[17px] shadow-lg shadow-terracotta/20"
               onClick={() =>
                 void checkOutBooking(booking.id).then(() => {
                   addToast('Checked out', 'success');
@@ -249,46 +238,88 @@ export function BookingDetailScreen() {
             >
               Check Out
             </button>
-          ) : null}
+          )}
 
-          {booking.status === 'awaiting' ? (
-            <button
-              type="button"
-              className="btn-danger whitespace-nowrap text-[15px] tracking-tight"
-              onClick={() => setCloseSheetOpen(true)}
-            >
-              Mark as Paid
-            </button>
-          ) : null}
+          <div className="grid grid-cols-2 gap-2.5">
+            {booking.status === 'awaiting' && (
+              <button
+                type="button"
+                className="btn-danger text-[15px] font-bold py-3 flex items-center justify-center gap-2"
+                onClick={() => setCloseSheetOpen(true)}
+              >
+                <CheckSquare size={18} weight="bold" />
+                Mark Paid
+              </button>
+            )}
 
-          {booking.status === 'awaiting' || booking.status === 'paid' ? (
-            <button
-              type="button"
-              className="btn-sage whitespace-nowrap text-[15px] tracking-tight"
-              onClick={() => setGenerateSheetOpen(true)}
-            >
-              Generate Invoice
-            </button>
-          ) : null}
+            {(booking.status === 'awaiting' || booking.status === 'paid') && (
+              <button
+                type="button"
+                className={`btn-sage text-[15px] font-bold py-3 flex items-center justify-center gap-2 ${booking.status === 'paid' ? 'col-span-1' : 'col-span-1'}`}
+                onClick={() => setGenerateSheetOpen(true)}
+              >
+                <Receipt size={18} weight="bold" />
+                {booking.status === 'paid' ? 'Invoice' : 'Invoice'}
+              </button>
+            )}
 
-          {booking.status === 'paid' ? (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => navigate(`/receipt/${booking.id}`)}
-            >
-              View Receipt
-            </button>
-          ) : null}
+            {booking.status === 'paid' && (
+              <button
+                type="button"
+                className="btn-secondary text-[15px] py-3 font-bold"
+                onClick={() => navigate(`/receipt/${booking.id}`)}
+              >
+                View Receipt
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="mt-3">
-          <h2 className="text-sm font-black text-bark mb-2 uppercase tracking-wide">
-            Daily Reports
-          </h2>
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[11px] font-black text-bark-light uppercase tracking-widest">
+              Daily Reports
+            </h2>
+          </div>
           <ReportList bookingId={booking.id} />
         </div>
-      </div>
+
+        {/* Danger Zone - Discreet Cancellation */}
+        {booking.status !== 'cancelled' && booking.status !== 'paid' && (
+          <div className="mt-12 pt-8 border-t border-pebble/40 flex flex-col items-center">
+            {cancelConfirm ? (
+              <div className="surface-card !bg-blush/10 !p-5 border border-terracotta/20 w-full animate-in fade-in zoom-in duration-200">
+                <p className="m-0 mb-4 font-bold text-terracotta text-sm text-center leading-snug">
+                  Cancel this booking? <br/>This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => void handleCancel()}
+                    disabled={saving}
+                    className="flex-1 py-3 bg-terracotta text-white border-none rounded-xl font-bold text-sm cursor-pointer active:scale-95 transition-transform shadow-md shadow-terracotta/20"
+                  >
+                    {saving ? 'Cancelling…' : 'Yes, cancel'}
+                  </button>
+                  <button
+                    onClick={() => setCancelConfirm(false)}
+                    className="flex-1 py-3 bg-cream text-bark border border-pebble rounded-xl font-bold text-sm cursor-pointer active:scale-95 transition-transform"
+                  >
+                    Keep booking
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setCancelConfirm(true)}
+                className="text-[10px] font-black text-terracotta/60 uppercase tracking-[0.15em] hover:text-terracotta hover:scale-105 active:scale-95 transition-all py-4 px-8"
+              >
+                Cancel booking
+              </button>
+            )}
+          </div>
+        )}
+
+
       <CloseBookingSheet
         isOpen={closeSheetOpen}
         onClose={() => setCloseSheetOpen(false)}

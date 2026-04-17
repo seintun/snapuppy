@@ -481,7 +481,7 @@ export function ProfileScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-3 pb-6">
+    <div className="flex flex-col gap-3 pb-32">
       <form onSubmit={(e) => void handleSubmit(onSave)(e)} className="flex flex-col gap-3">
         {/* ── Identity Hero ── */}
         <div className="surface-card !p-4">
@@ -544,44 +544,15 @@ export function ProfileScreen() {
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
-            {/* Nightly */}
-            <div>
-              <label
-                className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
-                htmlFor="nightly-rate"
-              >
-                🌙 Boarding / night
-              </label>
-              <div className="flex">
-                <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
-                  $
-                </span>
-                <input
-                  id="nightly-rate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="9999.99"
-                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.nightlyRate ? 'border-terracotta' : ''}`}
-                  {...register('nightlyRate', {
-                    setValueAs: (value) => (value === '' ? 0 : Number(value)),
-                  })}
-                />
-              </div>
-              {errors.nightlyRate && (
-                <p className="text-[10px] text-terracotta mt-0.5">{errors.nightlyRate.message}</p>
-              )}
-            </div>
-
             {/* Daycare */}
             <div>
               <label
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="daycare-rate"
               >
-                ☀️ Daycare / day
+                ☀️ Daycare
               </label>
-              <div className="flex">
+              <div className="flex relative">
                 <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
                   $
                 </span>
@@ -591,45 +562,49 @@ export function ProfileScreen() {
                   step="0.01"
                   min="0"
                   max="9999.99"
-                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.daycareRate ? 'border-terracotta' : ''}`}
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 pr-10 ${errors.daycareRate ? 'border-terracotta' : ''}`}
                   {...register('daycareRate', {
                     setValueAs: (value) => (value === '' ? 0 : Number(value)),
                   })}
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-bark-light/40 uppercase pointer-events-none">
+                  /day
+                </span>
               </div>
               {errors.daycareRate && (
                 <p className="text-[10px] text-terracotta mt-0.5">{errors.daycareRate.message}</p>
               )}
             </div>
 
-            {/* Holiday boarding */}
+            {/* Boarding */}
             <div>
               <label
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
-                htmlFor="holiday-boarding-rate"
+                htmlFor="nightly-rate"
               >
-                🎄 Holiday boarding
+                🌙 Boarding
               </label>
-              <div className="flex">
-                <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
+              <div className="flex relative">
+                <span className="w-10 flex items-center justify-center bg-sage-light rounded-l-lg font-bold text-sage border border-pebble border-r-0 text-sm shrink-0">
                   $
                 </span>
                 <input
-                  id="holiday-boarding-rate"
+                  id="nightly-rate"
                   type="number"
                   step="0.01"
                   min="0"
                   max="9999.99"
-                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidayBoardingRate ? 'border-terracotta' : ''}`}
-                  {...register('holidayBoardingRate', {
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 pr-12 ${errors.nightlyRate ? 'border-terracotta' : ''}`}
+                  {...register('nightlyRate', {
                     setValueAs: (value) => (value === '' ? 0 : Number(value)),
                   })}
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-bark-light/40 uppercase pointer-events-none">
+                  /night
+                </span>
               </div>
-              {errors.holidayBoardingRate && (
-                <p className="text-[10px] text-terracotta mt-0.5">
-                  {errors.holidayBoardingRate.message}
-                </p>
+              {errors.nightlyRate && (
+                <p className="text-[10px] text-terracotta mt-0.5">{errors.nightlyRate.message}</p>
               )}
             </div>
 
@@ -641,7 +616,7 @@ export function ProfileScreen() {
               >
                 🎄 Holiday daycare
               </label>
-              <div className="flex">
+              <div className="flex relative">
                 <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
                   $
                 </span>
@@ -651,11 +626,14 @@ export function ProfileScreen() {
                   step="0.01"
                   min="0"
                   max="9999.99"
-                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 ${errors.holidayDaycareRate ? 'border-terracotta' : ''}`}
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 pr-10 ${errors.holidayDaycareRate ? 'border-terracotta' : ''}`}
                   {...register('holidayDaycareRate', {
                     setValueAs: (value) => (value === '' ? 0 : Number(value)),
                   })}
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-bark-light/40 uppercase pointer-events-none">
+                  /day
+                </span>
               </div>
               {errors.holidayDaycareRate && (
                 <p className="text-[10px] text-terracotta mt-0.5">
@@ -664,30 +642,56 @@ export function ProfileScreen() {
               )}
             </div>
 
-            {/* Cutoff time */}
+            {/* Holiday boarding */}
             <div>
+              <label
+                className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
+                htmlFor="holiday-boarding-rate"
+              >
+                🎄 Holiday boarding
+              </label>
+              <div className="flex relative">
+                <span className="w-10 flex items-center justify-center bg-blush/60 rounded-l-lg font-bold text-terracotta border border-pebble border-r-0 text-sm shrink-0">
+                  $
+                </span>
+                <input
+                  id="holiday-boarding-rate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="9999.99"
+                  className={`form-input rounded-l-none flex-1 text-sm py-2.5 pr-12 ${errors.holidayBoardingRate ? 'border-terracotta' : ''}`}
+                  {...register('holidayBoardingRate', {
+                    setValueAs: (value) => (value === '' ? 0 : Number(value)),
+                  })}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-bark-light/40 uppercase pointer-events-none">
+                  /night
+                </span>
+              </div>
+              {errors.holidayBoardingRate && (
+                <p className="text-[10px] text-terracotta mt-0.5">
+                  {errors.holidayBoardingRate.message}
+                </p>
+              )}
+            </div>
+
+            {/* Cutoff time */}
+            <div className="col-span-2 mt-2">
               <label
                 className="text-[10px] font-bold text-bark-light uppercase tracking-wider block mb-1"
                 htmlFor="cutoff-time"
               >
-                🕐 Pickup cut-off
+                Pickup cut-off
               </label>
-              <div className="flex">
-                <span className="w-10 flex items-center justify-center bg-sky/20 rounded-l-lg font-bold text-bark border border-pebble border-r-0 text-sm shrink-0">
-                  <Clock size={16} weight="bold" className="text-bark-light" />
-                </span>
-                <div className="flex-1">
-                  <TimePicker
-                    value={cutoffTime}
-                    onChange={(v) =>
-                      setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })
-                    }
-                    error={!!errors.cutoffTime}
-                    className="rounded-l-none border-l-0"
-                    hideIcon={true}
-                  />
-                </div>
-              </div>
+              <TimePicker
+                value={cutoffTime}
+                onChange={(v) =>
+                  setValue('cutoffTime', v, { shouldValidate: true, shouldDirty: true })
+                }
+                error={!!errors.cutoffTime}
+                hideIcon={false}
+              />
               {errors.cutoffTime && (
                 <p className="text-[10px] text-terracotta mt-0.5">{errors.cutoffTime.message}</p>
               )}
