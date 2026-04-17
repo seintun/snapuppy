@@ -46,7 +46,16 @@ Users should be prompted to add the app to their home screen. Once installed as 
 | User taps Sign Out | Yes |
 | Browser/app data cleared | Yes |
 
+## Page Restore Handling
+
+When a user returns to a cached browser page (e.g., pressing Back after navigating away, or the browser restoring a suspended tab), the `pageshow` event fires with `persisted: true`.
+
+`src/hooks/useAuth.ts` listens for this event and calls `supabase.auth.getSession()` to verify the session is still valid. If the session expired while the app was in the background, the user is signed out immediately — preventing a stale logged-in UI that would fail on the next API call.
+
+This is **distinct from ITP eviction**: ITP wipes `localStorage` entirely (session gone), whereas page restore handles the case where storage is intact but the session has since been revoked server-side.
+
 ## Implementation Notes
 
 - `src/lib/supabase.ts` — explicit `persistSession: true`, `autoRefreshToken: true`, `storageKey: 'snapuppy-auth'`
 - `src/hooks/useAuth.ts` — `INITIAL_SESSION` handler trusts the SDK-provided session directly; no server-side `getUser()` re-validation that would break offline or post-expiry reopens
+- `src/hooks/useAuth.ts` — `pageshow` listener (persisted=true) guards against stale auth state on page restore

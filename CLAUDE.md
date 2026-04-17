@@ -21,60 +21,9 @@
 | Dates           | `date-fns`                                         |
 | Package manager | Bun                                                |
 
-## Architecture Map
+## Modules
 
-Use `@/` alias for all internal imports.
-
-### `src/features` (10 modules)
-
-| Module       | Responsibility                                                    |
-| ------------ | ----------------------------------------------------------------- |
-| `auth/`      | Sitter auth flow (`LoginScreen`, `RequireAuth`, provider/context) |
-| `bookings/`  | Booking lifecycle UI (create/edit/accept/decline/close/details)   |
-| `calendar/`  | Calendar surfaces and month/day booking visualization             |
-| `dashboard/` | Today view + metrics cards/dashboard widgets                      |
-| `dogs/`      | Dog CRUD, profile/detail views, add/edit surfaces                 |
-| `guest/`     | Guest profile/service helpers                                     |
-| `invoice/`   | Invoice preview/render/print/share                                |
-| `profile/`   | Sitter business profile/preferences and client link modal         |
-| `recurring/` | Recurring availability UI and recurrence support                  |
-| `reports/`   | Report generation/list/detail sheet/modal surfaces                |
-
-### `src/lib` (18 TS files, grouped)
-
-| Domain          | Files                                                                         |
-| --------------- | ----------------------------------------------------------------------------- |
-| Core infra      | `supabase.ts`, `logger.ts`, `errors.ts`, `schemas.ts`                         |
-| Booking/pricing | `bookingService.ts`, `rate-calculator.ts`, `recurringService.ts`, `breeds.ts` |
-| Invoicing       | `invoiceGenerator.ts`, `invoiceTemplate.ts`                                   |
-| Metrics/reports | `metricsCalculator.ts`, `metricsService.ts`, `reportService.ts`               |
-| Offline/cache   | `persister.ts`, `offlineQueue.ts`, `sync.ts`                                  |
-| Utilities       | `image-utils.ts`, `paymentUtils.ts`                                           |
-
-### `src/hooks` (12 files including barrel)
-
-| Hook                   | Use                                              |
-| ---------------------- | ------------------------------------------------ |
-| `useAuth.ts`           | Sitter auth state/session API                    |
-| `useBookings.ts`       | Booking queries/mutations and cache invalidation |
-| `useDogBreeds.ts`      | Breed data source/query helper                   |
-| `useDogs.ts`           | Dog query/mutation orchestration                 |
-| `useOfflineSync.ts`    | Queue replay + reconnect sync trigger            |
-| `useOnlineStatus.ts`   | Online/offline status tracking                   |
-| `useProfile.ts`        | Profile query/update orchestration               |
-| `usePwaInstall.ts`     | PWA install prompt and capability state          |
-| `useRecurring.ts`      | Recurrence generation/preview helpers            |
-| `useReports.ts`        | Reports query/mutation orchestration             |
-| `useSwipeToDismiss.ts` | Gesture interaction helper for sheets/cards      |
-| `index.ts`             | Shared hooks barrel export                       |
-
-### `src/components` (organized)
-
-| Group           | Components                                                                                    |
-| --------------- | --------------------------------------------------------------------------------------------- |
-| Layout          | `AppLayout`, `BottomTabs`, `PwaStatus`                                                        |
-| Feedback/errors | `ErrorBoundary`, `ErrorScreen`, `LoadingSpinner`, `OfflineBanner`, `ToastProvider`            |
-| Primitives      | `AddButton`, `Badge`, `Card`, `DogAvatar`, `EmptyState`, `ConfirmModal`, `TimePicker`, `SlideUpSheet` |
+Use `@/` alias for all imports. Features: `auth`, `bookings`, `calendar`, `dashboard`, `dogs`, `guest`, `invoice`, `profile`, `recurring`, `reports`. For full module map, service functions, data flow diagrams, and dependency rules: read `docs/architecture.md`.
 
 ## High-Impact Patterns (Non-Obvious)
 
@@ -130,3 +79,7 @@ bun run format
 | `src/types/index.ts`                     | Type helpers (`Tables`, `TablesInsert`, etc.)                 |
 | `docs/technical_decisions.md`            | Architecture decision log                                     |
 | `docs/architecture.md`                   | Data flow, auth boundaries, module dependency rules           |
+
+## Symbol Index
+
+For function/symbol lookup by domain (auth, bookings, pricing, dogs, invoice, offline, metrics, types): read `docs/symbol-index.md` on demand — not loaded every session.
