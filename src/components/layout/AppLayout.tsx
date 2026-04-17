@@ -5,7 +5,6 @@ import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
 export function AppLayout() {
   const location = useLocation();
-  const isDetailScreen = location.pathname.split('/').filter(Boolean).length > 1;
 
   return (
     <div className="min-h-dvh max-w-[520px] mx-auto bg-warm-beige relative flex flex-col overflow-x-hidden">
@@ -26,7 +25,7 @@ export function AppLayout() {
         </div>
       </main>
 
-      {!isDetailScreen && <BottomTabs />}
+      <BottomTabs />
       <PwaStatus />
     </div>
   );

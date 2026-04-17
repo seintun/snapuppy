@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, Warning, CurrencyCircleDollar, CheckSquare, Receipt } from '@phosphor-icons/react';
+import { CaretLeft, Clock, Warning, CurrencyCircleDollar, CheckSquare, Receipt } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { Badge } from '@/components/ui/Badge';
@@ -103,10 +103,10 @@ export function BookingDetailScreen() {
         <div className="flex items-center justify-between mb-2">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1 text-bark-light hover:text-bark font-bold text-[11px] uppercase tracking-wider bg-transparent border-none cursor-pointer py-1 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-bark/5 text-bark/50 transition-all hover:bg-bark/10 hover:text-bark active:scale-90"
+            aria-label="Go back"
           >
-            <ArrowLeft size={14} weight="bold" />
-            Back
+            <CaretLeft size={18} weight="bold" />
           </button>
           <div className="flex items-center gap-2">
             <Badge

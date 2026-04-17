@@ -252,16 +252,18 @@ export function BookingsScreen() {
                   </div>
 
                   {booking.status !== 'paid' && (
-                    <div className="border-t border-pebble/10 bg-cream/40 px-3 py-1.5 flex justify-center">
-                      <button
-                        type="button"
-                        className="btn-sage !w-auto !px-8 !py-1 !text-[10px] !rounded-full shadow-sm active:scale-95 transition-transform flex items-center gap-1.5"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void runPrimaryAction(booking);
-                        }}
-                        disabled={ctaBusy}
-                      >
+                    <>
+                      <div className="mx-6 h-px bg-gradient-to-r from-transparent via-pebble/20 to-transparent opacity-50" />
+                      <div className="px-3 py-1.5 flex justify-center">
+                        <button
+                          type="button"
+                          className="btn-sage !w-auto !px-8 !py-1 !text-[10px] !rounded-full shadow-sm active:scale-95 transition-transform flex items-center gap-1.5"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void runPrimaryAction(booking);
+                          }}
+                          disabled={ctaBusy}
+                        >
                         {booking.status === 'upcoming' ? (
                           <><SignIn size={12} weight="bold" />Check In</>
                         ) : booking.status === 'active' ? (
@@ -271,7 +273,8 @@ export function BookingsScreen() {
                         )}
                       </button>
                     </div>
-                  )}
+                  </>
+                )}
                 </Card>
               ))}
 
