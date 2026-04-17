@@ -9,7 +9,7 @@ Last updated: 2026-04-16
 | High     | `src/features/dogs/dogService.ts`                                   | Service logic split between feature and `src/lib` patterns                                 | Decide convention: feature-owned domain services vs centralized `src/lib` services           |
 | Medium   | `src/features/profile/profileService.ts`                            | Profile write logic is feature-local while adjacent cross-cutting rules exist in `src/lib` | Extract cross-feature concerns (schema compatibility/retries) to `src/lib` helper            |
 | Medium   | `src/features/guest/guestService.ts`                                | Guest domain service is isolated and not aligned with feature barrel usage                 | Confirm guest module roadmap; promote to first-class feature with UI or fold into core flows |
-| Medium   | `src/lib/invoiceService.ts`                                         | Mostly route-link utility, limited shared domain logic                                     | Move link generation into invoice feature boundary if no other callers emerge                |
+| Low      | Invoice link generation                                             | No dedicated invoiceService.ts exists; link generation lives inline in invoice feature     | Consolidate if a second caller emerges; not worth extracting yet                             |
 
 ## 2) Deferred Architecture Improvements
 

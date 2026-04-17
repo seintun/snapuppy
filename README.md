@@ -48,7 +48,7 @@ VITE_SUPABASE_ANON_KEY=...
 ```text
 src/
   components/   # shared UI primitives and layout
-  features/     # feature modules (auth, bookings, calendar, client, etc.)
+  features/     # feature modules (auth, bookings, calendar, dashboard, dogs, invoice, etc.)
   hooks/        # shared hooks
   lib/          # services and domain utilities
   types/        # generated DB types + helpers
@@ -60,4 +60,4 @@ docs/
 - Architecture reference: `docs/architecture.md`
 - Technical decisions: `docs/technical_decisions.md`
 - Debt register and follow-ups: `docs/tech-debt.md`
-- Historical plans: `docs/plan.md`, `docs/phase-2-implementation-plan.md`, `docs/phase2_implement_plan.md`
+- Phase 1 MVP plan (historical): `docs/plan.md`
