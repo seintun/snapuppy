@@ -4,6 +4,7 @@ import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useBooking } from '@/hooks/useBookings';
 import { useProfile } from '@/hooks/useProfile';
 import { parseInvoiceOverrides } from '@/lib/invoiceGenerator';
+import { buildBookingInvoiceInput } from './invoiceHelpers';
 import { InvoicePreview } from './InvoicePreview';
 
 export function BookingReceiptView() {
@@ -51,22 +52,12 @@ export function BookingReceiptView() {
         <p className="text-sm text-bark-light">PAID</p>
       </div>
       <InvoicePreview
-        invoice={{
-          sitterName: profile?.display_name || 'Sitter',
-          clientName: booking.dog?.owner_name ?? 'Client',
-          dogName: booking.dog?.name ?? 'Dog',
-          dogPhotoUrl: booking.dog?.photo_url ?? null,
-          startDate: booking.start_date,
-          endDate: booking.end_date,
-          subtotal: booking.total_amount,
+        invoice={buildBookingInvoiceInput(booking, profile, {
           lineItems: overrides?.lineItems,
           creditAmount: overrides?.creditAmount,
-          tipAmount: booking.tip_amount ?? 0,
-          paymentInstructions: profile?.payment_instructions ?? null,
-          paymentNotes: booking.payment_notes,
           documentLabel: 'Receipt',
           isPaid: true,
-        }}
+        })}
         downloadName={`receipt-${booking.id}.png`}
       />
     </div>

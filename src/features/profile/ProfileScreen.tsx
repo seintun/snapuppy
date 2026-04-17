@@ -10,6 +10,7 @@ import {
   isLegacyPaymentInstructions,
   serializePaymentMethods,
 } from '@/hooks/useProfile';
+import { formatPhoneProgressive, isZellePhone, normalizeZelleHandle } from '@/lib/paymentUtils';
 import { ProfileSchema, PaymentMethodSchema, type ProfileFormData, type PaymentMethod } from '@/lib/schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -94,15 +95,7 @@ function LogoCircle({ logoUrl, displayName, uploading, onPickFile }: LogoCircleP
   );
 }
 
-// ── Payment Methods Panel ──────────────────────────────────────────────────────
-
-function formatPhone(phone: string): string {
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 0) return '';
-  if (cleaned.length <= 3) return `(${cleaned}`;
-  if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
-  return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
-}
+// ── Payment Methods Panel ────────────────────────────────────────────────────────
 
 interface PaymentPanelProps {
   initialMethods: PaymentMethod[];
@@ -135,11 +128,7 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
     let toValidate = handle.trim();
     if (type === 'venmo') toValidate = toValidate.replace(/^@/, '');
     if (type === 'cashapp') toValidate = toValidate.replace(/^\$/, '');
-    
-    // For Zelle, if it looks like a phone, strip all non-digits for validation
-    if (type === 'zelle' && /^[0-9\s()\-+.]+$/.test(toValidate) && !toValidate.includes('@')) {
-      toValidate = toValidate.replace(/\D/g, '');
-    }
+    if (type === 'zelle') toValidate = normalizeZelleHandle(toValidate);
 
     if (!toValidate) return 'Handle is required';
     const result = PaymentMethodSchema.safeParse({ type, handle: toValidate });
@@ -161,9 +150,7 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
 
   const handleConfirmAdd = async () => {
     let finalHandle = addHandle.trim();
-    if (addingType === 'zelle' && /^[0-9\s()\-+.]+$/.test(finalHandle) && !finalHandle.includes('@')) {
-      finalHandle = finalHandle.replace(/\D/g, '');
-    }
+    if (addingType === 'zelle') finalHandle = normalizeZelleHandle(finalHandle);
 
     const err = validateHandle(addingType!, finalHandle);
     if (err) { setAddError(err); return; }
@@ -219,9 +206,9 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
             const icon = PAYMENT_ICON[type];
             let displayHandle = m.handle;
 
-            // Auto-format Zelle phone in saved rows too
-            if (type === 'zelle' && /^\d+$/.test(m.handle.replace(/\D/g, ''))) {
-              displayHandle = formatPhone(m.handle);
+            // Auto-format Zelle phone in saved rows for display.
+            if (type === 'zelle' && isZellePhone(m.handle)) {
+              displayHandle = formatPhoneProgressive(m.handle);
             }
 
             if (confirmDeleteIndex === i) {
@@ -309,13 +296,7 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
               onChange={(e) => {
                 let val = e.target.value;
                 if (addingType === 'zelle') {
-                  // If it ONLY contains phone-like characters, format it
-                  // Phone-like chars: digits, spaces, (), -, +, .
-                  const isPhoneLike = /^[0-9\s()\-+.]+$/.test(val);
-                  if (isPhoneLike) {
-                    val = formatPhone(val);
-                  }
-                  // Otherwise, allow it as is (for email)
+                  val = isZellePhone(val) ? formatPhoneProgressive(val) : val;
                 } else {
                   val = applyPrefix(addingType, val);
                 }

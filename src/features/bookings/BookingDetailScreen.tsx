@@ -17,6 +17,7 @@ import { ReportList } from '@/features/reports';
 import { GenerateInvoiceSheet } from '@/features/invoice/GenerateInvoiceSheet';
 import { parseInvoiceOverrides, type InvoiceLineItem } from '@/lib/invoiceGenerator';
 import { useProfile } from '@/hooks/useProfile';
+import { buildBookingInvoiceInput } from '@/features/invoice/invoiceHelpers';
 import { getStatusLabel, getStatusVariant } from './bookingUi';
 import { BookingTypePill } from './BookingTypePill';
 import { CloseBookingSheet } from './CloseBookingSheet';
@@ -299,19 +300,9 @@ export function BookingDetailScreen() {
         bookingId={booking.id}
         initialLineItems={derivedLineItems}
         savedOverrides={parseInvoiceOverrides(booking.invoice_overrides)}
-        previewInvoice={{
-          sitterName: profile?.display_name || 'Sitter',
-          clientName: booking.dog?.owner_name ?? 'Client',
-          dogName: booking.dog?.name ?? 'Dog',
-          dogPhotoUrl: booking.dog?.photo_url ?? null,
-          startDate: booking.start_date,
-          endDate: booking.end_date,
-          subtotal: booking.total_amount,
+        previewInvoice={buildBookingInvoiceInput(booking, profile, {
           tipAmount: 0,
-          paymentInstructions: profile?.payment_instructions ?? null,
-          paymentNotes: booking.payment_notes,
-          isPaid: booking.is_paid ?? false,
-        }}
+        })}
       />
     </div>
   );
