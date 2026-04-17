@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { CheckCircle, Plus, SignOut, TagSimple, X } from '@phosphor-icons/react';
+import { Plus, TagSimple, X } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { SlideUpSheet } from '@/components/ui/SlideUpSheet';
 import { useSaveInvoiceOverrides } from '@/hooks/useBookings';
@@ -82,7 +82,6 @@ export function GenerateInvoiceSheet({
     reset,
     watch,
     formState,
-    setValue,
     setError,
     clearErrors,
   } = useForm<GenerateInvoiceValues>({

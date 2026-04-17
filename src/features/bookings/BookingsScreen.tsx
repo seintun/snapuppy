@@ -202,61 +202,60 @@ export function BookingsScreen() {
               {tabBookings.map((booking) => (
                 <Card
                   key={booking.id}
-                  className={`relative overflow-hidden border border-pebble/10 p-0 shadow-sm ${getBorderColor(booking.status)} border-l-4`}
-                  pressable
+                  className={`border border-pebble/10 p-0 shadow-sm ${getBorderColor(booking.status)} border-l-4 overflow-hidden relative active:scale-[0.98] transition-all cursor-pointer`}
                   onClick={() => navigate(`/bookings/${booking.id}`)}
                 >
-                  <div className="absolute left-2.5 top-2 z-10">
+                  <div className="flex items-center justify-between px-3 pt-2">
                     <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
+                    <Badge
+                      variant={getStatusVariant(booking.status)}
+                      className="px-2 py-0.5 text-[8px] uppercase tracking-widest font-black"
+                    >
+                      {getStatusLabel(booking.status)}
+                    </Badge>
                   </div>
-                  <div className="flex items-start justify-between gap-3 px-3 pb-2 pt-9">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="sm" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <h2 className="truncate text-sm font-black text-bark leading-none">{booking.dog?.name ?? 'Unknown Dog'}</h2>
-                        </div>
-                        <p className="mt-0.5 text-[11px] font-bold tracking-wide text-bark-light">
-                          {formatBookingRange(booking)}
-                        </p>
-                        {(booking.dropoff_time || booking.pickup_time) && (
-                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-black uppercase tracking-wider">
-                            {booking.dropoff_time && (
-                              <span className="flex items-center gap-1 whitespace-nowrap text-sage">
-                                <span className="text-[8px] opacity-60">IN:</span> {formatTime(booking.dropoff_time)}
-                              </span>
-                            )}
-                            {booking.pickup_time && (
-                              <span className="flex items-center gap-1 whitespace-nowrap text-terracotta">
-                                <span className="text-[8px] opacity-60">OUT:</span> {formatTime(booking.pickup_time)}
-                              </span>
-                            )}
-                          </div>
-                        )}
 
-                      </div>
+                  <div className="flex items-center gap-2.5 px-3 py-1.5">
+                    <DogAvatar name={booking.dog?.name ?? 'Dog'} src={booking.dog?.photo_url} size="md" className="ring-1 ring-pebble/20" />
+                    
+                    <div className="flex-1 min-w-0">
+                      <h2 className="truncate text-base font-black text-bark leading-none mb-0.5">
+                        {booking.dog?.name ?? 'Unknown Dog'}
+                      </h2>
+                      <p className="text-[11px] font-bold tracking-wide text-bark-light mb-0.5">
+                        {formatBookingRange(booking)}
+                      </p>
+                      {(booking.dropoff_time || booking.pickup_time) && (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-black uppercase tracking-wider">
+                          {booking.dropoff_time && (
+                            <span className="flex items-center gap-1 whitespace-nowrap text-sage">
+                              <span className="text-[8px] opacity-60">IN:</span> {formatTime(booking.dropoff_time)}
+                            </span>
+                          )}
+                          {booking.pickup_time && (
+                            <span className="flex items-center gap-1 whitespace-nowrap text-terracotta">
+                              <span className="text-[8px] opacity-60">OUT:</span> {formatTime(booking.pickup_time)}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge
-                        variant={getStatusVariant(booking.status)}
-                        className="px-2 py-0.5 text-[9px] uppercase tracking-wide"
-                      >
-                        {getStatusLabel(booking.status)}
-                      </Badge>
-                      <p className="text-lg font-black leading-none text-terracotta">
+
+                    <div className="flex flex-col items-end shrink-0">
+                      <p className="text-xl font-black leading-none text-terracotta">
                         {formatCurrency(booking.total_amount)}
                       </p>
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-bark-light/50">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-bark-light/40">
                         {getDurationText(booking)}
                       </p>
                     </div>
                   </div>
 
-                  {booking.status !== 'paid' ? (
-                    <div className="flex justify-center border-t border-pebble/10 bg-cream/60 px-3 py-2">
+                  {booking.status !== 'paid' && (
+                    <div className="border-t border-pebble/10 bg-cream/40 px-3 py-1.5 flex justify-center">
                       <button
                         type="button"
-                        className="btn-sage !w-auto !px-6 !py-1.5 !text-[10px]"
+                        className="btn-sage !w-auto !px-8 !py-1 !text-[10px] !rounded-full shadow-sm active:scale-95 transition-transform flex items-center gap-1.5"
                         onClick={(event) => {
                           event.stopPropagation();
                           void runPrimaryAction(booking);
@@ -268,11 +267,11 @@ export function BookingsScreen() {
                         ) : booking.status === 'active' ? (
                           <><SignOut size={12} weight="bold" />Check Out</>
                         ) : (
-                          <><CurrencyDollar size={12} weight="bold" />Mark as Paid</>
+                          <><CurrencyDollar size={12} weight="bold" />Mark Paid</>
                         )}
                       </button>
                     </div>
-                  ) : null}
+                  )}
                 </Card>
               ))}
 

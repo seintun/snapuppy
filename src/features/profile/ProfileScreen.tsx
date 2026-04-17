@@ -14,7 +14,6 @@ import { formatPhoneProgressive, isZellePhone, normalizeZelleHandle } from '@/li
 import { ProfileSchema, PaymentMethodSchema, type ProfileFormData, type PaymentMethod } from '@/lib/schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  Clock,
   CurrencyCircleDollar,
   SignOut,
   Camera,

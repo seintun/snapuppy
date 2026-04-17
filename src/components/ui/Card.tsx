@@ -9,7 +9,7 @@ interface CardProps extends PropsWithChildren {
 export function Card({ children, className = '', pressable, onClick }: CardProps) {
   return (
     <section 
-      className={`bg-cream rounded-xl shadow-sm border border-pebble p-4 transition-all duration-120 ${
+      className={`bg-cream rounded-xl shadow-sm border border-pebble transition-all duration-120 ${
         pressable ? 'cursor-pointer active:scale-[0.98] active:shadow-none' : ''
       } ${className}`} 
       onClick={onClick}
