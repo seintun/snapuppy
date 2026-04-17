@@ -66,6 +66,7 @@ export interface CreateBookingInput {
 
 export interface PaymentCloseInput {
   tipAmount?: number;
+  paymentMethod?: string | null;
   paymentNotes?: string | null;
   paidAt?: string;
 }
@@ -460,6 +461,7 @@ export async function saveInvoiceOverrides(
   bookingId: string,
   sitterId: string,
   overrides: InvoiceOverrides,
+  totalAmount?: number,
 ): Promise<void> {
   const supabase = await getSupabase();
   const invoiceOverridesJson: Json = {
@@ -481,9 +483,13 @@ export async function saveInvoiceOverrides(
         }
       : {}),
   };
+  const updatePayload: any = { invoice_overrides: invoiceOverridesJson };
+  if (totalAmount !== undefined) {
+    updatePayload.total_amount = totalAmount;
+  }
   const { error } = await supabase
     .from('bookings')
-    .update({ invoice_overrides: invoiceOverridesJson })
+    .update(updatePayload)
     .eq('id', bookingId)
     .eq('sitter_id', sitterId);
 
@@ -693,6 +699,7 @@ export function buildPaymentCloseUpdate(input: PaymentCloseInput): {
   status: 'paid';
   is_paid: true;
   tip_amount: number;
+  payment_method: string | null;
   payment_notes: string | null;
   paid_at: string;
   updated_at: string;
@@ -702,6 +709,7 @@ export function buildPaymentCloseUpdate(input: PaymentCloseInput): {
     status: 'paid',
     is_paid: true,
     tip_amount: toCurrencyAmount(Math.max(0, input.tipAmount ?? 0)),
+    payment_method: input.paymentMethod?.trim() || null,
     payment_notes: input.paymentNotes?.trim() || null,
     paid_at: paidAt,
     updated_at: paidAt,

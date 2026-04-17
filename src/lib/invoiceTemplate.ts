@@ -78,18 +78,26 @@ function renderPaymentBadge(m: PaymentBadgeItem): string {
  *
  * @param rawInstructions - The raw `payment_instructions` column value (NOT HTML-escaped).
  */
-function renderPaymentBlock(rawInstructions: string | null | undefined): string {
+function renderPaymentBlock(rawInstructions: string | null | undefined, selectedPaymentMethod?: string | null): string {
   const cashBadge: PaymentBadgeItem = { type: 'cash', handle: 'Cash' };
   const parsed = parsePaymentMethodsJson(rawInstructions);
+  const selectedType = selectedPaymentMethod?.toLowerCase();
 
-  if (parsed) {
-    const allMethods: PaymentBadgeItem[] = [cashBadge, ...parsed];
-    const badgesHtml = allMethods.map(renderPaymentBadge).join('');
+  if (parsed || selectedType === 'cash') {
+    const allMethods: PaymentBadgeItem[] = [cashBadge, ...(parsed || [])];
+    const filteredMethods = selectedType 
+      ? allMethods.filter(m => m.type.toLowerCase() === selectedType)
+      : allMethods;
+
+    if (filteredMethods.length === 0) return '';
+
+    const badgesHtml = filteredMethods.map(renderPaymentBadge).join('');
+    const label = selectedType ? 'PAYMENT METHOD' : 'FORMS OF PAYMENT ACCEPTED';
 
     return `
       <div style="margin-top:10px; padding:8px 12px; background:#fff; border-radius:12px; border:1px solid #e2d8ce;">
         <div style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:#8b7355; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
-          <span style="font-size:12px;">💵</span> FORMS OF PAYMENT ACCEPTED
+          ${label}
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:4px;">
           ${badgesHtml}
@@ -115,6 +123,7 @@ export function buildInvoiceHtml(
     paymentInstructions?: string | null;
     documentLabel?: 'Invoice' | 'Receipt';
     isPaid?: boolean;
+    selectedPaymentMethod?: string | null;
   },
 ) {
   const {
@@ -235,13 +244,13 @@ export function buildInvoiceHtml(
         ${hasLineItems ? `<div style="display:flex; justify-content:space-between; font-size:12px; color:#8a786a;"><span>Services</span><span style="font-weight:700;">$${formatMoney(baseSubtotal)}</span></div>` : ''}
         ${adjustmentCharges > 0 ? `<div style="display:flex; justify-content:space-between; font-size:12px; color:#5a8f56;"><span>Charges</span><span style="font-weight:700;">+$${formatMoney(adjustmentCharges)}</span></div>` : ''}
         ${adjustmentDiscounts > 0 ? `<div style="display:flex; justify-content:space-between; font-size:12px; color:#c0603a;"><span>Discounts</span><span style="font-weight:700;">−$${formatMoney(adjustmentDiscounts)}</span></div>` : ''}
-        ${showTip && displayedTip > 0 ? `<div style="display:flex; justify-content:space-between; font-size:12px; color:#8a786a;"><span>Tip 💝</span><span style="font-weight:700;">$${formatMoney(displayedTip)}</span></div>` : ''}
+        ${showTip && displayedTip > 0 ? `<div style="display:flex; justify-content:space-between; font-size:12px; color:#5a8f56;"><span>Tip 💝</span><span style="font-weight:700;">+$${formatMoney(displayedTip)}</span></div>` : ''}
       </div>`
     : '';
 
   // Payment block
   const paymentBlock = [
-    renderPaymentBlock(paymentInstructions),
+    renderPaymentBlock(paymentInstructions, input.selectedPaymentMethod),
     paymentNotes
       ? `<div style="margin-top:8px; font-size:11px; color:#7a6657; line-height:1.5; padding:0 4px;"><strong>Note:</strong> ${paymentNotes}</div>`
       : '',

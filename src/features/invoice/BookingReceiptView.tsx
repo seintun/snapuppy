@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { CaretLeft } from '@phosphor-icons/react';
 import { AppLoadingAnimation } from '@/components/ui/AppLoadingAnimation';
 import { useBooking } from '@/hooks/useBookings';
 import { useProfile } from '@/hooks/useProfile';
@@ -39,21 +40,24 @@ export function BookingReceiptView() {
   const overrides = parseInvoiceOverrides(booking.invoice_overrides);
 
   return (
-    <div className="min-h-dvh bg-warm-beige p-4">
-      <div className="mb-3">
+    <div className="min-h-dvh bg-warm-beige p-4 pt-2">
+      <div className="flex items-center justify-between mb-4">
         <button
-          type="button"
-          className="btn-secondary mb-3"
-          onClick={() => navigate(`/bookings/${booking.id}`)}
+          onClick={() => navigate(-1)}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-bark/5 text-bark/50 transition-all hover:bg-bark/10 hover:text-bark active:scale-90"
+          aria-label="Go Back"
         >
-          Back to Booking
+          <CaretLeft size={20} weight="bold" />
         </button>
-        <h1 className="text-xl font-black text-bark">Receipt</h1>
-        <p className="text-sm text-bark-light">PAID</p>
+        <div className="text-right">
+          <h1 className="text-base font-black text-bark leading-none">Receipt</h1>
+          <p className="text-[11px] font-bold text-bark-light uppercase tracking-widest leading-tight">PAID</p>
+        </div>
       </div>
       <InvoicePreview
         invoice={buildBookingInvoiceInput(booking, profile, {
           lineItems: overrides?.lineItems,
+          adjustments: overrides?.adjustments,
           creditAmount: overrides?.creditAmount,
           documentLabel: 'Receipt',
           isPaid: true,

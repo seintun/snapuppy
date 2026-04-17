@@ -16,7 +16,9 @@ import {
 } from '@/hooks/useBookings';
 import { type BookingRecord, type BookingStatus } from '@/lib/bookingService';
 import { CreateBookingSheet } from './CreateBookingSheet';
-import { CloseBookingSheet } from './CloseBookingSheet';
+import { MarkPaidSheet } from './MarkPaidSheet';
+import { calculateInvoiceTotals } from '@/lib/invoiceGenerator';
+import { useProfile } from '@/hooks/useProfile';
 import { BookingTypePill } from './BookingTypePill';
 import {
   bookingStatusOptions,
@@ -68,7 +70,8 @@ export function BookingsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
-  const [closeSheetBookingId, setCloseSheetBookingId] = useState<string | null>(null);
+  const [markPaidBookingId, setMarkPaidBookingId] = useState<string | null>(null);
+  const { data: profile } = useProfile();
 
   useEffect(() => {
     if (!requestedTab) return;
@@ -115,7 +118,7 @@ export function BookingsScreen() {
     }
 
     if (booking.status === 'awaiting') {
-      setCloseSheetBookingId(booking.id);
+      setMarkPaidBookingId(booking.id);
     }
   }
 
@@ -243,7 +246,31 @@ export function BookingsScreen() {
 
                     <div className="flex flex-col items-end shrink-0">
                       <p className="text-xl font-black leading-none text-terracotta">
-                        {formatCurrency(booking.total_amount)}
+                        {(() => {
+                          if (booking.status === 'paid' && (booking.total_amount ?? 0) > 0) {
+                            return formatCurrency(booking.total_amount);
+                          }
+                          
+                          const overrides = booking.invoice_overrides ? JSON.parse(JSON.stringify(booking.invoice_overrides)) : null;
+                          const tipAmount = booking.tip_amount || 0;
+                          
+                          // If we have line item overrides, use them
+                          if (overrides?.lineItems?.length > 0) {
+                            const totals = calculateInvoiceTotals({
+                              sitterName: '', clientName: '', dogName: '',
+                              startDate: '2000-01-01', endDate: '2000-01-01',
+                              subtotal: 0,
+                              lineItems: overrides.lineItems,
+                              adjustments: overrides.adjustments || [],
+                              tipAmount
+                            });
+                            return formatCurrency(totals.total);
+                          }
+                          
+                          // Fallback: derive from days
+                          const subtotal = booking.days.reduce((sum, day) => sum + (day.amount || 0), 0);
+                          return formatCurrency(subtotal + tipAmount);
+                        })()}
                       </p>
                       <p className="text-[9px] font-bold uppercase tracking-widest text-bark-light/40">
                         {getDurationText(booking)}
@@ -338,13 +365,17 @@ export function BookingsScreen() {
       </div>
 
       <CreateBookingSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
-      {closeSheetBookingId ? (
-        <CloseBookingSheet
-          isOpen={true}
-          onClose={() => setCloseSheetBookingId(null)}
-          bookingId={closeSheetBookingId}
-        />
-      ) : null}
+      {markPaidBookingId ? (() => {
+        const selectedBooking = bookings.find((b) => b.id === markPaidBookingId);
+        return selectedBooking ? (
+          <MarkPaidSheet
+            isOpen={true}
+            onClose={() => setMarkPaidBookingId(null)}
+            booking={selectedBooking}
+            profile={profile}
+          />
+        ) : null;
+      })() : null}
       <AddButton onClick={() => setIsCreateOpen(true)} variant="booking" isActive={isCreateOpen} />
     </div>
   );

@@ -58,6 +58,7 @@ export type Database = {
           notes: string | null;
           dropoff_time: string | null;
           paid_at: string | null;
+          payment_method: string | null;
           payment_notes: string | null;
           pickup_time: string | null;
           sitter_id: string;
@@ -80,6 +81,7 @@ export type Database = {
           notes?: string | null;
           dropoff_time?: string | null;
           paid_at?: string | null;
+          payment_method?: string | null;
           payment_notes?: string | null;
           pickup_time?: string | null;
           sitter_id: string;
@@ -102,6 +104,7 @@ export type Database = {
           notes?: string | null;
           dropoff_time?: string | null;
           paid_at?: string | null;
+          payment_method?: string | null;
           payment_notes?: string | null;
           pickup_time?: string | null;
           sitter_id?: string;

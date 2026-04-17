@@ -102,12 +102,16 @@ export function GenerateInvoiceSheet({
     name: 'adjustments',
   });
 
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+
   useEffect(() => {
-    if (!isOpen) return;
-    reset(defaultValues);
-    setMode('edit');
-    setPreviewOverrides(null);
-  }, [defaultValues, isOpen, reset]);
+    if (isOpen && !prevOpen) {
+      reset(defaultValues);
+      setMode('edit');
+      setPreviewOverrides(null);
+    }
+    setPrevOpen(isOpen);
+  }, [isOpen, prevOpen, reset, defaultValues]);
 
   const watchedLineItems = watch('lineItems');
   const watchedAdjustments = watch('adjustments');
@@ -194,6 +198,29 @@ export function GenerateInvoiceSheet({
     }
   });
 
+  const handleDone = async () => {
+    if (previewOverrides) {
+      const totals = calculateInvoiceTotals({
+        sitterName: '',
+        clientName: '',
+        dogName: '',
+        startDate: '2000-01-01',
+        endDate: '2000-01-01',
+        subtotal: 0,
+        lineItems: previewOverrides.lineItems,
+        adjustments: previewOverrides.adjustments || [],
+        tipAmount: 0,
+      });
+      try {
+        await saveInvoiceOverrides({ bookingId, overrides: previewOverrides, totalAmount: totals.total });
+      } catch (error) {
+        addToast(error instanceof Error ? error.message : 'Failed to save finalize invoice', 'error');
+        return;
+      }
+    }
+    onClose();
+  };
+
   if (mode === 'preview' && previewOverrides) {
     return (
       <SlideUpSheet isOpen={isOpen} onClose={onClose} title="Preview">
@@ -217,7 +244,12 @@ export function GenerateInvoiceSheet({
             >
               Back to Edit
             </button>
-            <button type="button" className="btn-sage min-h-[44px]" onClick={onClose}>
+            <button
+              type="button"
+              className="btn-sage min-h-[44px]"
+              onClick={handleDone}
+              disabled={isPending}
+            >
               Done
             </button>
           </div>

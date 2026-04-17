@@ -15,12 +15,12 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { ReportList } from '@/features/reports';
 import { GenerateInvoiceSheet } from '@/features/invoice/GenerateInvoiceSheet';
-import { parseInvoiceOverrides, type InvoiceLineItem } from '@/lib/invoiceGenerator';
+import { calculateInvoiceTotals, parseInvoiceOverrides, type InvoiceLineItem } from '@/lib/invoiceGenerator';
 import { useProfile } from '@/hooks/useProfile';
 import { buildBookingInvoiceInput } from '@/features/invoice/invoiceHelpers';
 import { getStatusLabel, getStatusVariant, formatTime } from './bookingUi';
 import { BookingTypePill } from './BookingTypePill';
-import { CloseBookingSheet } from './CloseBookingSheet';
+import { MarkPaidSheet } from './MarkPaidSheet';
 
 export function BookingDetailScreen() {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +35,7 @@ export function BookingDetailScreen() {
   const { mutateAsync: checkOutBooking } = useCheckOutBooking();
 
   const [cancelConfirm, setCancelConfirm] = useState(false);
-  const [closeSheetOpen, setCloseSheetOpen] = useState(false);
+  const [markPaidSheetOpen, setMarkPaidSheetOpen] = useState(false);
   const [generateSheetOpen, setGenerateSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -77,7 +77,10 @@ export function BookingDetailScreen() {
   }
 
   const dog = booking.dog;
-  const derivedLineItems = Object.values(
+  const parsedOverrides = parseInvoiceOverrides(booking.invoice_overrides);
+  const derivedLineItems = parsedOverrides?.lineItems && parsedOverrides.lineItems.length > 0
+    ? parsedOverrides.lineItems
+    : Object.values(
     booking.days.reduce(
       (acc, day) => {
         const key = `${day.rate_type}-${day.is_holiday}-${day.amount}`;
@@ -95,6 +98,20 @@ export function BookingDetailScreen() {
       {} as Record<string, InvoiceLineItem>,
     ),
   );
+
+  const displayTotal = parsedOverrides
+    ? calculateInvoiceTotals({
+        sitterName: '',
+        clientName: '',
+        dogName: '',
+        startDate: '2000-01-01',
+        endDate: '2000-01-01',
+        subtotal: 0,
+        lineItems: parsedOverrides.lineItems,
+        adjustments: parsedOverrides.adjustments || [],
+        tipAmount: booking.tip_amount || 0,
+      }).total
+    : booking.total_amount;
 
   return (
     <div className="pb-24">
@@ -118,6 +135,11 @@ export function BookingDetailScreen() {
             <BookingTypePill type={booking.type} isHoliday={booking.is_holiday} />
           </div>
         </div>
+        {booking.status === 'paid' && booking.paid_at && (
+          <div className="text-xs text-bark-light mb-2 text-right">
+            Paid {format(parseISO(booking.paid_at), "MMM d, yyyy 'at' h:mm a")}
+          </div>
+        )}
 
         <div className="flex items-center gap-4">
           {dog ? (
@@ -201,7 +223,7 @@ export function BookingDetailScreen() {
             <div className="flex justify-between items-center mt-5 pt-4 border-t border-pebble/60">
               <span className="text-xs font-bold text-bark-light uppercase tracking-widest">Total Amount</span>
               <span className="text-[26px] font-black text-bark tracking-tight leading-none">
-                ${booking.total_amount.toFixed(2)}
+                ${displayTotal.toFixed(2)}
               </span>
             </div>
           </div>
@@ -239,47 +261,49 @@ export function BookingDetailScreen() {
 
           <div className="grid grid-cols-2 gap-2.5">
             {booking.status === 'awaiting' && (
-              <button
-                type="button"
-                className="btn-danger text-[15px] font-bold py-3 flex items-center justify-center gap-2"
-                onClick={() => setCloseSheetOpen(true)}
-              >
-                <CheckSquare size={18} weight="bold" />
-                Mark Paid
-              </button>
-            )}
-
-            {(booking.status === 'awaiting' || booking.status === 'paid') && (
-              <button
-                type="button"
-                className={`btn-sage text-[15px] font-bold py-3 flex items-center justify-center gap-2 ${booking.status === 'paid' ? 'col-span-1' : 'col-span-1'}`}
-                onClick={() => setGenerateSheetOpen(true)}
-              >
-                <Receipt size={18} weight="bold" />
-                {booking.status === 'paid' ? 'Invoice' : 'Invoice'}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn-sage text-[15px] font-bold py-3 flex items-center justify-center gap-2"
+                  onClick={() => setGenerateSheetOpen(true)}
+                >
+                  <Receipt size={18} weight="bold" />
+                  Invoice
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger text-[15px] font-bold py-3 flex items-center justify-center gap-2"
+                  onClick={() => setMarkPaidSheetOpen(true)}
+                >
+                  <CheckSquare size={18} weight="bold" />
+                  Mark Paid
+                </button>
+              </>
             )}
 
             {booking.status === 'paid' && (
               <button
                 type="button"
-                className="btn-secondary text-[15px] py-3 font-bold"
+                className="btn-secondary col-span-2 text-[15px] py-3 font-bold flex items-center justify-center gap-2"
                 onClick={() => navigate(`/receipt/${booking.id}`)}
               >
+                <Receipt size={18} weight="bold" />
                 View Receipt
               </button>
             )}
           </div>
         </div>
 
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-black text-bark-light uppercase tracking-widest">
-              Daily Reports
-            </h2>
+        {booking.status !== 'cancelled' && booking.status !== 'paid' && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[11px] font-black text-bark-light uppercase tracking-widest">
+                Daily Reports
+              </h2>
+            </div>
+            <ReportList bookingId={booking.id} />
           </div>
-          <ReportList bookingId={booking.id} />
-        </div>
+        )}
 
         {/* Danger Zone - Discreet Cancellation */}
         {booking.status !== 'cancelled' && booking.status !== 'paid' && (
@@ -317,10 +341,15 @@ export function BookingDetailScreen() {
         )}
 
 
-      <CloseBookingSheet
-        isOpen={closeSheetOpen}
-        onClose={() => setCloseSheetOpen(false)}
-        bookingId={booking.id}
+      <MarkPaidSheet
+        isOpen={markPaidSheetOpen}
+        onClose={() => setMarkPaidSheetOpen(false)}
+        booking={booking}
+        profile={profile}
+        onSuccess={() => {
+          setMarkPaidSheetOpen(false);
+          navigate('/bookings?tab=awaiting', { replace: true });
+        }}
       />
       <GenerateInvoiceSheet
         isOpen={generateSheetOpen}

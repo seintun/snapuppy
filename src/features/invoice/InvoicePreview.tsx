@@ -10,6 +10,7 @@ interface InvoicePreviewProps {
     paymentInstructions?: string | null;
     documentLabel?: 'Invoice' | 'Receipt';
     isPaid?: boolean;
+    selectedPaymentMethod?: string | null;
   };
   downloadName?: string;
 }

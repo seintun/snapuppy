@@ -35,6 +35,7 @@ export interface InvoiceInput {
   lineItems?: InvoiceLineItem[];
   creditAmount?: number;
   adjustments?: InvoiceAdjustment[];
+  selectedPaymentMethod?: string | null;
 }
 
 function toFiniteNumber(value: unknown, fallback = 0): number {

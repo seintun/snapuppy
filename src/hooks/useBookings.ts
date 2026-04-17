@@ -169,8 +169,8 @@ export function useSaveInvoiceOverrides() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ bookingId, overrides }: { bookingId: string; overrides: InvoiceOverrides }) =>
-      svcSaveInvoiceOverrides(bookingId, user!.id, overrides),
+    mutationFn: ({ bookingId, overrides, totalAmount }: { bookingId: string; overrides: InvoiceOverrides; totalAmount?: number }) =>
+      svcSaveInvoiceOverrides(bookingId, user!.id, overrides, totalAmount),
     onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['bookings', user?.id, variables.bookingId] });

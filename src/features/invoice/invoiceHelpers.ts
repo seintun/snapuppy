@@ -14,6 +14,7 @@ export type InvoicePreviewInput = InvoiceInput & {
   paymentInstructions?: string | null;
   documentLabel?: 'Invoice' | 'Receipt';
   isPaid?: boolean;
+  selectedPaymentMethod?: string | null;
 };
 
 /**
@@ -41,6 +42,7 @@ export function buildBookingInvoiceInput(
     paymentInstructions: profile?.payment_instructions ?? null,
     paymentNotes: booking.payment_notes,
     isPaid: booking.is_paid ?? false,
+    selectedPaymentMethod: booking.payment_method,
     ...overrides,
   };
 }
