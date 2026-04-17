@@ -96,6 +96,14 @@ function LogoCircle({ logoUrl, displayName, uploading, onPickFile }: LogoCircleP
 
 // ── Payment Methods Panel ──────────────────────────────────────────────────────
 
+function formatPhone(phone: string): string {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 0) return '';
+  if (cleaned.length <= 3) return `(${cleaned}`;
+  if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+  return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+}
+
 interface PaymentPanelProps {
   initialMethods: PaymentMethod[];
   legacyText: string | null;
@@ -124,9 +132,17 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
   const isBusy = saving || pendingSave;
 
   const validateHandle = (type: PaymentType, handle: string): string => {
-    const stripped = handle.replace(/^[@$]/, '').trim();
-    if (!stripped) return 'Handle is required';
-    const result = PaymentMethodSchema.safeParse({ type, handle });
+    let toValidate = handle.trim();
+    if (type === 'venmo') toValidate = toValidate.replace(/^@/, '');
+    if (type === 'cashapp') toValidate = toValidate.replace(/^\$/, '');
+    
+    // For Zelle, if it looks like a phone, strip all non-digits for validation
+    if (type === 'zelle' && /^[0-9\s()\-+.]+$/.test(toValidate) && !toValidate.includes('@')) {
+      toValidate = toValidate.replace(/\D/g, '');
+    }
+
+    if (!toValidate) return 'Handle is required';
+    const result = PaymentMethodSchema.safeParse({ type, handle: toValidate });
     if (!result.success) {
       if (type === 'zelle') {
         return 'Enter a valid email (e.g. name@email.com) or 10-digit US phone (e.g. 2125551234)';
@@ -144,9 +160,15 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
   };
 
   const handleConfirmAdd = async () => {
-    const err = validateHandle(addingType!, addHandle);
+    let finalHandle = addHandle.trim();
+    if (addingType === 'zelle' && /^[0-9\s()\-+.]+$/.test(finalHandle) && !finalHandle.includes('@')) {
+      finalHandle = finalHandle.replace(/\D/g, '');
+    }
+
+    const err = validateHandle(addingType!, finalHandle);
     if (err) { setAddError(err); return; }
-    const next = [...methods, { type: addingType!, handle: addHandle } as PaymentMethod];
+    
+    const next = [...methods, { type: addingType!, handle: finalHandle } as PaymentMethod];
     setPendingSave(true);
     try {
       await onSave(next);
@@ -195,6 +217,12 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
           {methods.map((m, i) => {
             const type = m.type as PaymentType;
             const icon = PAYMENT_ICON[type];
+            let displayHandle = m.handle;
+
+            // Auto-format Zelle phone in saved rows too
+            if (type === 'zelle' && /^\d+$/.test(m.handle.replace(/\D/g, ''))) {
+              displayHandle = formatPhone(m.handle);
+            }
 
             if (confirmDeleteIndex === i) {
               return (
@@ -231,7 +259,7 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
                   <p className="text-[11px] font-bold text-bark-light uppercase tracking-wide leading-none mb-0.5">
                     {PAYMENT_LABELS[type]}
                   </p>
-                  <p className="text-sm text-bark truncate">{m.handle}</p>
+                  <p className="text-sm text-bark truncate">{displayHandle}</p>
                 </div>
                 <button
                   type="button"
@@ -278,9 +306,24 @@ function PaymentMethodsPanel({ initialMethods, legacyText, onSave, saving }: Pay
               type="text"
               value={addHandle}
               autoFocus
-              onChange={(e) => { setAddHandle(applyPrefix(addingType, e.target.value)); setAddError(''); }}
+              onChange={(e) => {
+                let val = e.target.value;
+                if (addingType === 'zelle') {
+                  // If it ONLY contains phone-like characters, format it
+                  // Phone-like chars: digits, spaces, (), -, +, .
+                  const isPhoneLike = /^[0-9\s()\-+.]+$/.test(val);
+                  if (isPhoneLike) {
+                    val = formatPhone(val);
+                  }
+                  // Otherwise, allow it as is (for email)
+                } else {
+                  val = applyPrefix(addingType, val);
+                }
+                setAddHandle(val);
+                setAddError('');
+              }}
               placeholder={
-                addingType === 'zelle' ? 'Email or phone number' :
+                addingType === 'zelle' ? 'name@email.com or (212) 555-1234' :
                 addingType === 'cashapp' ? '$cashtag' :
                 '@venmo-username'
               }

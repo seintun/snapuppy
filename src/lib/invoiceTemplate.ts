@@ -9,6 +9,15 @@ function escapeHtml(value: string): string {
     .replaceAll("'", '&#39;');
 }
 
+function unescapeHtml(value: string): string {
+  return value
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'");
+}
+
 function formatMoney(amount: number): string {
   return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -17,6 +26,99 @@ function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${months[month - 1]} ${day}, ${year}`;
+}
+
+function formatPhoneNumber(phone: string): string {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  return phone;
+}
+
+function getParsedPaymentMethods(instructions: string | null | undefined): any[] | null {
+  if (!instructions) return null;
+  try {
+    // 1. First, try to clean extreme escaping or double-stringified artifacts
+    let raw = unescapeHtml(instructions.trim());
+    
+    // 2. Clear any leading/trailing quotes if it was double-stringified as a string literal
+    if (raw.startsWith('"') && raw.endsWith('"')) {
+      raw = JSON.parse(raw);
+    }
+    
+    if (!raw.startsWith('[') || !raw.endsWith(']')) return null;
+    
+    let parsed = JSON.parse(raw);
+    // 3. Handle potential secondary stringification
+    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+    
+    return Array.isArray(parsed) && parsed.length > 0 && parsed[0].type ? parsed : null;
+  } catch (e) {
+    console.error('Payment parsing failed:', e);
+    return null;
+  }
+}
+
+function renderPaymentBlock(instructions: string | null | undefined): string {
+  const methods: any[] = [{ type: 'cash', handle: 'Cash' }];
+  const parsed = getParsedPaymentMethods(instructions);
+  if (parsed) methods.push(...parsed);
+
+  if (methods.length > 0) {
+    const badgesHtml = methods
+      .map((m: any) => {
+        const type = (m.type || '').toLowerCase();
+        let handle = m.handle || '';
+        
+        // Auto-format Zelle phone numbers
+        if (type === 'zelle' && /^\d+$/.test(handle.replace(/\D/g, ''))) {
+          handle = formatPhoneNumber(handle);
+        }
+        
+        const escapedHandle = escapeHtml(handle);
+        const config = {
+          venmo: { bg: '#e8f4ff', text: '#008cff', handleText: '#0076db', label: 'Venmo', initial: 'V' },
+          cashapp: { bg: '#e6fff0', text: '#00c352', handleText: '#00a345', label: 'Cash App', initial: '$' },
+          zelle: { bg: '#f3ebff', text: '#6d1edb', handleText: '#5b17bb', label: 'Zelle', initial: 'Z' },
+          cash: { bg: '#eef5ee', text: '#5a8f56', handleText: '#4a7c44', label: 'Payment', initial: '💵' },
+        }[type as 'venmo' | 'cashapp' | 'zelle' | 'cash'] || {
+          bg: '#f0f4f0',
+          text: '#5a8f56',
+          handleText: '#5b4a3e',
+          label: 'Payment',
+          initial: 'P',
+        };
+
+        return `<div style="display:inline-flex; align-items:center; gap:6px; background:${config.bg}; border-radius:999px; padding:4px 8px 4px 4px; border:1px solid rgba(0,0,0,0.05); margin:2px 0;">
+          <div style="width:24px; height:24px; border-radius:50%; background:#fff; color:${config.text}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0;">
+            ${config.initial}
+          </div>
+          <div style="display:flex; flex-direction:column; line-height:1.0;">
+            <span style="font-size:7px; font-weight:900; color:${config.text}cc; text-transform:uppercase; letter-spacing:0.02em;">${config.label}</span>
+            <span style="font-size:12px; font-weight:900; color:${config.handleText}; letter-spacing:-0.01em;">${escapedHandle}</span>
+          </div>
+        </div>`;
+      })
+      .join('');
+
+    return `
+      <div style="margin-top:10px; padding:8px 12px; background:#fff; border-radius:12px; border:1px solid #e2d8ce;">
+        <div style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:#8b7355; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+          <span style="font-size:12px;">💵</span> FORMS OF PAYMENT ACCEPTED
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+          ${badgesHtml}
+        </div>
+      </div>`;
+  }
+
+  // Legacy fallback
+  return `
+    <div style="margin-top:10px; padding:10px 12px; background:#fff; border-radius:12px; border:1px solid #e2d8ce;">
+      <div style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:#8b7355; margin-bottom:4px;">Forms of Payment Accepted</div>
+      <div style="font-size:11px; color:#4a3728; line-height:1.4;">${escapeHtml(instructions)}</div>
+    </div>`;
 }
 
 export function buildInvoiceHtml(
@@ -149,11 +251,9 @@ export function buildInvoiceHtml(
 
   // Payment block
   const paymentBlock = [
-    paymentInstructions
-      ? `<div style="margin-top:10px; padding:8px 10px; background:#f5f0eb; border-radius:8px; border-left:3px solid #8FB886; font-size:11px; color:#5b4a3e; line-height:1.5;"><strong>Payment:</strong> ${paymentInstructions}</div>`
-      : '',
+    renderPaymentBlock(paymentInstructions),
     paymentNotes
-      ? `<div style="margin-top:6px; font-size:11px; color:#7a6657; line-height:1.5;"><strong>Notes:</strong> ${paymentNotes}</div>`
+      ? `<div style="margin-top:8px; font-size:11px; color:#7a6657; line-height:1.5; padding:0 4px;"><strong>Note:</strong> ${paymentNotes}</div>`
       : '',
   ]
     .filter(Boolean)

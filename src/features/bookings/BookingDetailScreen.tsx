@@ -308,6 +308,7 @@ export function BookingDetailScreen() {
           endDate: booking.end_date,
           subtotal: booking.total_amount,
           tipAmount: 0,
+          paymentInstructions: profile?.payment_instructions ?? null,
           paymentNotes: booking.payment_notes,
           isPaid: booking.is_paid ?? false,
         }}

@@ -3,30 +3,19 @@ import { useAuthContext } from '@/features/auth/useAuthContext';
 import { getProfile, updateProfile } from '@/features/profile/profileService';
 import type { Database } from '@/types/database';
 import type { PaymentMethod } from '@/lib/schemas';
+import { parsePaymentMethodsJson } from '@/lib/paymentUtils';
 import { enqueueOfflineMutation } from '@/lib/offlineQueue';
 
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 export function parsePaymentMethods(raw: string | null | undefined): PaymentMethod[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed as PaymentMethod[];
-  } catch {
-    // Legacy free text — not valid JSON, return empty (handled in UI)
-    return [];
-  }
+  return parsePaymentMethodsJson(raw) ?? [];
 }
 
 export function isLegacyPaymentInstructions(raw: string | null | undefined): boolean {
   if (!raw) return false;
-  try {
-    JSON.parse(raw);
-    return false;
-  } catch {
-    return true;
-  }
+  // If the robust parser returns null and there is a value, it's a legacy free-text string.
+  return parsePaymentMethodsJson(raw) === null;
 }
 
 export function serializePaymentMethods(methods: PaymentMethod[]): string | null {
