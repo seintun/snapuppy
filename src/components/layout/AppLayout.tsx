@@ -1,10 +1,9 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { BottomTabs } from './BottomTabs';
 import { PwaStatus } from './PwaStatus';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
 export function AppLayout() {
-  const location = useLocation();
 
   return (
     <div className="min-h-dvh max-w-[520px] mx-auto bg-warm-beige relative flex flex-col overflow-x-hidden">

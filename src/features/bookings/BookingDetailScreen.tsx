@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { CaretLeft, Clock, Warning, CurrencyCircleDollar, CheckSquare, Receipt } from '@phosphor-icons/react';
+import { CaretLeft, Warning, CurrencyCircleDollar, CheckSquare, Receipt } from '@phosphor-icons/react';
 import { useToast } from '@/components/ui/useToast';
 import { DogAvatar } from '@/components/ui/DogAvatar';
 import { Badge } from '@/components/ui/Badge';
