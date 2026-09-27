@@ -5,6 +5,10 @@
 **Purpose:** Mobile-first sitter operations app (bookings, calendar, dogs, invoicing)  
 **Primary references:** `docs/technical_decisions.md`, `docs/architecture.md`
 
+Shared agent rules (also read by Codex and opencode) live in AGENTS.md, imported here:
+
+@AGENTS.md
+
 ## Stack (Locked)
 
 | Layer           | Choice                                             |
