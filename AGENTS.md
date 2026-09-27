@@ -2,7 +2,7 @@
 
 **Project:** snapuppy.life — Mobile-first PWA for independent dog sitters
 **Status:** Phase 2+ in progress (Phase 1 baseline complete)
-**Stack Docs:** `docs/technical_decisions.md` | **Plan:** `docs/plan.md`
+**Stack Docs:** `docs/technical_decisions.md` | **Architecture:** `docs/architecture.md` | **Plan:** `docs/plan.md`
 
 ---
 
@@ -15,6 +15,8 @@
 | Styling         | Tailwind CSS v4                  | No config file — uses `@tailwindcss/vite` plugin |
 | Backend         | Supabase                         | PostgreSQL + Auth + Storage                      |
 | Routing         | React Router v7                  | Client-side only                                 |
+| State/Data      | TanStack Query                   | Query cache persisted to IndexedDB               |
+| Validation      | Zod + react-hook-form            | Via `@hookform/resolvers`                        |
 | Testing         | Vitest (unit) + Playwright (e2e) | jsdom environment                                |
 | Icons           | @phosphor-icons/react            | No other icon lib                                |
 | Dates           | date-fns                         | No moment.js, no dayjs                           |
@@ -50,7 +52,7 @@ src/
   main.tsx
 ```
 
-Use `@/` alias (maps to `src/`) for all internal imports.
+Use `@/` alias (maps to `src/`) for all internal imports. For the full module map, service functions, data flow and dependency rules, read `docs/architecture.md`. For function/symbol lookup by domain (auth, bookings, pricing, dogs, invoice, offline, metrics, types), read `docs/symbol-index.md` on demand.
 
 ---
 
@@ -124,6 +126,16 @@ type DogInsert = TablesInsert<'dogs'>;
 Global state uses Context + Provider pattern (see `AuthContext`/`AuthProvider`, `ToastContext`/`ToastProvider`).
 Never manage auth or toast state directly in components.
 
+### High-Impact Patterns (Non-Obvious)
+
+| Pattern                                                                                                    | Source of truth                                                                                      |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| RLS is the primary auth layer; many services also use explicit `sitter_id` scoping filters                 | `src/lib/bookingService.ts`, `src/features/dogs/dogService.ts`                                       |
+| Zod schemas are centralized and consumed by forms via RHF resolvers                                        | `src/lib/schemas.ts`                                                                                 |
+| Query cache is persisted to IndexedDB for offline-first behavior                                           | `src/lib/persister.ts`, `src/main.tsx`                                                               |
+| Offline queue plumbing exists (enqueue/drain/status); mutation replay handlers should be verified per path | `src/lib/offlineQueue.ts`, `src/lib/sync.ts`, `src/hooks/useOfflineSync.ts`                          |
+| Sitter auth ownership chain                                                                                | `src/hooks/useAuth.ts` -> `src/features/auth/AuthContext.ts` -> `src/features/auth/AuthProvider.tsx` |
+
 ---
 
 ## Styling Rules
@@ -179,22 +191,29 @@ bun run format        # Prettier
 - **No per-dog pricing** — rates are universal in the `profiles` table
 - **No external calendar sync** — calendar is app-owned for Phase 1
 - **No `sitter_id = auth.uid()` copy-paste filters** — use established service query patterns
+- **No broad app-level barrel imports** — prefer direct imports from module files
 
 ---
 
 ## Key Files
 
-| File                          | Purpose                                                           |
-| ----------------------------- | ----------------------------------------------------------------- |
-| `src/main.tsx`                | Provider tree, Query persistence, service worker registration     |
-| `src/App.tsx`                 | Route topology and auth guard composition                         |
-| `src/lib/supabase.ts`         | Typed Supabase client                                             |
-| `src/lib/schemas.ts`          | Centralized Zod schemas consumed by all RHF forms                 |
-| `src/lib/rate-calculator.ts`  | Pure functions for booking day pricing                            |
-| `src/lib/bookingService.ts`   | Booking CRUD + pricing orchestration                              |
-| `src/hooks/useBookings.ts`    | Main booking query/mutation hook (representative pattern)         |
-| `src/types/database.ts`       | Supabase-generated DB types                                       |
-| `src/types/index.ts`          | Type helpers (`Tables<T>`, `TablesInsert<T>`)                     |
-| `src/styles.css`              | Global CSS, design tokens, all component classes                  |
-| `docs/technical_decisions.md` | Architecture decision records (read before making arch decisions) |
-| `docs/architecture.md`        | Data flow, auth boundaries, module dependency rules               |
+| File                                     | Purpose                                                           |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| `src/main.tsx`                           | Provider tree, Query persistence, service worker registration     |
+| `src/App.tsx`                            | Route topology and auth guard composition                         |
+| `src/lib/supabase.ts`                    | Typed Supabase client                                             |
+| `src/lib/schemas.ts`                     | Centralized Zod schemas consumed by all RHF forms                 |
+| `src/lib/rate-calculator.ts`             | Pure functions for booking day pricing                            |
+| `src/lib/bookingService.ts`              | Booking CRUD + pricing orchestration                              |
+| `src/lib/invoiceTemplate.ts`             | Invoice HTML template/sanitization surface                        |
+| `src/lib/offlineQueue.ts`                | Offline mutation persistence and queue semantics                  |
+| `src/lib/sync.ts`                        | Replay/synchronization engine                                     |
+| `src/lib/persister.ts`                   | TanStack Query IndexedDB persister                                |
+| `src/hooks/useBookings.ts`               | Main booking query/mutation hook (representative pattern)         |
+| `src/features/auth/AuthProvider.tsx`     | Sitter auth lifecycle and session wiring                          |
+| `src/features/profile/profileService.ts` | Profile writes and schema-compat retry logic                      |
+| `src/types/database.ts`                  | Supabase-generated DB types                                       |
+| `src/types/index.ts`                     | Type helpers (`Tables<T>`, `TablesInsert<T>`)                     |
+| `src/styles.css`                         | Global CSS, design tokens, all component classes                  |
+| `docs/technical_decisions.md`            | Architecture decision records (read before making arch decisions) |
+| `docs/architecture.md`                   | Data flow, auth boundaries, module dependency rules               |
